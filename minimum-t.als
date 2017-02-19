@@ -45,7 +45,8 @@ fact {
 }
 
 pred some_commit {
-   some Commit
+   some c : Commit |
+     c.c_sender in SaneNode
 }
 
 // run ownPrev for 10
