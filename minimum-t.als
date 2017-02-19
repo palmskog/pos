@@ -38,10 +38,16 @@ fact {
    all p : Prepare | p.p_view_src in (p.p_view.(^v_prev))
 }
 
-pred some_prepare {
-   some Prepare
+fact {
+   all c : Commit |
+  
+      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash && p.p_view = c.c_view}). mul[ 3]  >= mul[ #Node, 2 ]
+}
+
+pred some_commit {
+   some Commit
 }
 
 // run ownPrev for 10
 
-run some_prepare for 2
+run some_commit for 2
