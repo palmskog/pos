@@ -1,34 +1,34 @@
 module minimalt
 
 sig View {
-//  prev: lone View
+  v_prev: lone View
 }
 
 sig Hash {
-  prev: lone Hash
+  h_prev: lone Hash
 }
 
 fact {
-  no x : Hash | x in x.(^prev)
+  no x : Hash | x in x.(^h_prev)
 }
 
-// sig Commit {
- //  hash : Hash,
- // view : View
-//}
-
-//sig Prepare {
-//  hash : Hash,
-//  view: View,
-//  view_src : View
-//}
-
-pred ownPrev (h: Hash) {
-  h in h.prev
+sig Commit {
+  hash : Hash,
+  view : View
 }
 
-pred viewSrcNotOlder (p : Hash) {
-  // p.view_src in (p.view)
+sig Prepare {
+  hash : Hash,
+  view: View,
+  view_src : View
+}
+
+//pred ownPrev (h: Hash) {
+//  h in h.prev
+//}
+
+pred viewSrcNotOlder (p : Prepare) {
+   p.view_src in (p.view.(^v_prev))
 }
 
 pred any {
