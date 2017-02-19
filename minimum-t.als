@@ -40,7 +40,7 @@ fact {
 
 fact {
    all c : Commit |
-  
+      c.c_sender in SaneNode implies
       (#{n : Node | some p : Prepare | p.p_hash = c.c_hash && p.p_view = c.c_view}). mul[ 3]  >= mul[ #Node, 2 ]
 }
 
