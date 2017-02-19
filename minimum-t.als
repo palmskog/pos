@@ -27,13 +27,14 @@ sig Prepare {
 //  h in h.prev
 //}
 
-pred viewSrcNotOlder (p : Prepare) {
-   p.view_src in (p.view.(^v_prev))
+fact {
+   all p : Prepare | p.view_src in (p.view.(^v_prev))
 }
 
-pred any {
+pred some_prepare {
+   some Prepare
 }
 
 // run ownPrev for 10
 
-run viewSrcNotOlder for 10
+run some_prepare for 3
