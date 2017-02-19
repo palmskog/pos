@@ -1,6 +1,8 @@
 module minimalt
 
-sig Node {}
+abstract sig Node {}
+sig SaneNode extends Node {}
+sig SlashedNode extends Node {}
 
 sig View {
   v_prev: lone View
