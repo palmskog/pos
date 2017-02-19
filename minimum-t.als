@@ -1,5 +1,7 @@
 module minimalt
 
+sig Node {}
+
 sig View {
   v_prev: lone View
 }
@@ -18,18 +20,20 @@ fact {
 
 
 sig Commit {
-  hash : Hash,
-  view : View
+  c_hash : Hash,
+  c_view : View,
+  c_sender: one Node
 }
 
 sig Prepare {
-  hash : Hash,
-  view: View,
-  view_src : View
+  p_hash : Hash,
+  p_view: View,
+  p_view_src : View,
+  p_sender: one Node
 }
 
 fact {
-   all p : Prepare | p.view_src in (p.view.(^v_prev))
+   all p : Prepare | p.p_view_src in (p.p_view.(^v_prev))
 }
 
 pred some_prepare {
@@ -38,4 +42,4 @@ pred some_prepare {
 
 // run ownPrev for 10
 
-run some_prepare for 3
+run some_prepare for 2
