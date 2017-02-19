@@ -12,6 +12,11 @@ fact {
   no x : Hash | x in x.(^h_prev)
 }
 
+fact {
+  no x : View | x in x.(^v_prev)
+}
+
+
 sig Commit {
   hash : Hash,
   view : View
@@ -22,10 +27,6 @@ sig Prepare {
   view: View,
   view_src : View
 }
-
-//pred ownPrev (h: Hash) {
-//  h in h.prev
-//}
 
 fact {
    all p : Prepare | p.view_src in (p.view.(^v_prev))
