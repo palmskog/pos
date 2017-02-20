@@ -9,7 +9,8 @@ sig View {
 }
 
 sig Hash {
-  h_prev: lone Hash
+  h_prev: lone Hash,
+  h_view: one View
 }
 
 fact {
@@ -23,31 +24,31 @@ fact {
 
 sig Commit {
   c_hash : Hash,
-  c_view : View,
   c_sender: one Node
 }
 
 sig Prepare {
   p_hash : Hash,
-  p_view: View,
   p_view_src : View,
   p_sender: one Node
 }
 
 fact {
-   all p : Prepare | p.p_view_src in (p.p_view.(^v_prev))
+   all p : Prepare | p.p_view_src in (p.p_hash.h_view.(^v_prev))
 }
 
 fact {
    all c : Commit |
       c.c_sender in SaneNode implies
-      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash && p.p_view = c.c_view}). mul[ 3]  >= mul[ #Node, 2 ]
+      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash && p.p_hash.h_view = c.c_hash.h_view}). mul[ 3]  >= mul[ #Node, 2 ]
 }
 
 pred some_commit {
    some c : Commit |
      c.c_sender in SaneNode
 }
+
+// how to do the degree of ancestors
 
 // run ownPrev for 10
 
