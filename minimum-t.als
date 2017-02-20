@@ -49,7 +49,7 @@ fact {
   all p : Prepare |
      (p.p_sender in SaneNode && some p.p_view_src.v_prev) implies
      some h_anc : Hash | some v_src : View |
-      h_anc in p.p_hash.(^h_prev) &&
+      h_anc in p.p_hash.(^h_prev) && h_anc.h_view = p.p_view_src &&
       (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash = h_anc && p'.p_view_src = v_src }). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
 }
 
@@ -83,6 +83,10 @@ fact {
 
 }
 
+fact {
+  all v0, v1 : View | v0 in v1.(*v_prev) or v1 in v0.(*v_prev)
+}
+
 
 pred incompatible_commits {
 
@@ -98,4 +102,4 @@ pred incompatible_commits {
 
 // run ownPrev for 10
 
-run incompatible_commits for 3
+run incompatible_commits for 5
