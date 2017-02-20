@@ -48,7 +48,9 @@ fact {
 fact {
   all p : Prepare |
      (p.p_sender in SaneNode && some p.p_view_src.v_prev) implies
-      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash in p.p_hash.(^h_prev)}). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
+     some h_anc : Hash | some v_src : View |
+      h_anc in p.p_hash.(^h_prev) &&
+      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash = h_anc && p'.p_view_src = v_src }). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
 }
 
 pred some_commit {
