@@ -53,6 +53,16 @@ fact {
       (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash = h_anc && p'.p_view_src = v_src }). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
 }
 
+// Slashing condition [iii]
+fact {
+  all c : Commit | all p : Prepare | c.c_sender = p.p_sender &&     
+    p.p_view_src in c.c_hash.h_view.(^v_prev) && c.c_hash.h_view in p.p_hash.h_view.(^v_prev)
+    implies 0 = 1
+}
+
+// Slashing condition [iv]
+
+
 pred some_commit {
    some c : Commit |
      c.c_sender in SaneNode
