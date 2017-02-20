@@ -84,10 +84,10 @@ fact {
 }
 
 
-pred incompatible_commits_case1 {
+pred incompatible_commits {
 
-   some h0, h1 : Hash | h0 != h1 &&
-    h0.h_view = h1.h_view &&
+   some h0, h1 : Hash | (not h0 in h1.(*h_prev)) &&
+    (not h1 in h0.(*h_prev)) &&
     (#{n0 : Node | some c0 : Commit | c0.c_sender = n0 && c0.c_hash = h0}).mul[3] >= (#Node).mul[2] &&
     (#{n1 : Node | some c1 : Commit | c1.c_sender = n1 && c1.c_hash = h1}).mul[3] >= (#Node).mul[2] &&
     (#SlashedNode).mul[3] < (#Node)
@@ -98,4 +98,4 @@ pred incompatible_commits_case1 {
 
 // run ownPrev for 10
 
-run incompatible_commits_case1 for 2
+run incompatible_commits for 3
