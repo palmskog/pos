@@ -41,14 +41,14 @@ fact {
 fact {
    all c : Commit |
       c.c_sender in SaneNode implies
-      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash}). mul[ 3]  >= mul[ #Node, 2 ]
+      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash}). mul[ 3]  >= mul[ #{n : Node}, 2 ]
 }
 
 // Slashing condition [ii]
 fact {
   all p : Prepare |
      (p.p_sender in SaneNode && some p.p_view_src.v_prev) implies
-      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash in p.p_hash.(^h_prev)}). mul[ 3]  >= mul[ #Node, 2 ]
+      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash in p.p_hash.(^h_prev)}). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
 }
 
 pred some_commit {
