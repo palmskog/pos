@@ -55,13 +55,16 @@ fact {
 
 // Slashing condition [iii]
 fact {
-  all c : Commit | all p : Prepare | c.c_sender = p.p_sender &&     
+  all c : Commit | c.c_sender in SaneNode implies all p : Prepare | c.c_sender = p.p_sender && 
     p.p_view_src in c.c_hash.h_view.(^v_prev) && c.c_hash.h_view in p.p_hash.h_view.(^v_prev)
     implies 0 = 1
 }
 
 // Slashing condition [iv]
-
+fact {
+  all p0: Prepare | all p1:Prepare | p0.p_sender = p1.p_sender && p1.p_sender in SaneNode && p0.p_hash.h_view = p1.p_hash.h_view implies
+    p0.p_view_src = p1.p_view_src && p0.p_hash = p1.p_hash
+}
 
 pred some_commit {
    some c : Commit |
@@ -69,8 +72,8 @@ pred some_commit {
 }
 
 pred some_prepare_new {
-   some p : Prepare |
-      some p.p_view_src.v_prev && p.p_sender in SaneNode
+   some p : Prepare | some c : Commit |
+      some p.p_view_src.v_prev && p.p_sender in SaneNode && c.c_sender = p.p_sender
 }
 
 fact prev_does_not_match {
