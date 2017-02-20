@@ -48,8 +48,15 @@ pred some_commit {
      c.c_sender in SaneNode
 }
 
+pred prev_does_not_match {
+
+  some h : Hash |
+    h.h_prev.h_view != h.h_view.v_prev
+
+}
+
 // how to do the degree of ancestors
 
 // run ownPrev for 10
 
-run some_commit for 2
+run prev_does_not_match for 2
