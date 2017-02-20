@@ -40,7 +40,7 @@ fact {
 fact {
    all c : Commit |
       c.c_sender in SaneNode implies
-      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash && p.p_hash.h_view = c.c_hash.h_view}). mul[ 3]  >= mul[ #Node, 2 ]
+      (#{n : Node | some p : Prepare | p.p_hash = c.c_hash}). mul[ 3]  >= mul[ #Node, 2 ]
 }
 
 pred some_commit {
@@ -48,10 +48,10 @@ pred some_commit {
      c.c_sender in SaneNode
 }
 
-pred prev_does_not_match {
+fact prev_does_not_match {
 
-  some h : Hash |
-    h.h_prev.h_view != h.h_view.v_prev
+  all h : Hash |
+    h.h_prev.h_view = h.h_view.v_prev
 
 }
 
@@ -59,4 +59,4 @@ pred prev_does_not_match {
 
 // run ownPrev for 10
 
-run prev_does_not_match for 2
+run some_commit for 2
