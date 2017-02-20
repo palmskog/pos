@@ -76,12 +76,14 @@ pred some_prepare_new {
       some p.p_view_src.v_prev && p.p_sender in SaneNode && c.c_sender = p.p_sender
 }
 
-fact prev_does_not_match {
+fact {
 
   all h : Hash |
     h.h_prev.h_view = h.h_view.v_prev
 
 }
+
+
 
 // how to do the degree of ancestors
 
