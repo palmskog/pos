@@ -543,6 +543,19 @@ proof -
     using between_concrete by blast
 qed
 
+
+lemma ancestor_ancestor : "
+       nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
+       vs1 < v \<Longrightarrow>
+       \<not> vs1 < c_view \<Longrightarrow>
+       \<not> c_view \<le> - 1 \<Longrightarrow>
+       - 1 \<le> vs' \<Longrightarrow>
+       vs' < vs1 \<Longrightarrow>
+       Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<Longrightarrow>
+       nth_ancestor s (nat (vs1 - c_view)) h_anc \<noteq> Some y 
+"
+sorry
+
 lemma the_induction :
       "nat (v - c_view) \<le> Suc n \<Longrightarrow>
        situation_has_nodes s \<Longrightarrow>
@@ -560,52 +573,38 @@ lemma the_induction :
           two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
           (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
        one_third_slashed s"
-apply(subgoal_tac "vs1 = -1")
+apply(case_tac "vs1 = -1")
  apply simp
-
-
-
-(*
-proof -
- assume "- 1 \<le> vs1"
- moreover assume "\<not> vs1 < c_view"
- moreover assume " \<not> c_view \<le> - 1"
- ultimately have "-1 < vs1"
-  by linarith
- moreover assume "prepared s x v vs1"
- moreover assume "situation_has_nodes s"
- ultimately have "
-    (\<exists> h_anc vs'.
+apply(subgoal_tac "
+       (\<exists> h_anc vs'.
            -1 \<le> vs' \<and> vs' < vs1 \<and>
            Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
-           two_thirds_sent_message s (Prepare (h_anc, vs1, vs'))) \<or>
-    one_third_slashed s"
-   sorry
- then have "
-    (\<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs1 \<and>
-           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
-           prepared s h_anc vs1 vs') \<or>
-    one_third_slashed s"
-   by (simp add: prepared_def)
-*)
-
-sorry
-
-(*
-definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
-where
-"slashed_two s n =
-  (n \<in> Nodes s \<and>
-     (\<exists> x v vs1.
-       ((n, Prepare (x, v, vs1)) \<in> Messages s \<and>
-       vs \<noteq> -1 \<and>
-       (\<not> (\<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs \<and>
-           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
-           two_thirds_sent_message s (Prepare (h_anc, vs1, vs')))))))"
-
-*)
+           prepared s h_anc vs1 vs') \<or> one_third_slashed s")
+ apply clarsimp
+ apply(drule_tac x = h_anc in spec)
+ apply(drule_tac x = y in spec)
+ apply(drule_tac x = vs1 in spec)
+ apply clarsimp
+ apply(case_tac "nat (vs1 - c_view) \<le> n")
+  apply simp
+  apply(case_tac "nth_ancestor s (nat (vs1 - c_view)) h_anc \<noteq> Some y")
+   apply simp
+  apply(simp add: ancestor_ancestor)
+ apply linarith
+apply(subgoal_tac
+  "(\<exists> somebody. \<not> slashed s somebody \<and> somebody \<in> Nodes s \<and> (somebody, Prepare (x, v, vs1)) \<in> Messages s) \<or> one_third_slashed s")
+ apply clarify
+ apply(subgoal_tac "\<not> slashed_two s somebody")
+  defer
+  apply(simp add: slashed_def)
+ apply (metis (mono_tags, lifting) not_one_third one_third_slashed_def prepared_def two_more_two_ex two_thirds_sent_message_def)
+apply(simp add: slashed_two_def)
+apply(drule_tac x = x in spec)
+apply(drule_tac x = x in spec)
+apply(drule_tac x = v in spec)
+apply(drule_tac x = vs1 in spec)
+apply auto
+done
 
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
