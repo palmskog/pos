@@ -39,17 +39,17 @@ where
 "two_thirds_sent_message s m =
  (2 * card (Nodes s) \<le> 3 * card (who_have_sent s m))"
 
-definition slashing_one :: "situation \<Rightarrow> node \<Rightarrow> bool"
+definition slashed_one :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
-"slashing_one s n =
+"slashed_one s n =
  (n \<in> Nodes s \<and>
     (\<exists> h v.
       ((n, Commit (h, v)) \<in> Messages s \<and>
     (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> two_thirds_sent_message s (Prepare (h, v, vs) ))))))"
 
-definition slashing_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
+definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
-"slashing_two s n =
+"slashed_two s n =
   (n \<in> Nodes s \<and>
      (\<exists> h v vs.
        ((n, Prepare (h, v, vs)) \<in> Messages s \<and>
@@ -59,22 +59,29 @@ where
            Some h_anc = nth_ancestor s (nat (vs - vs')) h \<and>
            two_thirds_sent_message s (Prepare (h_anc, vs, vs')))))))"
 
-definition slashing_three :: "situation \<Rightarrow> node \<Rightarrow> bool"
+definition slashed_three :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
-"slashing_three s n =
+"slashed_three s n =
   (n \<in> Nodes s \<and>
     (\<exists> x y v w u.
       (n, Commit (x, v)) \<in> Messages s \<and>
       (n, Prepare (y, w, u)) \<in> Messages s \<and>
       u < v \<and> v < w))"
 
-definition slashing_four :: "situation \<Rightarrow> node \<Rightarrow> bool"
+definition slashed_four :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
-"slashing_four s n =
+"slashed_four s n =
   (n \<in> Nodes s \<and>
     (\<exists> x1 x2 v vs1 vs2.
       (n, Prepare (x1, v, vs1)) \<in> Messages s \<and>
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
       (x1 \<noteq> x2 \<or> vs1 \<noteq> vs2)))"
+
+definition slashed :: "situation \<Rightarrow> node \<Rightarrow> bool"
+where
+"slashed s n = (slashed_one s n \<or>
+                slashed_two s n \<or>
+                slashed_three s n \<or>
+                slashed_four s n)"
 
 end
