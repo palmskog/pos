@@ -403,12 +403,6 @@ apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_
 apply(rule condition_one_positive')
 using two_more_two_ex by blast
 
-lemma prepared_prepared_slash :
-  "no_dependency s x y \<Longrightarrow>
-   prepared s x v2 vs1 \<Longrightarrow>
-   prepared s y v2 vs \<Longrightarrow> - 1 \<le> vs \<Longrightarrow> vs < v2 \<Longrightarrow> one_third_slashed s"
-sorry
-
 lemma commit_prepared :
  "situation_has_nodes s \<Longrightarrow>
   no_dependency s x y \<Longrightarrow>
@@ -420,10 +414,11 @@ proof(simp add: two_thirds_sent_message_def)
  moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, v2)) \<in> Messages s)"
  ultimately have "(\<exists> vs. prepared s y v2 vs \<and> -1 \<le> vs \<and> vs < v2) \<or> one_third_slashed s"
    using commit_prepare by blast
+ moreover assume "situation_has_nodes s"
  moreover assume "no_dependency s x y"
  moreover assume "prepared s x v2 vs1"
  ultimately show "one_third_slashed s"
-   using prepared_prepared_slash by auto
+   	using safety_case1 by blast
 qed
 
 
