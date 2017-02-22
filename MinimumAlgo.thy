@@ -89,13 +89,17 @@ where
 "two_thirds_sent_message s m =
    two_thirds s (\<lambda> n. (n, m) \<in> Messages s)"
 
+definition prepared :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
+where
+"prepared s h v vs = (two_thirds_sent_message s (Prepare (h, v, vs)))"
+
 definition slashed_one :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
 "slashed_one s n =
  (n \<in> Nodes s \<and>
     (\<exists> h v.
       ((n, Commit (h, v)) \<in> Messages s \<and>
-    (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> two_thirds_sent_message s (Prepare (h, v, vs) ))))))"
+    (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s h v vs) ))))"
 
 definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
@@ -107,7 +111,7 @@ where
        (\<not> (\<exists> h_anc vs'.
            -1 \<le> vs' \<and> vs' < vs \<and>
            Some h_anc = nth_ancestor s (nat (vs - vs')) h \<and>
-           two_thirds_sent_message s (Prepare (h_anc, vs, vs')))))))"
+           prepared s h_anc vs vs')))))"
 
 definition slashed_three :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
@@ -138,10 +142,6 @@ definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "committed s h = (\<exists> v. two_thirds_sent_message s (Commit (h, v)))"
 
-definition prepared :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
-where
-"prepared s h v vs = (two_thirds_sent_message s (Prepare (h, v, vs)))"
-
 definition one_third_slashed :: "situation \<Rightarrow> bool"
 where
 "one_third_slashed s = one_third s (slashed s)"
@@ -171,7 +171,7 @@ lemma condition_one_positive :
     (\<exists>v vs.
      two_thirds s (\<lambda>n. (n, Prepare (x, v, vs)) \<in> Messages s)
      \<and> - 1 \<le> vs \<and> vs < v)"
-using slashed_def slashed_one_def two_thirds_sent_message_def
+using slashed_def slashed_one_def two_thirds_sent_message_def prepared_def
 by blast
 
 lemma condition_one_positive' :
@@ -181,7 +181,7 @@ lemma condition_one_positive' :
     (\<exists>vs.
      two_thirds s (\<lambda>n. (n, Prepare (x, v, vs)) \<in> Messages s)
      \<and> - 1 \<le> vs \<and> vs < v)"
-using slashed_def slashed_one_def two_thirds_sent_message_def
+using slashed_def slashed_one_def two_thirds_sent_message_def prepared_def
 by blast
 
 lemma set_conj [simp] :
@@ -526,13 +526,12 @@ proof(simp add: prepared_def two_thirds_sent_message_def)
 qed
 
 lemma between_case :
-  "Suc n = nat (v - c_view) \<Longrightarrow>
-   c_view \<le> v \<Longrightarrow>
+  "c_view \<le> v \<Longrightarrow>
    situation_has_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
-   prepared s x v vs1 \<Longrightarrow> - 1 \<le> vs1 \<Longrightarrow> vs1 < v \<Longrightarrow> vs1 < c_view \<Longrightarrow> one_third_slashed s"
+   prepared s x v vs1 \<Longrightarrow> - 1 \<le> vs1 \<Longrightarrow> c_view \<noteq> v \<Longrightarrow> vs1 < c_view \<Longrightarrow> one_third_slashed s"
 proof -
-  assume "Suc n = nat (v - c_view)"
+  assume "c_view \<noteq> v"
   moreover assume "c_view \<le> v"
   ultimately have "c_view < v"
     by linarith
@@ -545,38 +544,24 @@ proof -
 qed
 
 lemma the_induction :
-  "Suc n = nat (v - c_view) \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
-   nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
-   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
-   prepared s x v vs1 \<Longrightarrow>
-   - 1 \<le> vs1 \<Longrightarrow>
-   vs1 < v \<Longrightarrow>
-   \<not> vs1 < c_view \<Longrightarrow>
-    \<not> c_view \<le> - 1 \<Longrightarrow>
-   \<forall>x y v.
-      n = nat (v - c_view) \<longrightarrow>
-      c_view \<le> v \<longrightarrow>
-      situation_has_nodes s \<longrightarrow>
-      nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
-      two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
-      (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
-   one_third_slashed s"
-apply(subgoal_tac "-1 < vs1")
- defer
- apply auto[1]
-apply(subgoal_tac "
-    \<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs1 \<and>
-           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
-           prepared s h_anc vs1 vs'")
- apply(clarsimp)
- apply(drule_tac x = h_anc in spec)
- apply(drule_tac x = y in spec)
- apply(drule_tac x = vs1 in spec)
- apply(clarsimp)
- 
-
+      "nat (v - c_view) \<le> Suc n \<Longrightarrow>
+       situation_has_nodes s \<Longrightarrow>
+       nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
+       two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+       prepared s x v vs1 \<Longrightarrow>
+       vs1 < v \<Longrightarrow>
+       \<not> vs1 < c_view \<Longrightarrow>
+       \<not> c_view \<le> - 1 \<Longrightarrow>
+       \<forall>x y v.
+          nat (v - c_view) \<le> n \<longrightarrow>
+          c_view \<le> v \<longrightarrow>
+          situation_has_nodes s \<longrightarrow>
+          nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
+          two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
+          (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
+       one_third_slashed s"
+apply(subgoal_tac "vs1 = -1")
+ apply simp
 
 
 
@@ -624,16 +609,20 @@ where
 
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
-   n = nat (v - c_view) \<longrightarrow>
+   n \<ge> nat (v - c_view) \<longrightarrow>
    v \<ge> c_view \<longrightarrow>
    situation_has_nodes s \<longrightarrow>
-   nth_ancestor s n x \<noteq> Some y \<longrightarrow>
+   nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
    prepared s x v vs1 \<longrightarrow>
    - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s"
 apply(induction n; auto)
  using commit_prepared_again apply blast
+apply(case_tac "\<not> (v > c_view)")
+ apply clarsimp
+ using commit_prepared_again apply blast 
 apply(case_tac "vs1 < c_view")
+ apply clarsimp
  using between_case apply blast
 apply(case_tac "c_view \<le> -1")
  apply(clarsimp)
