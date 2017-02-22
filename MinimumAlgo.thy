@@ -452,6 +452,110 @@ lemma between_negone_and_something :
        v2 \<le> v1' \<Longrightarrow> \<not> v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
 sorry
 
+(*
+    \<forall>n. n \<in> Nodes s \<longrightarrow>
+        (n, Prepare (y, c_view, vs)) \<in> Messages s \<and> (n, Prepare (x, c_view, vs1)) \<in> Messages s \<longrightarrow>
+        slashed s n
+*)
+
+lemma one_third_prepared_conflict :
+ "x \<noteq> y \<Longrightarrow>
+  one_third s
+     (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s \<and> (n, Prepare (x, c_view, vs1)) \<in> Messages s) \<Longrightarrow>
+  situation_has_nodes s \<Longrightarrow>
+  one_third s (slashed s)"
+apply(rule mp_one_third; blast?)
+ apply(simp add: situation_has_nodes_def)
+using slashed_def slashed_four_def by blast
+
+lemma prepared_conflict :
+"prepared s y c_view vs \<Longrightarrow>
+ situation_has_nodes s \<Longrightarrow>
+ x \<noteq> y \<Longrightarrow>
+ prepared s x c_view vs1 \<Longrightarrow>
+ one_third_slashed s"
+proof(simp add: prepared_def two_thirds_sent_message_def one_third_slashed_def)
+ assume "situation_has_nodes s"
+ moreover assume "two_thirds s (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s)"
+ moreover assume "two_thirds s (\<lambda>n. (n, Prepare (x, c_view, vs1)) \<in> Messages s)"
+ ultimately have "one_third s (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s \<and>
+                                   (n, Prepare (x, c_view, vs1)) \<in> Messages s)"
+   using two_two by blast
+ moreover assume "situation_has_nodes s"
+ moreover assume "x \<noteq> y"
+ ultimately show "one_third s (slashed s)"
+  by (metis (no_types, lifting) mp_one_third situation_has_nodes_def slashed_def slashed_four_def)
+qed
+
+lemma commit_prepared_again :
+  "situation_has_nodes s \<Longrightarrow>
+   x \<noteq> y \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+   prepared s x c_view vs1 \<Longrightarrow>
+   one_third_slashed s"
+proof(simp add: two_thirds_sent_message_def)
+ assume "situation_has_nodes s"
+ moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s)"
+ ultimately have "(\<exists> vs. prepared s y c_view vs \<and> -1 \<le> vs \<and> vs < c_view) \<or> one_third_slashed s"
+   using commit_prepare by blast
+ moreover assume "situation_has_nodes s"
+ moreover assume "x \<noteq> y"
+ moreover assume "prepared s x c_view vs1"
+ ultimately show "one_third_slashed s"
+   using prepared_conflict by blast
+qed
+
+lemma condition_three_again :
+  "situation_has_nodes s \<Longrightarrow>
+   vs1 < c_view \<Longrightarrow>
+   c_view < v \<Longrightarrow>
+   one_third s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s \<and> (n, Prepare (x, v, vs1)) \<in> Messages s) \<Longrightarrow>
+   one_third_slashed s"
+apply(simp add: one_third_slashed_def)
+apply(rule mp_one_third; blast?)
+ apply(simp add: situation_has_nodes_def)
+using slashed_def slashed_three_def by blast
+
+lemma between_concrete :
+  "c_view < v \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+   prepared s x v vs1 \<Longrightarrow>
+   vs1 < c_view \<Longrightarrow>
+   situation_has_nodes s \<Longrightarrow>
+   one_third_slashed s"
+proof(simp add: prepared_def two_thirds_sent_message_def)
+  assume "situation_has_nodes s"
+  moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s)"
+  moreover assume "two_thirds s (\<lambda>n. (n, Prepare (x, v, vs1)) \<in> Messages s)"
+  ultimately have "one_third s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s \<and>
+                                 (n, Prepare (x, v, vs1)) \<in> Messages s)"
+    using two_two by blast
+  moreover assume "situation_has_nodes s"
+  moreover assume "c_view < v"
+  moreover assume "vs1 < c_view"
+  ultimately show "one_third_slashed s"
+    using condition_three_again by blast
+qed
+
+lemma between_case :
+  "Suc n = nat (v - c_view) \<Longrightarrow>
+   c_view \<le> v \<Longrightarrow>
+   situation_has_nodes s \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+   prepared s x v vs1 \<Longrightarrow> - 1 \<le> vs1 \<Longrightarrow> vs1 < v \<Longrightarrow> vs1 < c_view \<Longrightarrow> one_third_slashed s"
+proof -
+  assume "Suc n = nat (v - c_view)"
+  moreover assume "c_view \<le> v"
+  ultimately have "c_view < v"
+    by linarith
+  moreover assume "two_thirds_sent_message s (Commit (y, c_view))"
+  moreover assume "prepared s x v vs1"
+  moreover assume "vs1 < c_view"
+  moreover assume "situation_has_nodes s"
+  ultimately show ?thesis
+    using between_concrete by blast
+qed
+
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
    n = nat (v - c_view) \<longrightarrow>
@@ -461,6 +565,13 @@ lemma safety_sub_ind' :
    two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
    prepared s x v vs1 \<longrightarrow>
    - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s"
+apply(induction n; auto)
+ using commit_prepared_again apply blast
+apply(case_tac "vs1 < c_view")
+ using between_case apply blast
+
+(* perform induction! *)
+
 sorry
 
 lemma safety_sub_ind'' :
