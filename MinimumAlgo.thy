@@ -553,7 +553,7 @@ lemma the_induction :
    - 1 \<le> vs1 \<Longrightarrow>
    vs1 < v \<Longrightarrow>
    \<not> vs1 < c_view \<Longrightarrow>
-   c_view \<noteq> - 1 \<Longrightarrow>
+    \<not> c_view \<le> - 1 \<Longrightarrow>
    \<forall>x y v.
       n = nat (v - c_view) \<longrightarrow>
       c_view \<le> v \<longrightarrow>
@@ -562,7 +562,65 @@ lemma the_induction :
       two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
       (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
    one_third_slashed s"
+apply(subgoal_tac "-1 < vs1")
+ defer
+ apply auto[1]
+apply(subgoal_tac "
+    \<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs1 \<and>
+           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
+           prepared s h_anc vs1 vs'")
+ apply(clarsimp)
+ apply(drule_tac x = h_anc in spec)
+ apply(drule_tac x = y in spec)
+ apply(drule_tac x = vs1 in spec)
+ apply(clarsimp)
+ 
+
+
+
+
+(*
+proof -
+ assume "- 1 \<le> vs1"
+ moreover assume "\<not> vs1 < c_view"
+ moreover assume " \<not> c_view \<le> - 1"
+ ultimately have "-1 < vs1"
+  by linarith
+ moreover assume "prepared s x v vs1"
+ moreover assume "situation_has_nodes s"
+ ultimately have "
+    (\<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs1 \<and>
+           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
+           two_thirds_sent_message s (Prepare (h_anc, vs1, vs'))) \<or>
+    one_third_slashed s"
+   sorry
+ then have "
+    (\<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs1 \<and>
+           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
+           prepared s h_anc vs1 vs') \<or>
+    one_third_slashed s"
+   by (simp add: prepared_def)
+*)
+
 sorry
+
+(*
+definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
+where
+"slashed_two s n =
+  (n \<in> Nodes s \<and>
+     (\<exists> x v vs1.
+       ((n, Prepare (x, v, vs1)) \<in> Messages s \<and>
+       vs \<noteq> -1 \<and>
+       (\<not> (\<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs \<and>
+           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
+           two_thirds_sent_message s (Prepare (h_anc, vs1, vs')))))))"
+
+*)
 
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
@@ -577,7 +635,7 @@ apply(induction n; auto)
  using commit_prepared_again apply blast
 apply(case_tac "vs1 < c_view")
  using between_case apply blast
-apply(case_tac "c_view = -1")
+apply(case_tac "c_view \<le> -1")
  apply(clarsimp)
  using negone_commit apply blast
 apply(clarsimp)
