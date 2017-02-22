@@ -37,9 +37,9 @@ definition is_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<R
 where
 "is_descendant s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
-definition no_dependency :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
-"no_dependency s x y = ((\<not> is_descendant s x y) \<and> (\<not> is_descendant s y x))"
+"not_on_same_chain s x y = ((\<not> is_descendant s x y) \<and> (\<not> is_descendant s y x))"
 
 
 
@@ -328,15 +328,15 @@ apply(auto simp add: two_thirds_def one_third_def situation_has_nodes_def two_tw
 done
 
 lemma dependency_self [simp]:
-  "\<not> no_dependency s y y"
-apply(simp add: no_dependency_def)
+  "\<not> not_on_same_chain s y y"
+apply(simp add: not_on_same_chain_def)
 apply(simp add: is_descendant_def)
 apply(rule_tac x = 0 in exI)
 apply(simp)
 done
 
 lemma prepare_direct_conflict' :
- "no_dependency s x y \<Longrightarrow>
+ "not_on_same_chain s x y \<Longrightarrow>
   finite (Nodes s) \<Longrightarrow>
   n \<in> Nodes s \<Longrightarrow>
   (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
@@ -353,7 +353,7 @@ done
 
 
 lemma prepare_direct_conflict :
- "no_dependency s x y \<Longrightarrow>
+ "not_on_same_chain s x y \<Longrightarrow>
   finite (Nodes s) \<Longrightarrow>
   n \<in> Nodes s \<Longrightarrow>
   (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
@@ -363,7 +363,7 @@ done
 
 lemma safety_case1' :
    "situation_has_nodes s \<Longrightarrow>
-    no_dependency s x y \<Longrightarrow>
+    not_on_same_chain s x y \<Longrightarrow>
     two_thirds s (\<lambda>n. (n, Prepare (x, v2, vs1)) \<in> Messages s) \<Longrightarrow>
     two_thirds s (\<lambda>n. (n, Prepare (y, v2, vs2)) \<in> Messages s) \<Longrightarrow> one_third s (slashed s)"
 proof -
@@ -374,7 +374,7 @@ proof -
     "one_third s (\<lambda>n. (n, Prepare (x, v2, vs1)) \<in> Messages s
                    \<and> (n, Prepare (y, v2, vs2)) \<in> Messages s)"
     using two_two by blast
-  moreover assume "no_dependency s x y"
+  moreover assume "not_on_same_chain s x y"
   moreover assume "situation_has_nodes s"
   ultimately show "one_third s (slashed s)"
     by (rule_tac mp_one_third; auto simp add: situation_has_nodes_def prepare_direct_conflict)
@@ -382,7 +382,7 @@ qed
 
 lemma safety_case1 :
   "situation_has_nodes s \<Longrightarrow>
-   no_dependency s x y \<Longrightarrow>
+   not_on_same_chain s x y \<Longrightarrow>
    prepared s x v2 vs1 \<Longrightarrow>
    prepared s y v2 vs2 \<Longrightarrow>
    one_third_slashed s"
@@ -390,9 +390,9 @@ apply(auto simp add: one_third_slashed_def prepared_def two_thirds_sent_message_
      safety_case1')
 done
 
-lemma no_dependency_sym [simp] :
- "no_dependency s x y = no_dependency s y x"
-apply(auto simp add: no_dependency_def)
+lemma not_on_same_chain_sym [simp] :
+ "not_on_same_chain s x y = not_on_same_chain s y x"
+apply(auto simp add: not_on_same_chain_def)
 done
 
 lemma commit_prepare :
@@ -405,7 +405,7 @@ using two_more_two_ex by blast
 
 lemma commit_prepared :
  "situation_has_nodes s \<Longrightarrow>
-  no_dependency s x y \<Longrightarrow>
+  not_on_same_chain s x y \<Longrightarrow>
   two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
   prepared s x v2 vs1 \<Longrightarrow>
   - 1 \<le> vs1 \<Longrightarrow> vs1 < v2 \<Longrightarrow> one_third_slashed s"
@@ -415,7 +415,7 @@ proof(simp add: two_thirds_sent_message_def)
  ultimately have "(\<exists> vs. prepared s y v2 vs \<and> -1 \<le> vs \<and> vs < v2) \<or> one_third_slashed s"
    using commit_prepare by blast
  moreover assume "situation_has_nodes s"
- moreover assume "no_dependency s x y"
+ moreover assume "not_on_same_chain s x y"
  moreover assume "prepared s x v2 vs1"
  ultimately show "one_third_slashed s"
    	using safety_case1 by blast
@@ -658,14 +658,14 @@ lemma safety_sub_ind'' :
 using safety_sub_ind' by blast
 
 lemma no_pependency_ancestor [simp] :
- "no_dependency s x y \<Longrightarrow>
+ "not_on_same_chain s x y \<Longrightarrow>
   nth_ancestor s m x \<noteq> Some y"
-apply(simp add: no_dependency_def is_descendant_def)
+apply(simp add: not_on_same_chain_def is_descendant_def)
 done
 
 lemma safety_sub_ind :
   "situation_has_nodes s \<longrightarrow>
-   no_dependency s x y \<longrightarrow>
+   not_on_same_chain s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
    prepared s x v1' vs1 \<longrightarrow>
@@ -682,7 +682,7 @@ done
 
 lemma safety_sub_closer :
   "situation_has_nodes s \<longrightarrow>
-   no_dependency s x y \<longrightarrow>
+   not_on_same_chain s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
    prepared s x v1 vs1 \<longrightarrow>
@@ -698,7 +698,7 @@ done
 
 lemma safety_sub' :
   "situation_has_nodes s \<Longrightarrow>
-   no_dependency s x y \<Longrightarrow>
+   not_on_same_chain s x y \<Longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
    prepared s x v1 vs1 \<Longrightarrow>
@@ -711,7 +711,7 @@ lemma accountable_safety_sub :
   "situation_has_nodes s \<Longrightarrow>
    \<exists> v1 vs1. two_thirds_sent_message s (Commit (x, v1)) \<and> prepared s x v1 vs1 \<and> -1 \<le> vs1 \<and> vs1 < v1 \<Longrightarrow>
    \<exists> v2 vs2. two_thirds_sent_message s (Commit (y, v2)) \<and> prepared s y v2 vs2 \<and> -1 \<le> vs2 \<and> vs2 < v2 \<Longrightarrow>
-   no_dependency s x y \<Longrightarrow>
+   not_on_same_chain s x y \<Longrightarrow>
    one_third_slashed s
   "
 apply(auto simp add: safety_sub')
@@ -722,7 +722,7 @@ done
 lemma accountable_safety :
   "situation_has_nodes s \<Longrightarrow>
    committed s x \<Longrightarrow> committed s y \<Longrightarrow>
-   no_dependency s x y \<Longrightarrow> one_third_slashed s"
+   not_on_same_chain s x y \<Longrightarrow> one_third_slashed s"
 apply(auto simp add: committed_def)
 using accountable_safety_sub commit_expand by blast
 
