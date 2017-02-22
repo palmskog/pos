@@ -110,7 +110,7 @@ where
        vs \<noteq> -1 \<and>
        (\<not> (\<exists> h_anc vs'.
            -1 \<le> vs' \<and> vs' < vs \<and>
-           Some h_anc = nth_ancestor s (nat (vs - vs')) h \<and>
+           Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
            prepared s h_anc vs vs')))))"
 
 definition slashed_three :: "situation \<Rightarrow> node \<Rightarrow> bool"
@@ -544,6 +544,21 @@ proof -
 qed
 
 
+lemma ancestors_ancestor : "
+  \<forall> m x y.
+   nth_ancestor s n x = Some y \<longrightarrow>
+   nth_ancestor s m y = nth_ancestor s (n + m) x
+"
+apply(induction n; auto)
+apply(case_tac "PrevHash s x"; auto)
+done
+
+lemma nat_min_min :
+"    vs1 < v \<Longrightarrow>
+    \<not> vs1 < c_view \<Longrightarrow>
+   (nat (v - vs1) + nat (vs1 - c_view)) = nat (v - c_view)"
+by (simp add: Nat_Transfer.transfer_nat_int_functions(1))
+
 lemma ancestor_ancestor : "
        nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
        vs1 < v \<Longrightarrow>
@@ -551,10 +566,11 @@ lemma ancestor_ancestor : "
        \<not> c_view \<le> - 1 \<Longrightarrow>
        - 1 \<le> vs' \<Longrightarrow>
        vs' < vs1 \<Longrightarrow>
-       Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<Longrightarrow>
+       Some h_anc = nth_ancestor s (nat (v - vs1)) x \<Longrightarrow>
        nth_ancestor s (nat (vs1 - c_view)) h_anc \<noteq> Some y 
 "
-sorry
+apply(simp add: ancestors_ancestor nat_min_min)
+done
 
 lemma the_induction :
       "nat (v - c_view) \<le> Suc n \<Longrightarrow>
@@ -578,7 +594,7 @@ apply(case_tac "vs1 = -1")
 apply(subgoal_tac "
        (\<exists> h_anc vs'.
            -1 \<le> vs' \<and> vs' < vs1 \<and>
-           Some h_anc = nth_ancestor s (nat (vs1 - vs')) x \<and>
+           Some h_anc = nth_ancestor s (nat (v - vs1)) x \<and>
            prepared s h_anc vs1 vs') \<or> one_third_slashed s")
  apply clarsimp
  apply(drule_tac x = h_anc in spec)
