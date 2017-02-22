@@ -55,7 +55,8 @@ fact {
 
 // Slashing condition [iii]
 fact {
-  all c : Commit | c.c_sender in SaneNode implies all p : Prepare | c.c_sender = p.p_sender && 
+  all c : Commit | c.c_sender in SaneNode implies all p : Prepare | c.c_sender = p.p_sender &&
+    p.p_hash = c.c_hash && 
     p.p_view_src in c.c_hash.h_view.(^v_prev) && c.c_hash.h_view in p.p_hash.h_view.(^v_prev)
     implies 0 = 1
 }
@@ -102,4 +103,4 @@ pred incompatible_commits {
 
 // run ownPrev for 10
 
-run incompatible_commits for 6
+run incompatible_commits for 4
