@@ -717,11 +717,16 @@ lemma accountable_safety_sub :
 apply(auto simp add: safety_sub')
 done
 
+
+
 lemma accountable_safety :
   "situation_has_nodes s \<Longrightarrow>
    committed s x \<Longrightarrow> committed s y \<Longrightarrow>
    no_dependency s x y \<Longrightarrow> one_third_slashed s"
 apply(auto simp add: committed_def)
 using accountable_safety_sub commit_expand by blast
+
+(* what happens with half_slashed? *)
+
 
 end
