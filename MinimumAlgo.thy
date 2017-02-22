@@ -421,27 +421,80 @@ proof(simp add: two_thirds_sent_message_def)
    	using safety_case1 by blast
 qed
 
-
-(*
-       prepared s y v2' vs2 \<Longrightarrow>
+(*definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
+where
+"slashed_two s n =
+  (n \<in> Nodes s \<and>
+     (\<exists> h v vs.
+       ((n, Prepare (h, v, vs)) \<in> Messages s \<and>
+       vs \<noteq> -1 \<and>
+       (\<not> (\<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs \<and>
+           Some h_anc = nth_ancestor s (nat (vs - vs')) h \<and>
+           two_thirds_sent_message s (Prepare (h_anc, vs, vs')))))))"
 *)
 
+(*
+  prepared s y v2' vs2 \<Longrightarrow>
+  
+*)
+
+lemma negone_commit :
+  "situation_has_nodes s \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
+   v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
+sorry
+
+lemma between_negone_and_something :
+   "situation_has_nodes s \<Longrightarrow>
+       two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
+       prepared s x v1' (- 1) \<Longrightarrow>
+       v2 \<le> v1' \<Longrightarrow> \<not> v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
+sorry
+
+lemma safety_sub_ind' :
+  "\<forall> c_view s x y v vs1.
+   n = nat (v - c_view) \<longrightarrow>
+   v \<ge> c_view \<longrightarrow>
+   situation_has_nodes s \<longrightarrow>
+   nth_ancestor s n x \<noteq> Some y \<longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
+   prepared s x v vs1 \<longrightarrow>
+   - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s"
+sorry
+
+lemma safety_sub_ind'' :
+  "n = nat (v - c_view) \<Longrightarrow>
+   v \<ge> c_view \<Longrightarrow>
+   situation_has_nodes s \<Longrightarrow>
+   nth_ancestor s n x \<noteq> Some y \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+   prepared s x v vs1 \<Longrightarrow>
+   - 1 \<le> vs1 \<Longrightarrow> vs1 < v \<Longrightarrow> one_third_slashed s"
+using safety_sub_ind' by blast
+
+lemma no_pependency_ancestor [simp] :
+ "no_dependency s x y \<Longrightarrow>
+  nth_ancestor s m x \<noteq> Some y"
+apply(simp add: no_dependency_def is_descendant_def)
+done
 
 lemma safety_sub_ind :
-  "\<forall> v1 v2 vs1 vs2 v1' v2'.
-   n = nat (v1' - v2) + nat (v2' - v1) \<longrightarrow>
-   situation_has_nodes s \<longrightarrow>
+  "situation_has_nodes s \<longrightarrow>
    no_dependency s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
    prepared s x v1' vs1 \<longrightarrow>
    prepared s y v2' vs2 \<longrightarrow>
-   v2 \<le> v1' \<or> v1 \<le> v2' \<longrightarrow>
+   v1' \<ge> v2 \<or> v2' \<ge> v1 \<longrightarrow>
    - 1 \<le> vs1 \<longrightarrow> vs1 < v1' \<longrightarrow> - 1 \<le> vs2 \<longrightarrow> vs2 < v2' \<longrightarrow> one_third_slashed s"
-apply(induction n; auto)
-   using commit_prepared apply auto[1]
-  using commit_prepared no_dependency_sym apply blast
-sorry
+apply(auto)
+ apply(rule_tac s = s and c_view = v2 and v = v1' and n = "nat (v1' - v2)"
+       in safety_sub_ind''; simp?)
+apply(rule_tac s = s and c_view = v1 and v = v2' and n = "nat (v2' - v1)"
+       in safety_sub_ind''; simp?)
+done
+ 
 
 lemma safety_sub_closer :
   "situation_has_nodes s \<longrightarrow>
