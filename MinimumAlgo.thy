@@ -64,10 +64,17 @@ where
 "slashing_three s n =
   (n \<in> Nodes s \<and>
     (\<exists> x y v w u.
-      ((n, Commit (x, v)) \<in> Messages s \<and>
-       (n, Prepare (y, w, u)) \<in> Messages s \<and>
-       u < v \<and> v < w)))"
+      (n, Commit (x, v)) \<in> Messages s \<and>
+      (n, Prepare (y, w, u)) \<in> Messages s \<and>
+      u < v \<and> v < w))"
 
-(* four *)
+definition slashing_four :: "situation \<Rightarrow> node \<Rightarrow> bool"
+where
+"slashing_four s n =
+  (n \<in> Nodes s \<and>
+    (\<exists> x1 x2 v vs1 vs2.
+      (n, Prepare (x1, v, vs1)) \<in> Messages s \<and>
+      (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
+      (x1 \<noteq> x2 \<or> vs1 \<noteq> vs2)))"
 
 end
