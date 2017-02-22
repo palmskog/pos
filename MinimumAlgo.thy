@@ -443,20 +443,8 @@ lemma negone_commit :
   "situation_has_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
    v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
-sorry
+	using commit_expand by fastforce
 
-lemma between_negone_and_something :
-   "situation_has_nodes s \<Longrightarrow>
-       two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
-       prepared s x v1' (- 1) \<Longrightarrow>
-       v2 \<le> v1' \<Longrightarrow> \<not> v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
-sorry
-
-(*
-    \<forall>n. n \<in> Nodes s \<longrightarrow>
-        (n, Prepare (y, c_view, vs)) \<in> Messages s \<and> (n, Prepare (x, c_view, vs1)) \<in> Messages s \<longrightarrow>
-        slashed s n
-*)
 
 lemma one_third_prepared_conflict :
  "x \<noteq> y \<Longrightarrow>
@@ -556,6 +544,26 @@ proof -
     using between_concrete by blast
 qed
 
+lemma the_induction :
+  "Suc n = nat (v - c_view) \<Longrightarrow>
+   situation_has_nodes s \<Longrightarrow>
+   nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
+   two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
+   prepared s x v vs1 \<Longrightarrow>
+   - 1 \<le> vs1 \<Longrightarrow>
+   vs1 < v \<Longrightarrow>
+   \<not> vs1 < c_view \<Longrightarrow>
+   c_view \<noteq> - 1 \<Longrightarrow>
+   \<forall>x y v.
+      n = nat (v - c_view) \<longrightarrow>
+      c_view \<le> v \<longrightarrow>
+      situation_has_nodes s \<longrightarrow>
+      nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
+      two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
+      (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
+   one_third_slashed s"
+sorry
+
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
    n = nat (v - c_view) \<longrightarrow>
@@ -569,10 +577,13 @@ apply(induction n; auto)
  using commit_prepared_again apply blast
 apply(case_tac "vs1 < c_view")
  using between_case apply blast
-
-(* perform induction! *)
-
-sorry
+apply(case_tac "c_view = -1")
+ apply(clarsimp)
+ using negone_commit apply blast
+apply(clarsimp)
+apply(drule_tac x = c_view in spec)
+apply(drule_tac x = s in spec)
+using the_induction by blast
 
 lemma safety_sub_ind'' :
   "n = nat (v - c_view) \<Longrightarrow>
