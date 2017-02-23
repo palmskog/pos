@@ -21,6 +21,10 @@ datatype node = Node int
 
 type_synonym sent = "node * message"
 
+definition view_of_sent_message :: "(node * message) \<Rightarrow> view"
+where
+"view_of_sent_message = view_of_message o snd"
+
 record situation =
   Nodes :: "node set"
   Messages :: "sent set"
@@ -751,7 +755,7 @@ where
 "some_commits_by_honest_at s v =
   (\<exists> n \<in> Nodes s.
      (\<not> slashed s n) \<and>
-     (\<exists> h v. (n, Commit (h, v)) \<in> Messages s)
+     (\<exists> h. (n, Commit (h, v)) \<in> Messages s)
   )
 "
 
@@ -781,7 +785,9 @@ where
 lemma some_commits_by_honest_intro :
   "\<exists>n\<in>Nodes s. (\<exists>h v. (n, Commit (h, v)) \<in> Messages s) \<and> \<not> slashed s n \<Longrightarrow>
    {M1. some_commits_by_honest_at s M1} \<noteq> {}"
-sorry
+apply(auto simp add: some_commits_by_honest_at_def)
+done
+
 
 definition finite_messages :: "situation \<Rightarrow> bool"
 where
@@ -790,7 +796,29 @@ where
 lemma finite_commits_by_honest :
   "finite_messages s \<Longrightarrow>
    finite {M1. some_commits_by_honest_at s M1}"
-sorry
+proof -
+ assume "finite_messages s"
+ then have "finite (Messages s)"
+   by (simp add: finite_messages_def)
+ moreover have "{m \<in> Messages s. \<exists> n h v. m = (n, Commit (h, v))} \<subseteq> Messages s"
+   by blast
+ ultimately have "finite {m \<in> Messages s. \<exists> n h v. m = (n, Commit (h, v))}"
+   by auto
+ moreover have "{m \<in> Messages s. \<exists> n h v. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v))} \<subseteq>
+                {m \<in> Messages s. \<exists> n h v. m = (n, Commit (h, v))}"
+   by blast
+ then have "finite {m \<in> Messages s. \<exists> n h v. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v))}"
+   using calculation infinite_super by auto
+ then have "finite {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}"
+   by(rule Finite_Set.finite_image_set)
+ moreover have " {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}
+               = {M1. some_commits_by_honest_at s M1}"
+   apply (auto simp add: some_commits_by_honest_at_def view_of_sent_message_def view_of_message_def)
+    apply auto[1]
+   by force   
+ ultimately show "finite {M1. some_commits_by_honest_at s M1}"
+   by auto
+qed
 
 lemma finite_views_have_max :
  "views \<noteq> {} \<Longrightarrow> finite views \<Longrightarrow>
