@@ -94,6 +94,28 @@ proof (simp add: one_third_def)
     by auto
 qed
 
+lemma mp_two_thirds :
+  "finite (Nodes s) \<Longrightarrow>
+   \<forall> n. n \<in> Nodes s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
+   two_thirds s f \<Longrightarrow> two_thirds s g"
+proof (simp add: two_thirds_def)
+  assume "\<forall> n. n \<in> Nodes s \<longrightarrow> f n \<longrightarrow> g n"
+  moreover assume "finite (Nodes s)"
+  ultimately have "card {n \<in> Nodes s. f n} \<le> card {n \<in> Nodes s. g n}"
+    proof -
+      assume "\<forall> n. n \<in> Nodes s \<longrightarrow> f n \<longrightarrow> g n"
+      then have "{n \<in> Nodes s. f n} \<subseteq> {n \<in> Nodes s. g n}"
+        by blast
+      moreover assume "finite (Nodes s)"
+      ultimately show ?thesis
+        by (simp add: card_mono)
+    qed
+  moreover assume "2 * card (Nodes s) \<le> 3 * card {n \<in> Nodes s. f n}"
+  ultimately show "2 * card (Nodes s) \<le> 3 * card {n \<in> Nodes s. g n}"
+    by auto
+qed
+
+
 definition two_thirds_sent_message :: "situation \<Rightarrow> message \<Rightarrow> bool"
 where
 "two_thirds_sent_message s m =
@@ -764,7 +786,8 @@ where
 "some_messages_by_honest_at s v =
   (\<exists> n \<in> Nodes s.
      (\<not> slashed s n) \<and>
-     (\<exists> m. (n, m) \<in> Messages s))"
+     (\<exists> m. view_of_message m = v \<and> 
+       (n, m) \<in> Messages s))"
 
 definition no_commits_by_honest_after :: "situation \<Rightarrow> view \<Rightarrow> bool"
 where
@@ -786,6 +809,12 @@ lemma some_commits_by_honest_intro :
   "\<exists>n\<in>Nodes s. (\<exists>h v. (n, Commit (h, v)) \<in> Messages s) \<and> \<not> slashed s n \<Longrightarrow>
    {M1. some_commits_by_honest_at s M1} \<noteq> {}"
 apply(auto simp add: some_commits_by_honest_at_def)
+done
+
+lemma some_messages_by_honest_intro :
+  "\<exists>n\<in>Nodes s. (\<exists>m. (n, m) \<in> Messages s) \<and> \<not> slashed s n \<Longrightarrow>
+   {M1. some_messages_by_honest_at s M1} \<noteq> {}"
+apply(auto simp add: some_messages_by_honest_at_def)
 done
 
 
@@ -819,6 +848,32 @@ proof -
  ultimately show "finite {M1. some_commits_by_honest_at s M1}"
    by auto
 qed
+
+lemma finite_messages_by_honest :
+  "finite_messages s \<Longrightarrow>
+   finite {M1. some_messages_by_honest_at s M1}"
+proof -
+ assume "finite_messages s"
+ then have "finite (Messages s)"
+   by (simp add: finite_messages_def)
+ moreover have "{m \<in> Messages s. \<exists> n p. m = (n, p)} \<subseteq> Messages s"
+   by blast
+ ultimately have "finite {m \<in> Messages s. \<exists> n p. m = (n, p)}"
+   by auto
+ moreover have "{m \<in> Messages s. \<exists> n p. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, p)} \<subseteq>
+                {m \<in> Messages s. \<exists> n p. m = (n, p)}"
+   by blast
+ then have "finite {m \<in> Messages s. \<exists> n p. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, p)}"
+   using calculation infinite_super by auto
+ then have "finite {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, p))}"
+   by(rule Finite_Set.finite_image_set)
+ moreover have " {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Nodes s \<and> (\<not> slashed s n) \<and> m = (n, p))}
+               = {M1. some_messages_by_honest_at s M1}"
+   by (auto simp add: some_messages_by_honest_at_def view_of_sent_message_def view_of_message_def)
+ ultimately show "finite {M1. some_messages_by_honest_at s M1}"
+   by auto
+qed
+
 
 lemma view_some_arithmetics :
   "(v :: view) \<le> x \<or> v \<noteq> x"
@@ -873,22 +928,332 @@ apply(drule finite_commits_by_honest)
 using M1_prop_sub2 finite_views_have_max by presburger
 
 
+lemma M2_prop_sub2 :
+"\<exists> v_max. v_max \<in> {M1. some_messages_by_honest_at s M1}
+    \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> {M1. some_messages_by_honest_at s M1})
+ \<Longrightarrow>
+ \<exists>M2. M2 = - 1 \<and> (\<forall>n\<in>Nodes s. (\<exists>m. (n, m) \<in> Messages s) \<longrightarrow> slashed s n) \<or>
+         some_messages_by_honest_at s M2 \<and> no_messages_by_honest_after s M2"
+ apply(clarsimp)
+ apply(rule_tac x = v_max in exI)
+ apply(rule disjI2)
+ apply(rule conjI)
+  apply(auto)
+ apply(auto simp add: no_messages_by_honest_after_def some_messages_by_honest_at_def)
+done
+
+
 lemma M2_properties:
-  "\<exists> M2.
+  "finite_messages s \<Longrightarrow>
+   \<exists> M2.
      (M2 = -1 \<and> no_messages_by_honest s)
    \<or> (some_messages_by_honest_at s M2 \<and> no_messages_by_honest_after s M2)
   "
-oops
+apply(case_tac "no_messages_by_honest s")
+ apply(rule_tac x = "-1" in exI)
+ apply clarsimp
+apply(simp add: no_messages_by_honest_def)
+apply(drule some_messages_by_honest_intro)
+apply(drule finite_messages_by_honest)
+apply(rule_tac M2_prop_sub2)
+using finite_views_have_max by blast
+
+definition no_new_slashed :: "situation \<Rightarrow> situation \<Rightarrow> bool"
+where
+"no_new_slashed s s_new =
+  (\<forall> n. n \<in> Nodes s \<longrightarrow> slashed s_new n \<longrightarrow> slashed s n)"
+
+lemma no_messages_no_commits [simp] :
+ "no_messages_by_honest s \<Longrightarrow> no_commits_by_honest s"
+apply(simp add: no_messages_by_honest_def no_commits_by_honest_def)
+apply blast
+done
+
+lemma no_messages_then_no_messages_after [simp] :
+  "no_messages_by_honest s \<Longrightarrow> no_messages_by_honest_after s m"
+apply(simp add: no_messages_by_honest_def no_messages_by_honest_after_def)
+by blast
+
+lemma no_messages_denies_somit_commits_at [simp] :
+  "no_messages_by_honest s \<Longrightarrow>
+       \<not> some_commits_by_honest_at s m"
+by(auto simp add: no_messages_by_honest_def some_commits_by_honest_at_def)
+
+lemma no_messages_denies_some_messages_at [simp] :
+  "no_messages_by_honest s \<Longrightarrow>
+   \<not> some_messages_by_honest_at s m"
+apply(auto simp add: no_messages_by_honest_def some_messages_by_honest_at_def)
+done
+
+lemma no_commits_denies_some_commits_at [simp] :
+  "no_commits_by_honest s \<Longrightarrow>
+   no_commits_by_honest_after s M1"
+apply(auto simp add: no_commits_by_honest_def no_commits_by_honest_after_def)
+done
+
+definition liveness_witness :: "hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> node set \<Rightarrow> (node * message) set"
+where
+"liveness_witness h M1 M2 ns =
+   {(n, Prepare (h, M2 + 1, M1)) | n. n \<in> ns} \<union>
+   {(n, Commit  (h, M2 + 1))     | n. n \<in> ns}"
+
+lemma author_of_witness [simp] :
+  "authors (liveness_witness h_new M1 M2 ns) = ns"
+apply(simp add: authors_def liveness_witness_def)
+by blast
+
+lemma unslashed_can_use_witness [simp]:
+ "unslashed_can_extend s
+  \<lparr>Nodes = Nodes s,
+   Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+   PrevHash = PrevHash s\<rparr>"
+apply(simp add: unslashed_can_extend_def)
+apply(rule_tac x  = " liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n}" in exI)
+apply(simp add: unslashed_nodes_def)
+done
+
+lemma more_than_two_thirds_mp :
+  "finite (Nodes s) \<Longrightarrow>
+   \<forall> n. n \<in> Nodes s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
+   more_than_two_thirds s f \<Longrightarrow> more_than_two_thirds s g"
+proof (simp add: more_than_two_thirds_def)
+ assume "\<forall>n. n \<in> Nodes s \<longrightarrow> f n \<longrightarrow> g n"
+ then have "{n \<in> Nodes s. f n} \<subseteq> {n \<in> Nodes s. g n}"
+  by blast
+ moreover assume "finite (Nodes s)"
+ then have "finite {n \<in> Nodes s. g n}"
+  by simp
+ ultimately have "card {n \<in> Nodes s. f n} \<le> card {n \<in> Nodes s. g n}"
+  by (simp add: card_mono)
+ then show "2 * card (Nodes s) < 3 * card {n \<in> Nodes s. f n} \<Longrightarrow>
+    2 * card (Nodes s) < 3 * card {n \<in> Nodes s. g n}"
+  by linarith
+qed
+
+lemma witness_commits_inner :
+  "Nodes s \<noteq> {} \<and> finite (Nodes s) \<Longrightarrow>
+    more_than_two_thirds s (\<lambda>n. \<not> slashed s n) \<Longrightarrow>
+    2 * card (Nodes s)
+    \<le> 3 * card {n \<in> Nodes s. (n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> n \<in> Nodes s \<and> \<not> slashed s n}"
+proof -
+  assume "more_than_two_thirds s (\<lambda>n. \<not> slashed s n)"
+  moreover assume "Nodes s \<noteq> {} \<and> finite (Nodes s)"
+  ultimately have "more_than_two_thirds s (\<lambda> n. (n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> \<not> slashed s n)"
+    by (metis (no_types, lifting) more_than_two_thirds_mp)
+  then have "
+     (2 * card (Nodes s) < 3 * card ({n. n \<in> Nodes s \<and> ((n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> \<not> slashed s n)}))
+  "
+    by (auto simp add: more_than_two_thirds_def)
+  moreover have "
+    {n \<in> Nodes s. (n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> n \<in> Nodes s \<and> \<not> slashed s n} =
+    {n. n \<in> Nodes s \<and> ((n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> \<not> slashed s n)}"
+    by blast
+  ultimately have " 2 * card (Nodes s)
+    < 3 * card {n \<in> Nodes s. (n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> n \<in> Nodes s \<and> \<not> slashed s n}
+  "
+    by auto
+  then show " 2 * card (Nodes s)
+    \<le> 3 * card {n \<in> Nodes s. (n, Commit (h_new, M2 + 1)) \<in> Messages s \<or> n \<in> Nodes s \<and> \<not> slashed s n}"
+    by auto
+qed
+
+lemma witness_commits [simp] :
+ "situation_has_nodes s \<Longrightarrow>
+   \<not> one_third_slashed s \<Longrightarrow>
+  committed
+  \<lparr>Nodes = Nodes s,
+   Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+   PrevHash = PrevHash s\<rparr>
+   h_new"
+apply(simp add: committed_def one_third_slashed_def)
+apply(rule_tac x = "M2 + 1"in exI)
+apply(simp add: two_thirds_sent_message_def liveness_witness_def two_thirds_def one_third_def situation_has_nodes_def)
+using witness_commits_inner by blast
+
+lemma two_thirds_transfer [simp] :
+ "two_thirds \<lparr> Nodes = Nodes s, Messages = X, PrevHash = Y \<rparr> g =
+  two_thirds s g"
+apply(simp add: two_thirds_def)
+done
+
+lemma prepared_transfer :
+ "finite (Nodes s) \<Longrightarrow>
+  prepared s ha v vs \<Longrightarrow>
+  prepared
+     \<lparr>Nodes = Nodes s,
+      Messages = Messages s \<union> X,
+      PrevHash = PrevHash s\<rparr>
+     ha v vs"
+apply(simp add: prepared_def two_thirds_sent_message_def)
+apply(rule mp_two_thirds; simp)
+done
+
+lemma witness_has_certain_view :
+ "(na, Commit (ha, v)) \<in> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n} \<Longrightarrow>
+  v = M2 + 1
+ "
+apply(simp add: liveness_witness_def)
+done
+
+lemma witness_has_certain_hash :
+ "(na, Commit (ha, v)) \<in> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n} \<Longrightarrow>
+  ha = h_new
+ "
+apply(simp add: liveness_witness_def)
+done
+
+lemma more_than_two_thirds_imply_two_thirds :
+ "more_than_two_thirds s f \<Longrightarrow>
+  two_thirds s f"
+apply(simp add: more_than_two_thirds_def two_thirds_def)
+done
+
+lemma witness_prepares:
+  "situation_has_nodes s \<Longrightarrow>
+   \<not> one_third_slashed s \<Longrightarrow>
+   prepared
+        \<lparr>Nodes = Nodes s,
+           Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+           PrevHash = PrevHash s\<rparr>
+        h_new (M2 + 1) M1"
+apply(simp add: prepared_def one_third_slashed_def liveness_witness_def
+      two_thirds_sent_message_def)
+apply(drule more_than_two_thirds_imply_two_thirds)
+by (metis (no_types, lifting) mp_two_thirds situation_has_nodes_def)
+
+
+lemma commit_can_be_after_neg_one:
+"situation_has_nodes s \<Longrightarrow>
+ n \<in> Nodes s \<Longrightarrow>
+ \<not> slashed s n \<Longrightarrow>
+ (n, Commit (h, M1)) \<in> Messages s \<Longrightarrow>
+ - 1 \<le> M1
+"
+	using condition_one_positive' by fastforce
+
+lemma witness_not_slashed_one :
+ "situation_has_nodes s \<Longrightarrow>
+  \<not> one_third_slashed s \<Longrightarrow>
+  no_messages_by_honest_after s M2 \<Longrightarrow>
+  n \<in> Nodes s \<Longrightarrow>
+  \<not> slashed s n \<Longrightarrow>
+  (n, Commit (h, M1)) \<in> Messages s \<Longrightarrow>
+  na \<in> Nodes s \<Longrightarrow>
+  slashed_one
+  \<lparr>Nodes = Nodes s,
+   Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+   PrevHash = PrevHash s\<rparr>
+   na \<Longrightarrow>
+  slashed_one s na"
+apply(simp add: slashed_one_def)
+apply clarsimp
+apply(case_tac "(na, Commit (ha, v)) \<in> Messages s")
+ apply(simp)
+ apply(rule_tac x = ha in exI)
+ apply(rule_tac x = v in exI)
+ apply(clarsimp)
+ apply(drule_tac x = vs in spec)
+ apply(simp)
+ using prepared_transfer situation_has_nodes_def apply blast
+apply(simp)
+apply(drule_tac x = M1 in spec)
+apply(subgoal_tac "v = M2 + 1"; simp add: witness_has_certain_view)
+apply(subgoal_tac "ha = h_new"; simp add: witness_has_certain_hash)
+apply clarsimp
+apply (simp add: witness_prepares)
+using commit_can_be_after_neg_one no_messages_by_honest_after_def view_of_message_def by fastforce
+
+lemma slashed_destruct :
+  "slashed s n \<Longrightarrow>
+   slashed_one s n \<or> slashed_two s n \<or> slashed_three s n \<or> slashed_four s n"
+apply(simp add: slashed_def)
+done
+
+lemma witness_not_guilty [simp]:
+      "situation_has_nodes s \<Longrightarrow>
+       finite_messages s \<Longrightarrow>
+       \<not> one_third_slashed s \<Longrightarrow>
+       \<not> no_messages_by_honest s \<Longrightarrow>
+       \<not> no_commits_by_honest s \<Longrightarrow>
+       no_commits_by_honest_after s M1 \<Longrightarrow>
+       some_messages_by_honest_at s M2 \<Longrightarrow>
+       no_messages_by_honest_after s M2 \<Longrightarrow>
+       n \<in> Nodes s \<Longrightarrow>
+       \<not> slashed s n \<Longrightarrow>
+       (n, Commit (h, M1)) \<in> Messages s \<Longrightarrow>
+       nth_ancestor s (nat (M2 + 1 - M1)) h_new = Some h \<Longrightarrow>
+       \<not> committed s h_new \<Longrightarrow>
+       no_new_slashed s
+        \<lparr>Nodes = Nodes s,
+           Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+           PrevHash = PrevHash s\<rparr>"
+apply(auto simp add: no_new_slashed_def)
+apply(drule slashed_destruct)
+apply(auto)
+   apply(subgoal_tac "slashed_one s na")
+    apply(simp add: slashed_def)
+   apply(rule_tac witness_not_slashed_one; simp)
+  
+
+
+sorry
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>
    (* decendants_exist s \<Longrightarrow> *)
+   finite_messages s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    \<exists> s_new h_new.
      \<not> committed s h_new \<and>
      unslashed_can_extend s s_new \<and>
-     committed s_new h_new
+     committed s_new h_new \<and>
+     no_new_slashed s s_new
   "
+apply(subgoal_tac "
+   \<exists> M1.
+     (M1 = -1 \<and> no_commits_by_honest s)
+   \<or> (some_commits_by_honest_at s M1 \<and> no_commits_by_honest_after s M1)")
+ defer
+ apply(rule M1_properties; simp)
+apply(subgoal_tac "\<exists> M2.
+     (M2 = -1 \<and> no_messages_by_honest s)
+   \<or> (some_messages_by_honest_at s M2 \<and> no_messages_by_honest_after s M2)")
+ defer
+ apply(rule M2_properties; simp)
+apply clarsimp
+apply(case_tac "no_messages_by_honest s")
+ apply simp
+ (* here, what kind of hash shall I pick?
+  * It's easier in the general case.
+  *)
+ defer
+apply simp
+apply(case_tac "no_commits_by_honest s")
+ apply simp
+ (* here, what kind of hash shall I pick?
+  * It's easier in the general case.
+  *)
+ defer
+apply clarsimp
+apply(simp add: some_commits_by_honest_at_def)
+apply clarsimp
+apply(subgoal_tac
+  "\<exists> h_new. nth_ancestor s (nat (M2 + 1 - M1)) h_new = Some h \<and>
+            \<not> committed s h_new")
+ apply clarsimp
+ apply(rule_tac x =
+   "\<lparr> Nodes = Nodes s
+    , Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n}
+    , PrevHash = PrevHash s
+    \<rparr>" in
+ exI)
+ apply(rule_tac x = h_new in exI)
+ apply(auto)
+ 
+
+
+
+oops
 
 
 end
