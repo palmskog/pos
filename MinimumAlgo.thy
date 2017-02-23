@@ -1190,6 +1190,12 @@ lemma witness_prepares_certain_view :
 apply(simp add: liveness_witness_def)
 done
 
+lemma witness_commits_certain_view :
+  "(n, Commit (h, v)) \<in> liveness_witness h_new M1 M2 nodes \<Longrightarrow>
+   v = M2 + 1"
+apply(simp add: liveness_witness_def)
+done
+
 lemma witness_prepares_certain_view_src :
   "(na, Prepare (ha, v, vs)) \<in> liveness_witness h_new M1 M2 nodes \<Longrightarrow>
    vs = M1
@@ -1265,6 +1271,124 @@ apply(drule_tac x = h_src in spec)
 apply clarsimp
 using prepared_transfer situation_has_nodes_def by blast
 
+lemma no_prepare_after :
+  "no_messages_by_honest_after s M2 \<Longrightarrow>
+   na \<in> Nodes s \<Longrightarrow>
+   (na, Prepare (y, w, u)) \<in> Messages s \<Longrightarrow>
+   \<not> slashed s na \<Longrightarrow> w \<le> M2"
+apply(simp add: no_messages_by_honest_after_def view_of_message_def)
+by fastforce
+
+lemma slashed_intro_three :
+  "slashed_three s n \<Longrightarrow> slashed s n"
+apply(simp add: slashed_def)
+done
+
+lemma no_commit_after :
+  "    no_commits_by_honest_after s M1 \<Longrightarrow>
+       na \<in> Nodes s \<Longrightarrow>
+       (na, Commit (x, v)) \<in> Messages s \<Longrightarrow> \<not> slashed s na \<Longrightarrow> v \<le> M1"
+apply(simp add: no_commits_by_honest_after_def view_of_message_def)
+by fastforce
+
+
+
+lemma slashed_three_transfers :
+ " situation_has_nodes s \<Longrightarrow>
+          finite_messages s \<Longrightarrow>
+          \<not> one_third_slashed s \<Longrightarrow>
+          no_commits_by_honest_after s M1 \<Longrightarrow>
+          no_messages_by_honest_after s M2 \<Longrightarrow>
+          na \<in> Nodes s \<Longrightarrow>
+          slashed_three
+           \<lparr>Nodes = Nodes s,
+              Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+              PrevHash = PrevHash s\<rparr>
+           na \<Longrightarrow>
+          slashed s na
+"
+apply(simp add: slashed_three_def)
+apply clarsimp
+apply(case_tac "(na, Prepare (y, w, u)) \<in> Messages s")
+ apply(simp)
+ apply(case_tac "(na, Commit (x, v)) \<in> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n}")
+  apply simp
+  apply(subgoal_tac "v = M2 + 1")
+   apply clarsimp
+   apply(subgoal_tac "\<not> slashed s na \<Longrightarrow> w \<le> M2")
+    apply linarith
+   using no_prepare_after apply blast
+  apply(drule witness_commits_certain_view; simp)
+ apply clarsimp
+ apply(rule slashed_intro_three)
+ apply(simp add: slashed_three_def)
+ apply(rule_tac x = x in exI)
+ apply(rule_tac x = y in exI)
+ apply(rule_tac x = v in exI)
+ apply blast
+apply clarsimp
+apply(subgoal_tac "w = M2 + 1")
+ apply clarsimp
+ apply(subgoal_tac "u = M1")
+  apply clarsimp
+  apply(case_tac "(na, Commit (x, v)) \<in> Messages s")
+   apply(subgoal_tac "\<not> slashed s na \<Longrightarrow> v \<le> M1")
+    apply linarith
+   using no_commit_after apply blast
+  apply clarsimp
+  apply (subgoal_tac "v = M2 + 1")
+   apply clarsimp
+  using witness_commits_certain_view apply blast
+ using witness_prepares_certain_view_src apply blast
+using witness_prepares_certain_view by blast
+
+lemma slashed_four_transfers :
+"no_messages_by_honest_after s M2 \<Longrightarrow>
+ na \<in> Nodes s \<Longrightarrow>
+    slashed_four
+    \<lparr>Nodes = Nodes s,
+              Messages = Messages s \<union> liveness_witness h_new M1 M2 {n \<in> Nodes s. \<not> slashed s n},
+              PrevHash = PrevHash s\<rparr>
+           na \<Longrightarrow>
+          slashed s na"
+apply(simp add: slashed_four_def)
+apply clarsimp
+apply(case_tac "(na, Prepare (x1, v, vs1)) \<in> Messages s")
+ apply clarsimp
+ apply(subgoal_tac "\<not> slashed s na \<Longrightarrow> v \<le> M2")
+  apply(case_tac "slashed s na"; simp)
+  apply(case_tac "(na, Prepare (x2, v, vs2)) \<in> Messages s"; simp)
+   apply(simp add: slashed_def)
+   apply(simp add: slashed_four_def)
+  apply(subgoal_tac "v = M2 + 1")
+   apply linarith
+  apply (simp add: witness_prepares_certain_view)
+ using no_prepare_after apply blast
+apply clarsimp
+apply(subgoal_tac "v = M2 + 1")
+ apply clarsimp
+ apply(case_tac "(na, Prepare (x2, M2 + 1, vs2)) \<in> Messages s")
+  apply clarsimp
+  apply(subgoal_tac "\<not> slashed s na \<Longrightarrow> M2 + 1 \<le> M2")
+   apply linarith
+  using no_prepare_after apply blast
+ apply clarsimp
+ apply(subgoal_tac "vs1 = M1")
+  apply clarsimp
+  apply(subgoal_tac "vs2 = M1")
+   apply clarsimp
+   apply(subgoal_tac "x1 = h_new")
+    apply clarsimp
+    apply (subgoal_tac "x2 = h_new")
+     apply clarsimp
+    using witness_prepares_certain_hash apply blast
+   using witness_prepares_certain_hash apply blast
+  using witness_prepares_certain_view_src apply blast
+ using witness_prepares_certain_view_src apply blast
+using witness_prepares_certain_view apply blast
+done
+
+
 lemma slashed_destruct :
   "slashed s n \<Longrightarrow>
    slashed_one s n \<or> slashed_two s n \<or> slashed_three s n \<or> slashed_four s n"
@@ -1273,6 +1397,11 @@ done
 
 lemma slashed_intro_two :
   "slashed_two s na \<Longrightarrow> slashed s na"
+apply(simp add: slashed_def)
+done
+
+lemma slashed_intro_four :
+  "slashed_four s na \<Longrightarrow> slashed s na"
 apply(simp add: slashed_def)
 done
 
@@ -1302,14 +1431,92 @@ apply(auto)
    apply(rule_tac witness_not_slashed_one; blast)
   apply(rule slashed_intro_two)
   apply(rule_tac slashed_two_transfers; blast)
- 
+ apply(rule_tac slashed_three_transfers; blast)
+apply(rule_tac slashed_four_transfers; blast)
+done
 
+definition new_descendant_available :: "situation \<Rightarrow> bool"
+where
+"new_descendant_available s =
+  (\<forall> n h v diff.
+    (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
+    (\<exists> h_new. nth_ancestor s diff h_new = Some h \<and> \<not> committed s h_new))"
 
+lemma no_messages_cannot_commit :
+  "situation_has_nodes s \<Longrightarrow>
+    \<not> one_third_slashed s \<Longrightarrow> no_messages_by_honest s \<Longrightarrow> \<not> committed s h"
+	using committed_implies_prepare it_is_somebody_that_prepares no_messages_by_honest_def by blast
+
+lemma corner_kick :
+  "situation_has_nodes s \<Longrightarrow>
+    finite_messages s \<Longrightarrow>
+    \<not> one_third_slashed s \<Longrightarrow>
+    no_messages_by_honest s \<Longrightarrow>
+    no_new_slashed s
+     \<lparr>Nodes = Nodes s,
+        Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) (- 1) {n \<in> Nodes s. \<not> slashed s n},
+        PrevHash = PrevHash s\<rparr>"
+apply(simp add: no_new_slashed_def)
+apply clarsimp
+apply(case_tac "slashed s n"; simp)
+apply(drule slashed_destruct)
+apply auto
+   apply(simp add: slashed_one_def)
+   apply clarsimp
+   apply(case_tac "(n, Commit (h, v)) \<in> Messages s")
+    apply simp
+    using no_messages_by_honest_def apply blast
+   apply simp
+   apply(simp add: liveness_witness_def)
+   apply clarsimp
+   apply(drule_tac x = "-1" in spec)
+   apply clarsimp
+   apply(simp add: prepared_def two_thirds_sent_message_def)
+   apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds mp_two_thirds not_one_third one_third_slashed_def situation_has_nodes_def)
+  apply(simp add: slashed_two_def)
+  apply clarsimp
+  apply(case_tac "(n, Prepare (h, v, vs)) \<in> Messages s")
+   apply simp
+   using no_messages_by_honest_def apply blast
+  apply clarsimp
+  apply(simp add: liveness_witness_def)
+ apply(simp add: slashed_three_def)
+ apply clarsimp
+ apply(case_tac "(n, Commit (x, v)) \<in> Messages s")
+  using no_messages_by_honest_def apply blast
+ apply clarsimp
+ apply(case_tac "(n, Prepare (y, w, u)) \<in> Messages s")
+  using no_messages_by_honest_def apply blast
+ apply clarsimp
+ apply(simp add: liveness_witness_def)
+apply(simp add: slashed_four_def)
+apply clarsimp
+apply(case_tac "(n, Prepare (x1, v, vs1)) \<in> Messages s")
+ using no_messages_by_honest_def apply blast
+apply(case_tac "(n, Prepare (x2, v, vs2)) \<in> Messages s")
+ using no_messages_by_honest_def apply blast
+apply clarsimp
+apply(simp add: liveness_witness_def)
+done
+
+lemma corner_kick2 :
+  "situation_has_nodes s \<Longrightarrow>
+          new_descendant_available s \<Longrightarrow>
+          finite_messages s \<Longrightarrow>
+          \<not> one_third_slashed s \<Longrightarrow>
+          \<not> no_messages_by_honest s \<Longrightarrow>
+          no_commits_by_honest s \<Longrightarrow>
+          \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
+          some_messages_by_honest_at s M2 \<Longrightarrow>
+          no_messages_by_honest_after s M2 \<Longrightarrow>
+          \<exists>s_new h_new.
+             \<not> committed s h_new \<and>
+             unslashed_can_extend s s_new \<and> committed s_new h_new \<and> no_new_slashed s s_new "
 sorry
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>
-   (* decendants_exist s \<Longrightarrow> *)
+   new_descendant_available s \<Longrightarrow>
    finite_messages s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    \<exists> s_new h_new.
@@ -1332,17 +1539,25 @@ apply(subgoal_tac "\<exists> M2.
 apply clarsimp
 apply(case_tac "no_messages_by_honest s")
  apply simp
- (* here, what kind of hash shall I pick?
-  * It's easier in the general case.
-  *)
- defer
+ apply(rule_tac x =
+   "\<lparr> Nodes = Nodes s
+    , Messages = Messages s \<union> liveness_witness (Hash 0) M1 M2 {n \<in> Nodes s. \<not> slashed s n}
+    , PrevHash = PrevHash s
+    \<rparr>" in
+ exI)
+ apply(rule_tac x = "Hash 0" in exI)
+ apply(simp add: no_messages_cannot_commit)
+ using corner_kick apply auto[1]
 apply simp
 apply(case_tac "no_commits_by_honest s")
  apply simp
+ apply(case_tac "some_commits_by_honest_at s M1")
+  using no_commits_by_honest_def some_commits_by_honest_at_def apply blast
+ apply clarsimp
  (* here, what kind of hash shall I pick?
   * It's easier in the general case.
   *)
- defer
+ apply(rule corner_kick2; blast)
 apply clarsimp
 apply(simp add: some_commits_by_honest_at_def)
 apply clarsimp
@@ -1356,13 +1571,13 @@ apply(subgoal_tac
     , PrevHash = PrevHash s
     \<rparr>" in
  exI)
- apply(rule_tac x = h_new in exI)
- apply(auto)
- 
-
-
-
-oops
-
+ apply(rule_tac x = h_new in exI; simp)
+apply(simp add: new_descendant_available_def)
+apply(drule_tac x = n in spec)
+apply(drule_tac x = h in spec)
+apply(subgoal_tac " (\<exists>v. (n, Commit (h, v)) \<in> Messages s)")
+ apply blast
+apply blast
+done
 
 end
