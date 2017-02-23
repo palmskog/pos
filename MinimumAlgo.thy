@@ -11,6 +11,12 @@ datatype message =
   Commit "hash * view"
 | Prepare "hash * view * view"
 
+definition view_of_message :: "message \<Rightarrow> view"
+where
+"view_of_message m = (case m of
+   Commit (h, v) \<Rightarrow> v
+ | Prepare (h, v, v_src) \<Rightarrow> v)"
+
 datatype node = Node int
 
 type_synonym sent = "node * message"
@@ -421,24 +427,6 @@ proof(simp add: two_thirds_sent_message_def)
    	using safety_case1 by blast
 qed
 
-(*definition slashed_two :: "situation \<Rightarrow> node \<Rightarrow> bool"
-where
-"slashed_two s n =
-  (n \<in> Nodes s \<and>
-     (\<exists> h v vs.
-       ((n, Prepare (h, v, vs)) \<in> Messages s \<and>
-       vs \<noteq> -1 \<and>
-       (\<not> (\<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs \<and>
-           Some h_anc = nth_ancestor s (nat (vs - vs')) h \<and>
-           two_thirds_sent_message s (Prepare (h_anc, vs, vs')))))))"
-*)
-
-(*
-  prepared s y v2' vs2 \<Longrightarrow>
-  
-*)
-
 lemma negone_commit :
   "situation_has_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
@@ -706,7 +694,6 @@ lemma safety_sub' :
    - 1 \<le> vs1 \<Longrightarrow> vs1 < v1 \<Longrightarrow> - 1 \<le> vs2 \<Longrightarrow> vs2 < v2 \<Longrightarrow> one_third_slashed s"
 using safety_sub_closer by auto
 
-
 lemma accountable_safety_sub :
   "situation_has_nodes s \<Longrightarrow>
    \<exists> v1 vs1. two_thirds_sent_message s (Commit (x, v1)) \<and> prepared s x v1 vs1 \<and> -1 \<le> vs1 \<and> vs1 < v1 \<Longrightarrow>
@@ -727,6 +714,131 @@ apply(auto simp add: committed_def)
 using accountable_safety_sub commit_expand by blast
 
 (* what happens with half_slashed? *)
+
+
+definition authors :: "(node * message) set \<Rightarrow> node set"
+where
+  "authors ms = {n. \<exists> m. (n, m) \<in> ms}"
+
+definition unslashed_nodes :: "situation \<Rightarrow> node set"
+where
+  "unslashed_nodes s = {n \<in> Nodes s. \<not> slashed s n}"
+
+definition unslashed_can_extend :: "situation \<Rightarrow> situation \<Rightarrow> bool"
+where
+"unslashed_can_extend s s_new =
+ (\<exists> new_messages.
+  authors new_messages \<subseteq> unslashed_nodes s \<and>
+  Nodes s_new = Nodes s \<and>
+  Messages s_new = Messages s \<union> new_messages \<and>
+  PrevHash s_new = PrevHash s_new)"
+
+definition no_commits_by_honest :: "situation \<Rightarrow> bool"
+where
+"no_commits_by_honest s =
+  (\<forall> n \<in> Nodes s. (\<forall> h v.
+     (n, Commit (h, v)) \<in> Messages s \<longrightarrow> slashed s n
+  ))
+"
+
+definition no_messages_by_honest :: "situation \<Rightarrow> bool"
+where
+"no_messages_by_honest s =
+  (\<forall> n \<in> Nodes s. (\<forall> m. (n, m) \<in> Messages s \<longrightarrow> slashed s n))"
+
+definition some_commits_by_honest_at :: "situation \<Rightarrow> view \<Rightarrow> bool"
+where
+"some_commits_by_honest_at s v =
+  (\<exists> n \<in> Nodes s.
+     (\<not> slashed s n) \<and>
+     (\<exists> h v. (n, Commit (h, v)) \<in> Messages s)
+  )
+"
+
+definition some_messages_by_honest_at :: "situation \<Rightarrow> view \<Rightarrow> bool"
+where
+"some_messages_by_honest_at s v =
+  (\<exists> n \<in> Nodes s.
+     (\<not> slashed s n) \<and>
+     (\<exists> m. (n, m) \<in> Messages s))"
+
+definition no_commits_by_honest_after :: "situation \<Rightarrow> view \<Rightarrow> bool"
+where
+"no_commits_by_honest_after s v_latest =
+   (\<forall> n \<in> Nodes s. (\<forall> h v.
+     (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
+     v \<le> v_latest \<or> slashed s n
+     ))
+"
+
+definition no_messages_by_honest_after :: "situation \<Rightarrow> view \<Rightarrow> bool"
+where
+"no_messages_by_honest_after s v_latest =
+  (\<forall> n \<in> Nodes s. (\<forall> m.
+    (n, m) \<in> Messages s \<longrightarrow>
+    view_of_message m \<le> v_latest \<or> slashed s n))"
+
+lemma some_commits_by_honest_intro :
+  "\<exists>n\<in>Nodes s. (\<exists>h v. (n, Commit (h, v)) \<in> Messages s) \<and> \<not> slashed s n \<Longrightarrow>
+   {M1. some_commits_by_honest_at s M1} \<noteq> {}"
+sorry
+
+definition finite_messages :: "situation \<Rightarrow> bool"
+where
+"finite_messages s = finite (Messages s)"
+
+lemma finite_commits_by_honest :
+  "finite_messages s \<Longrightarrow>
+   finite {M1. some_commits_by_honest_at s M1}"
+sorry
+
+lemma finite_views_have_max :
+ "views \<noteq> {} \<Longrightarrow> finite views \<Longrightarrow>
+  \<exists> v_max.
+    v_max \<in> views \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> views)"
+sorry
+
+lemma M1_properties :
+  "finite_messages s \<Longrightarrow>
+   \<exists> M1.
+     (M1 = -1 \<and> no_commits_by_honest s)
+   \<or> (some_commits_by_honest_at s M1 \<and> no_commits_by_honest_after s M1)
+   "
+apply(case_tac "no_commits_by_honest s")
+ apply(rule_tac x = "-1" in exI)
+ apply simp
+apply(simp add: no_commits_by_honest_def)
+apply(drule some_commits_by_honest_intro)
+apply(drule finite_commits_by_honest)
+apply(subgoal_tac "
+  \<exists> v_max.
+    v_max \<in> {M1. some_commits_by_honest_at s M1}
+    \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> {M1. some_commits_by_honest_at s M1})")
+ apply(clarsimp)
+ apply(rule_tac x = v_max in exI)
+ apply(rule disjI2)
+ apply(rule conjI)
+  apply(auto)
+ apply(simp add: no_commits_by_honest_after_def some_commits_by_honest_at_def)
+by (metis all_not_in_conv finite_views_have_max mem_Collect_eq)
+
+
+lemma M2_properties:
+  "\<exists> M2.
+     (M2 = -1 \<and> no_messages_by_honest s)
+   \<or> (some_messages_by_honest_at s M2 \<and> no_messages_by_honest_after s M2)
+  "
+oops
+
+lemma plausible_liveness :
+  "situation_has_nodes s \<Longrightarrow>
+   (* decendants_exist s \<Longrightarrow> *)
+   \<not> one_third_slashed s \<Longrightarrow>
+   \<exists> s_new h_new.
+     \<not> committed s h_new \<and>
+     unslashed_can_extend s s_new \<and>
+     committed s_new h_new
+  "
 
 
 end
