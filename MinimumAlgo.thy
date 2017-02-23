@@ -1499,6 +1499,7 @@ apply clarsimp
 apply(simp add: liveness_witness_def)
 done
 
+
 lemma corner_kick2 :
   "situation_has_nodes s \<Longrightarrow>
           new_descendant_available s \<Longrightarrow>
@@ -1512,7 +1513,33 @@ lemma corner_kick2 :
           \<exists>s_new h_new.
              \<not> committed s h_new \<and>
              unslashed_can_extend s s_new \<and> committed s_new h_new \<and> no_new_slashed s s_new "
-sorry
+apply(rule_tac x =
+   "\<lparr> Nodes = Nodes s
+    , Messages = Messages s \<union> liveness_witness (Hash 0) (-1) M2 {n \<in> Nodes s. \<not> slashed s n}
+    , PrevHash = PrevHash s
+    \<rparr>" in
+ exI)
+apply(rule_tac x = "Hash 0" in exI)
+apply auto
+ using committed_def no_commits_by_honest_def one_third_slashed_def two_more_two_ex two_thirds_sent_message_def apply fastforce
+apply(auto simp add: no_new_slashed_def)
+apply(drule slashed_destruct)
+apply(case_tac "slashed s n"; auto)
+   apply(simp add: slashed_one_def)
+   apply clarsimp
+   apply(case_tac "(n, Commit (h, v)) \<in> Messages s")
+    using no_commits_by_honest_def apply blast
+   apply clarsimp
+   apply(simp add: liveness_witness_def)
+   apply clarsimp
+   apply(drule_tac x = "-1" in spec)
+   apply clarsimp
+   apply(subgoal_tac "- 1 \<le> M2")
+    apply simp
+    apply(simp add: prepared_def two_thirds_sent_message_def)
+    apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds more_than_two_thirds_mp not_one_third one_third_slashed_def situation_has_nodes_def)
+   using sane_prepare_view_ge_negone apply blast
+
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>
