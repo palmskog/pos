@@ -820,11 +820,43 @@ proof -
    by auto
 qed
 
+lemma view_some_arithmetics :
+  "(v :: view) \<le> x \<or> v \<noteq> x"
+	by blast
+
 lemma finite_views_have_max :
- "views \<noteq> {} \<Longrightarrow> finite views \<Longrightarrow>
+ "finite (views :: view set) \<Longrightarrow> views \<noteq> {} \<Longrightarrow>
   \<exists> v_max.
     v_max \<in> views \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> views)"
-sorry
+apply(induct rule: finite_induct)
+ apply blast
+apply(case_tac "F = {}")
+ apply (clarsimp)
+apply clarsimp
+apply(case_tac "x > v_max")
+ apply(rule_tac x = x in exI)
+ apply(clarsimp)
+ apply(erule disjE)
+  apply clarsimp
+ apply force
+apply(rule_tac x = v_max in exI)
+apply clarsimp
+apply force
+done
+
+lemma M1_prop_sub2 :
+"\<exists> v_max. v_max \<in> {M1. some_commits_by_honest_at s M1}
+    \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> {M1. some_commits_by_honest_at s M1})
+ \<Longrightarrow>
+ \<exists>M1. M1 = - 1 \<and> (\<forall>n\<in>Nodes s. (\<exists>h v. (n, Commit (h, v)) \<in> Messages s) \<longrightarrow> slashed s n) \<or>
+     some_commits_by_honest_at s M1 \<and> no_commits_by_honest_after s M1"
+ apply(clarsimp)
+ apply(rule_tac x = v_max in exI)
+ apply(rule disjI2)
+ apply(rule conjI)
+  apply(auto)
+ apply(auto simp add: no_commits_by_honest_after_def some_commits_by_honest_at_def)
+done
 
 lemma M1_properties :
   "finite_messages s \<Longrightarrow>
@@ -838,17 +870,7 @@ apply(case_tac "no_commits_by_honest s")
 apply(simp add: no_commits_by_honest_def)
 apply(drule some_commits_by_honest_intro)
 apply(drule finite_commits_by_honest)
-apply(subgoal_tac "
-  \<exists> v_max.
-    v_max \<in> {M1. some_commits_by_honest_at s M1}
-    \<and> (\<forall> v. v \<le> v_max \<or> v \<notin> {M1. some_commits_by_honest_at s M1})")
- apply(clarsimp)
- apply(rule_tac x = v_max in exI)
- apply(rule disjI2)
- apply(rule conjI)
-  apply(auto)
- apply(simp add: no_commits_by_honest_after_def some_commits_by_honest_at_def)
-by (metis all_not_in_conv finite_views_have_max mem_Collect_eq)
+using M1_prop_sub2 finite_views_have_max by presburger
 
 
 lemma M2_properties:
