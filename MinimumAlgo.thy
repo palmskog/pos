@@ -464,24 +464,6 @@ apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_
 apply(rule condition_one_positive')
 using two_more_two_ex by blast
 
-lemma commit_prepared :
- "situation_has_nodes s \<Longrightarrow>
-  not_on_same_chain s x y \<Longrightarrow>
-  two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
-  prepared s x v2 vs1 \<Longrightarrow>
-  - 1 \<le> vs1 \<Longrightarrow> vs1 < v2 \<Longrightarrow> one_third_slashed s"
-proof(simp add: two_thirds_sent_message_def)
- assume "situation_has_nodes s"
- moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, v2)) \<in> Messages s)"
- ultimately have "(\<exists> vs. prepared s y v2 vs \<and> -1 \<le> vs \<and> vs < v2) \<or> one_third_slashed s"
-   using commit_prepare by blast
- moreover assume "situation_has_nodes s"
- moreover assume "not_on_same_chain s x y"
- moreover assume "prepared s x v2 vs1"
- ultimately show "one_third_slashed s"
-   	using safety_case1 by blast
-qed
-
 lemma negone_commit :
   "situation_has_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
