@@ -12,7 +12,7 @@ In Alloy, *enable Options->Forbid Overflow*
 
 `MinimumAlgo.thy` contains some proofs about safety and liveness of a protocol.  Open the file with [Isabelle 2016-1](http://isabelle.in.tum.de/).
 
-Or, adjust the path in `document_generation.sh` and run it to obtain a PDF file.
+Or, adjust the path in `document_generation.sh` and run it to obtain a PDF file (which should look like [this one](https://yoichihirai.com/minimal.pdf)).
 
 ## License
 
