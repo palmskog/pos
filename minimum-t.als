@@ -79,7 +79,7 @@ fact {
 // Slashing condition [iv]
 fact {
   all p0: Prepare | all p1:Prepare | p0.p_sender = p1.p_sender && p1.p_sender in SaneNode && p0.p_hash.h_view = p1.p_hash.h_view implies
-    /* p0.p_view_src = p1.p_view_src && */ p0.p_hash = p1.p_hash
+    p0.p_view_src = p1.p_view_src && p0.p_hash = p1.p_hash
 }
 
 pred some_commit {
@@ -110,7 +110,7 @@ pred incompatible_commits {
     (not h1 in h0.(*h_prev)) &&
     (#{n0 : Node | some c0 : Commit | c0.c_sender = n0 && c0.c_hash = h0}).mul[3] >= (#Node).mul[2] &&
     (#{n1 : Node | some c1 : Commit | c1.c_sender = n1 && c1.c_hash = h1}).mul[3] >= (#Node).mul[2] &&
-    (#SlashedNode).mul[3] < (#Node)
+    (#SlashedNode).mul[3] <= (#Node)
 
 }
 
