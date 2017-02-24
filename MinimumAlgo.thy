@@ -20,8 +20,18 @@ imports Main
 
 begin
 
+section "Definition of the Protocol"
+
+text "In this development we do not know much about hashes.  There are many hashes.
+Two hashes might be equal or not."
+
 datatype hash = Hash int
+
+text "Views are numbers."
+
 type_synonym view = int
+
+text "We have two kinds of messages."
 
 datatype message =
   Commit "hash * view"
@@ -47,11 +57,16 @@ definition view_of_sent_message :: "(node * message) \<Rightarrow> view"
 where
 "view_of_sent_message = view_of_message o snd"
 
+text "A situation might be seen from a global point of view where every sent messages can be seen,
+or more likely seen from a local point of view."
+
 record situation =
   Nodes :: "node set"
   Messages :: "sent set"
   PrevHash :: "hash \<Rightarrow> hash option"
 (* The slashing condition should be a function of the situation *)
+
+section "More Terminology"
 
 definition situation_has_nodes :: "situation \<Rightarrow> bool"
 where
@@ -148,6 +163,12 @@ where
 "prepared s h v vs =
    (two_thirds_sent_message s (Prepare (h, v, vs)))"
 
+definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
+where
+"committed s h = (\<exists> v. two_thirds_sent_message s (Commit (h, v)))"
+
+section "The Slashing Conditions"
+
 definition slashed_one :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
 "slashed_one s n =
@@ -202,13 +223,11 @@ where
                 slashed_three s n \<or>
                 slashed_four s n)"
 
-definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
-where
-"committed s h = (\<exists> v. two_thirds_sent_message s (Commit (h, v)))"
-
 definition one_third_slashed :: "situation \<Rightarrow> bool"
 where
 "one_third_slashed s = one_third s (slashed s)"
+
+section "Useful Lemmas for Accountable Safety"
 
 lemma card_not [simp] :
   "finite s \<Longrightarrow>
@@ -322,8 +341,7 @@ lemma two_more_two_ex :
   "situation_has_nodes s \<Longrightarrow>
    two_thirds s f \<Longrightarrow>
    more_than_two_thirds s g \<Longrightarrow>
-   \<exists> n \<in> Nodes s. f n \<and> g n
-  "
+   \<exists> n \<in> Nodes s. f n \<and> g n "
 apply(rule more_than_one_third_exists)
  apply simp
 apply(rule two_more_two; simp)
@@ -742,6 +760,7 @@ apply(auto simp add: safety_sub')
 done
 
 
+section "Accountable Safety"
 
 lemma accountable_safety :
   "situation_has_nodes s \<Longrightarrow>
@@ -752,6 +771,7 @@ using accountable_safety_sub commit_expand by blast
 
 (* what happens with half_slashed? *)
 
+section "More Terminology for Liveness"
 
 definition authors :: "(node * message) set \<Rightarrow> node set"
 where
@@ -787,16 +807,15 @@ definition some_commits_by_honest_at :: "situation \<Rightarrow> view \<Rightarr
 where
 "some_commits_by_honest_at s v =
   (\<exists> n \<in> Nodes s.
-     (\<not> slashed s n) \<and>
-     (\<exists> h. (n, Commit (h, v)) \<in> Messages s)
-  )
+     \<not> slashed s n \<and>
+     (\<exists> h. (n, Commit (h, v)) \<in> Messages s))
 "
 
 definition some_messages_by_honest_at :: "situation \<Rightarrow> view \<Rightarrow> bool"
 where
 "some_messages_by_honest_at s v =
   (\<exists> n \<in> Nodes s.
-     (\<not> slashed s n) \<and>
+     \<not> slashed s n \<and>
      (\<exists> m. view_of_message m = v \<and> 
        (n, m) \<in> Messages s))"
 
@@ -1188,15 +1207,13 @@ done
 
 lemma witness_prepares_certain_hash :
   "(na, Prepare (ha, v, vs)) \<in> liveness_witness h_new M1 M2 nodes \<Longrightarrow>
-   ha = h_new
-  "
+   ha = h_new"
 apply(simp add: liveness_witness_def)
 done
 
 lemma witness_prepares_certain_view :
   "(na, Prepare (ha, v, vs)) \<in> liveness_witness h_new M1 M2 nodes \<Longrightarrow>
-   v = M2 + 1
-  "
+   v = M2 + 1"
 apply(simp add: liveness_witness_def)
 done
 
@@ -1208,8 +1225,7 @@ done
 
 lemma witness_prepares_certain_view_src :
   "(na, Prepare (ha, v, vs)) \<in> liveness_witness h_new M1 M2 nodes \<Longrightarrow>
-   vs = M1
-  "
+   vs = M1"
 apply(simp add: liveness_witness_def)
 done
 
@@ -1520,7 +1536,6 @@ lemma no_commit_new_slashed_three:
          situation_has_nodes s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
-         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
          no_messages_by_honest_after s M2 \<Longrightarrow>
          n \<in> Nodes s \<Longrightarrow>
          \<not> slashed s n \<Longrightarrow>
@@ -1543,18 +1558,18 @@ done
 
 lemma no_commit_new_slashed_four:
   "no_invalid_view s \<Longrightarrow>
-         situation_has_nodes s \<Longrightarrow>
-         \<not> one_third_slashed s \<Longrightarrow>
-         no_commits_by_honest s \<Longrightarrow>
-         no_messages_by_honest_after s M2 \<Longrightarrow>
-         n \<in> Nodes s \<Longrightarrow>
-         \<not> slashed s n \<Longrightarrow>
-         slashed_four
-          \<lparr>Nodes = Nodes s,
-             Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) M2 {n \<in> Nodes s. \<not> slashed s n},
-             PrevHash = PrevHash s\<rparr>
-          n \<Longrightarrow>
-         False"
+   situation_has_nodes s \<Longrightarrow>
+   \<not> one_third_slashed s \<Longrightarrow>
+   no_commits_by_honest s \<Longrightarrow>
+   no_messages_by_honest_after s M2 \<Longrightarrow>
+   n \<in> Nodes s \<Longrightarrow>
+   \<not> slashed s n \<Longrightarrow>
+   slashed_four
+    \<lparr>Nodes = Nodes s,
+       Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) M2 {n \<in> Nodes s. \<not> slashed s n},
+       PrevHash = PrevHash s\<rparr>
+    n \<Longrightarrow>
+   False"
 apply(simp add: slashed_four_def)
 apply clarsimp
 apply(erule disjE)
@@ -1588,7 +1603,6 @@ lemma no_commit_new_slashed_two:
          situation_has_nodes s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
-         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
          some_messages_by_honest_at s M2 \<Longrightarrow>
          no_messages_by_honest_after s M2 \<Longrightarrow>
          n \<in> Nodes s \<Longrightarrow>
@@ -1620,17 +1634,14 @@ done
 lemma corner_kick2 :
   "no_invalid_view s \<Longrightarrow>
    situation_has_nodes s \<Longrightarrow>
-          new_descendant_available s \<Longrightarrow>
-          finite_messages s \<Longrightarrow>
-          \<not> one_third_slashed s \<Longrightarrow>
-          \<not> no_messages_by_honest s \<Longrightarrow>
-          no_commits_by_honest s \<Longrightarrow>
-          \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
-          some_messages_by_honest_at s M2 \<Longrightarrow>
-          no_messages_by_honest_after s M2 \<Longrightarrow>
-          \<exists>s_new h_new.
-             \<not> committed s h_new \<and>
-             unslashed_can_extend s s_new \<and> committed s_new h_new \<and> no_new_slashed s s_new "
+   new_descendant_available s \<Longrightarrow>
+   \<not> one_third_slashed s \<Longrightarrow>
+   no_commits_by_honest s \<Longrightarrow>
+   some_messages_by_honest_at s M2 \<Longrightarrow>
+   no_messages_by_honest_after s M2 \<Longrightarrow>
+   \<exists>s_new h_new.
+      \<not> committed s h_new \<and>
+      unslashed_can_extend s s_new \<and> committed s_new h_new \<and> no_new_slashed s s_new "
 apply(rule_tac x =
    "\<lparr> Nodes = Nodes s
     , Messages = Messages s \<union> liveness_witness (Hash 0) (-1) M2 {n \<in> Nodes s. \<not> slashed s n}
@@ -1661,6 +1672,8 @@ apply(case_tac "slashed s n"; auto)
  using no_commit_new_slashed_three apply blast
 using no_commit_new_slashed_four apply blast
 done
+
+section "Plausible Liveness"
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>

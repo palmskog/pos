@@ -110,7 +110,7 @@ pred incompatible_commits {
     (not h1 in h0.(*h_prev)) &&
     (#{n0 : Node | some c0 : Commit | c0.c_sender = n0 && c0.c_hash = h0}).mul[3] >= (#Node).mul[2] &&
     (#{n1 : Node | some c1 : Commit | c1.c_sender = n1 && c1.c_hash = h1}).mul[3] >= (#Node).mul[2] &&
-    (#SlashedNode).mul[3] < (#Node)
+    (#SlashedNode).mul[3] <= (#Node)
 }
 
 // how to do the degree of ancestors
