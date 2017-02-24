@@ -1227,18 +1227,12 @@ using situation_has_nodes_def two_more_two_ex by force
 
 lemma slashed_two_transfers :
    "situation_has_nodes s \<Longrightarrow>
-          finite_messages s \<Longrightarrow>
           \<not> one_third_slashed s \<Longrightarrow>
-          \<not> no_messages_by_honest s \<Longrightarrow>
-          \<not> no_commits_by_honest s \<Longrightarrow>
-          no_commits_by_honest_after s M1 \<Longrightarrow>
-          some_messages_by_honest_at s M2 \<Longrightarrow>
           no_messages_by_honest_after s M2 \<Longrightarrow>
           n \<in> Nodes s \<Longrightarrow>
           \<not> slashed s n \<Longrightarrow>
           (n, Commit (h, M1)) \<in> Messages s \<Longrightarrow>
           nth_ancestor s (nat (M2 + 1 - M1)) h_new = Some h \<Longrightarrow>
-          \<not> committed s h_new \<Longrightarrow>
           na \<in> Nodes s \<Longrightarrow>
           slashed_two
            \<lparr>Nodes = Nodes s,
@@ -1305,7 +1299,6 @@ by fastforce
 
 lemma slashed_three_transfers :
  " situation_has_nodes s \<Longrightarrow>
-          finite_messages s \<Longrightarrow>
           \<not> one_third_slashed s \<Longrightarrow>
           no_commits_by_honest_after s M1 \<Longrightarrow>
           no_messages_by_honest_after s M2 \<Longrightarrow>
@@ -1525,13 +1518,9 @@ done
 lemma no_commit_new_slashed_three:
   "no_invalid_view s \<Longrightarrow>
          situation_has_nodes s \<Longrightarrow>
-         new_descendant_available s \<Longrightarrow>
-         finite_messages s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
-         \<not> no_messages_by_honest s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
          \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
-         some_messages_by_honest_at s M2 \<Longrightarrow>
          no_messages_by_honest_after s M2 \<Longrightarrow>
          n \<in> Nodes s \<Longrightarrow>
          \<not> slashed s n \<Longrightarrow>
@@ -1555,13 +1544,8 @@ done
 lemma no_commit_new_slashed_four:
   "no_invalid_view s \<Longrightarrow>
          situation_has_nodes s \<Longrightarrow>
-         new_descendant_available s \<Longrightarrow>
-         finite_messages s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
-         \<not> no_messages_by_honest s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
-         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
-         some_messages_by_honest_at s M2 \<Longrightarrow>
          no_messages_by_honest_after s M2 \<Longrightarrow>
          n \<in> Nodes s \<Longrightarrow>
          \<not> slashed s n \<Longrightarrow>
@@ -1602,10 +1586,7 @@ done
 lemma no_commit_new_slashed_two:
   "no_invalid_view s \<Longrightarrow>
          situation_has_nodes s \<Longrightarrow>
-         new_descendant_available s \<Longrightarrow>
-         finite_messages s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
-         \<not> no_messages_by_honest s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
          \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
          some_messages_by_honest_at s M2 \<Longrightarrow>
@@ -1722,9 +1703,6 @@ apply(case_tac "no_commits_by_honest s")
  apply(case_tac "some_commits_by_honest_at s M1")
   using no_commits_by_honest_def some_commits_by_honest_at_def apply blast
  apply clarsimp
- (* here, what kind of hash shall I pick?
-  * It's easier in the general case.
-  *)
  apply(rule corner_kick2; blast)
 apply clarsimp
 apply(simp add: some_commits_by_honest_at_def)
