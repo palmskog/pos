@@ -68,9 +68,9 @@ record situation =
 
 section "More Terminology"
 
-definition situation_has_nodes :: "situation \<Rightarrow> bool"
+definition situation_has_finitely_many_nodes :: "situation \<Rightarrow> bool"
 where
-"situation_has_nodes s = (Nodes s \<noteq> {} \<and> finite (Nodes s))"
+"situation_has_finitely_many_nodes s = (Nodes s \<noteq> {} \<and> finite (Nodes s))"
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
 where
@@ -242,9 +242,9 @@ proof -
 qed
 
 lemma not_one_third [simp] :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    (\<not> one_third s f) = (more_than_two_thirds s (\<lambda> n. \<not> f n))"
-apply(auto simp add: one_third_def more_than_two_thirds_def situation_has_nodes_def)
+apply(auto simp add: one_third_def more_than_two_thirds_def situation_has_finitely_many_nodes_def)
 done
 
 lemma condition_one_positive :
@@ -312,12 +312,12 @@ qed
 
 
 lemma two_more_two :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    two_thirds s f \<Longrightarrow>
    more_than_two_thirds s g \<Longrightarrow>
    more_than_one_third s (\<lambda> n. f n \<and> g n)
   "
-apply(simp add: two_thirds_def situation_has_nodes_def more_than_two_thirds_def more_than_one_third_def)
+apply(simp add: two_thirds_def situation_has_finitely_many_nodes_def more_than_two_thirds_def more_than_one_third_def)
 apply(rule two_more_two_set; simp)
 done
 
@@ -328,17 +328,17 @@ lemma card_nonzero_exists :
 	by (metis (no_types, lifting) Collect_empty_eq card_0_eq card_ge_0_finite not_gr_zero)
 
 lemma more_than_one_third_exists :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    more_than_one_third s f \<Longrightarrow>
    \<exists> n \<in> Nodes s. f n
   "
 apply(rule card_nonzero_exists)
-apply(simp add: situation_has_nodes_def more_than_one_third_def)
+apply(simp add: situation_has_finitely_many_nodes_def more_than_one_third_def)
 done
 
 
 lemma two_more_two_ex :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    two_thirds s f \<Longrightarrow>
    more_than_two_thirds s g \<Longrightarrow>
    \<exists> n \<in> Nodes s. f n \<and> g n "
@@ -349,14 +349,14 @@ done
 
 
 lemma committed_implies_prepare :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    committed s x \<Longrightarrow> (\<exists> v vs. prepared s x v vs \<and> -1 \<le> vs \<and> vs < v) \<or> one_third_slashed s"
 apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_third_slashed_def)
 apply(rule condition_one_positive)
 using two_more_two_ex by blast
 
 lemma commit_expand:
-  "situation_has_nodes s \<Longrightarrow> 
+  "situation_has_finitely_many_nodes s \<Longrightarrow> 
    two_thirds_sent_message s (Commit (x, v)) \<Longrightarrow>
    (\<exists> vs. prepared s x v vs \<and> -1 \<le> vs \<and> vs < v) \<or> one_third_slashed s"
 apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_third_slashed_def)
@@ -402,11 +402,11 @@ proof -
 qed
 
 lemma two_two :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    two_thirds s f \<Longrightarrow>
    two_thirds s g \<Longrightarrow>
    one_third s (\<lambda> n. f n \<and> g n)"
-apply(auto simp add: two_thirds_def one_third_def situation_has_nodes_def two_two_set)
+apply(auto simp add: two_thirds_def one_third_def situation_has_finitely_many_nodes_def two_two_set)
 done
 
 lemma dependency_self [simp]:
@@ -441,12 +441,12 @@ apply(auto simp add: slashed_def prepare_direct_conflict')
 done
 
 lemma safety_case1' :
-   "situation_has_nodes s \<Longrightarrow>
+   "situation_has_finitely_many_nodes s \<Longrightarrow>
     not_on_same_chain s x y \<Longrightarrow>
     two_thirds s (\<lambda>n. (n, Prepare (x, v2, vs1)) \<in> Messages s) \<Longrightarrow>
     two_thirds s (\<lambda>n. (n, Prepare (y, v2, vs2)) \<in> Messages s) \<Longrightarrow> one_third s (slashed s)"
 proof -
-  assume "situation_has_nodes s"
+  assume "situation_has_finitely_many_nodes s"
   moreover assume "two_thirds s (\<lambda>n. (n, Prepare (x, v2, vs1)) \<in> Messages s)"
   moreover assume "two_thirds s (\<lambda>n. (n, Prepare (y, v2, vs2)) \<in> Messages s)"
   ultimately have
@@ -454,13 +454,13 @@ proof -
                    \<and> (n, Prepare (y, v2, vs2)) \<in> Messages s)"
     using two_two by blast
   moreover assume "not_on_same_chain s x y"
-  moreover assume "situation_has_nodes s"
+  moreover assume "situation_has_finitely_many_nodes s"
   ultimately show "one_third s (slashed s)"
-    by (rule_tac mp_one_third; auto simp add: situation_has_nodes_def prepare_direct_conflict)
+    by (rule_tac mp_one_third; auto simp add: situation_has_finitely_many_nodes_def prepare_direct_conflict)
 qed
 
 lemma safety_case1 :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    not_on_same_chain s x y \<Longrightarrow>
    prepared s x v2 vs1 \<Longrightarrow>
    prepared s y v2 vs2 \<Longrightarrow>
@@ -475,7 +475,7 @@ apply(auto simp add: not_on_same_chain_def)
 done
 
 lemma commit_prepare :
- "situation_has_nodes s \<Longrightarrow>
+ "situation_has_finitely_many_nodes s \<Longrightarrow>
   two_thirds s (\<lambda>n. (n, Commit (y, v)) \<in> Messages s) \<Longrightarrow>
   (\<exists>vs. prepared s y v vs \<and> -1 \<le> vs \<and> vs < v) \<or> one_third_slashed s"
 apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_third_slashed_def)
@@ -483,7 +483,7 @@ apply(rule condition_one_positive')
 using two_more_two_ex by blast
 
 lemma negone_commit :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
    v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
 	using commit_expand by fastforce
@@ -493,43 +493,43 @@ lemma one_third_prepared_conflict :
  "x \<noteq> y \<Longrightarrow>
   one_third s
      (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s \<and> (n, Prepare (x, c_view, vs1)) \<in> Messages s) \<Longrightarrow>
-  situation_has_nodes s \<Longrightarrow>
+  situation_has_finitely_many_nodes s \<Longrightarrow>
   one_third s (slashed s)"
 apply(rule mp_one_third; blast?)
- apply(simp add: situation_has_nodes_def)
+ apply(simp add: situation_has_finitely_many_nodes_def)
 using slashed_def slashed_four_def by blast
 
 lemma prepared_conflict :
 "prepared s y c_view vs \<Longrightarrow>
- situation_has_nodes s \<Longrightarrow>
+ situation_has_finitely_many_nodes s \<Longrightarrow>
  x \<noteq> y \<Longrightarrow>
  prepared s x c_view vs1 \<Longrightarrow>
  one_third_slashed s"
 proof(simp add: prepared_def two_thirds_sent_message_def one_third_slashed_def)
- assume "situation_has_nodes s"
+ assume "situation_has_finitely_many_nodes s"
  moreover assume "two_thirds s (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s)"
  moreover assume "two_thirds s (\<lambda>n. (n, Prepare (x, c_view, vs1)) \<in> Messages s)"
  ultimately have "one_third s (\<lambda>n. (n, Prepare (y, c_view, vs)) \<in> Messages s \<and>
                                    (n, Prepare (x, c_view, vs1)) \<in> Messages s)"
    using two_two by blast
- moreover assume "situation_has_nodes s"
+ moreover assume "situation_has_finitely_many_nodes s"
  moreover assume "x \<noteq> y"
  ultimately show "one_third s (slashed s)"
-  by (metis (no_types, lifting) mp_one_third situation_has_nodes_def slashed_def slashed_four_def)
+  by (metis (no_types, lifting) mp_one_third situation_has_finitely_many_nodes_def slashed_def slashed_four_def)
 qed
 
 lemma commit_prepared :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    x \<noteq> y \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
    prepared s x c_view vs1 \<Longrightarrow>
    one_third_slashed s"
 proof(simp add: two_thirds_sent_message_def)
- assume "situation_has_nodes s"
+ assume "situation_has_finitely_many_nodes s"
  moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s)"
  ultimately have "(\<exists> vs. prepared s y c_view vs \<and> -1 \<le> vs \<and> vs < c_view) \<or> one_third_slashed s"
    using commit_prepare by blast
- moreover assume "situation_has_nodes s"
+ moreover assume "situation_has_finitely_many_nodes s"
  moreover assume "x \<noteq> y"
  moreover assume "prepared s x c_view vs1"
  ultimately show "one_third_slashed s"
@@ -537,14 +537,14 @@ proof(simp add: two_thirds_sent_message_def)
 qed
 
 lemma condition_three_again :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    vs1 < c_view \<Longrightarrow>
    c_view < v \<Longrightarrow>
    one_third s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s \<and> (n, Prepare (x, v, vs1)) \<in> Messages s) \<Longrightarrow>
    one_third_slashed s"
 apply(simp add: one_third_slashed_def)
 apply(rule mp_one_third; blast?)
- apply(simp add: situation_has_nodes_def)
+ apply(simp add: situation_has_finitely_many_nodes_def)
 using slashed_def slashed_three_def by blast
 
 lemma between_concrete :
@@ -552,16 +552,16 @@ lemma between_concrete :
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
    prepared s x v vs1 \<Longrightarrow>
    vs1 < c_view \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
+   situation_has_finitely_many_nodes s \<Longrightarrow>
    one_third_slashed s"
 proof(simp add: prepared_def two_thirds_sent_message_def)
-  assume "situation_has_nodes s"
+  assume "situation_has_finitely_many_nodes s"
   moreover assume "two_thirds s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s)"
   moreover assume "two_thirds s (\<lambda>n. (n, Prepare (x, v, vs1)) \<in> Messages s)"
   ultimately have "one_third s (\<lambda>n. (n, Commit (y, c_view)) \<in> Messages s \<and>
                                  (n, Prepare (x, v, vs1)) \<in> Messages s)"
     using two_two by blast
-  moreover assume "situation_has_nodes s"
+  moreover assume "situation_has_finitely_many_nodes s"
   moreover assume "c_view < v"
   moreover assume "vs1 < c_view"
   ultimately show "one_third_slashed s"
@@ -570,7 +570,7 @@ qed
 
 lemma between_case :
   "c_view \<le> v \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
+   situation_has_finitely_many_nodes s \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
    prepared s x v vs1 \<Longrightarrow> - 1 \<le> vs1 \<Longrightarrow> c_view \<noteq> v \<Longrightarrow> vs1 < c_view \<Longrightarrow> one_third_slashed s"
 proof -
@@ -581,7 +581,7 @@ proof -
   moreover assume "two_thirds_sent_message s (Commit (y, c_view))"
   moreover assume "prepared s x v vs1"
   moreover assume "vs1 < c_view"
-  moreover assume "situation_has_nodes s"
+  moreover assume "situation_has_finitely_many_nodes s"
   ultimately show ?thesis
     using between_concrete by blast
 qed
@@ -617,7 +617,7 @@ done
 
 lemma the_induction :
       "nat (v - c_view) \<le> Suc n \<Longrightarrow>
-       situation_has_nodes s \<Longrightarrow>
+       situation_has_finitely_many_nodes s \<Longrightarrow>
        nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
        two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
        prepared s x v vs1 \<Longrightarrow>
@@ -627,7 +627,7 @@ lemma the_induction :
        \<forall>x y v.
           nat (v - c_view) \<le> n \<longrightarrow>
           c_view \<le> v \<longrightarrow>
-          situation_has_nodes s \<longrightarrow>
+          situation_has_finitely_many_nodes s \<longrightarrow>
           nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
           two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
           (\<forall>vs1. prepared s x v vs1 \<longrightarrow> - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s) \<Longrightarrow>
@@ -669,7 +669,7 @@ lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
    n \<ge> nat (v - c_view) \<longrightarrow>
    v \<ge> c_view \<longrightarrow>
-   situation_has_nodes s \<longrightarrow>
+   situation_has_finitely_many_nodes s \<longrightarrow>
    nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<longrightarrow>
    prepared s x v vs1 \<longrightarrow>
@@ -693,7 +693,7 @@ using the_induction by blast
 lemma safety_sub_ind'' :
   "n = nat (v - c_view) \<Longrightarrow>
    v \<ge> c_view \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
+   situation_has_finitely_many_nodes s \<Longrightarrow>
    nth_ancestor s n x \<noteq> Some y \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
    prepared s x v vs1 \<Longrightarrow>
@@ -707,7 +707,7 @@ apply(simp add: not_on_same_chain_def is_descendant_def)
 done
 
 lemma safety_sub_ind :
-  "situation_has_nodes s \<longrightarrow>
+  "situation_has_finitely_many_nodes s \<longrightarrow>
    not_on_same_chain s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
@@ -724,7 +724,7 @@ done
  
 
 lemma safety_sub_closer :
-  "situation_has_nodes s \<longrightarrow>
+  "situation_has_finitely_many_nodes s \<longrightarrow>
    not_on_same_chain s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
@@ -740,7 +740,7 @@ apply auto
 done
 
 lemma safety_sub' :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    not_on_same_chain s x y \<Longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
@@ -750,7 +750,7 @@ lemma safety_sub' :
 using safety_sub_closer by auto
 
 lemma accountable_safety_sub :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    \<exists> v1 vs1. two_thirds_sent_message s (Commit (x, v1)) \<and> prepared s x v1 vs1 \<and> -1 \<le> vs1 \<and> vs1 < v1 \<Longrightarrow>
    \<exists> v2 vs2. two_thirds_sent_message s (Commit (y, v2)) \<and> prepared s y v2 vs2 \<and> -1 \<le> vs2 \<and> vs2 < v2 \<Longrightarrow>
    not_on_same_chain s x y \<Longrightarrow>
@@ -763,7 +763,7 @@ done
 section "Accountable Safety"
 
 lemma accountable_safety :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    committed s x \<Longrightarrow> committed s y \<Longrightarrow>
    not_on_same_chain s x y \<Longrightarrow> one_third_slashed s"
 apply(auto simp add: committed_def)
@@ -1088,7 +1088,7 @@ proof -
 qed
 
 lemma witness_commits [simp] :
- "situation_has_nodes s \<Longrightarrow>
+ "situation_has_finitely_many_nodes s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
   committed
   \<lparr>Nodes = Nodes s,
@@ -1097,7 +1097,7 @@ lemma witness_commits [simp] :
    h_new"
 apply(simp add: committed_def one_third_slashed_def)
 apply(rule_tac x = "M2 + 1"in exI)
-apply(simp add: two_thirds_sent_message_def liveness_witness_def two_thirds_def one_third_def situation_has_nodes_def)
+apply(simp add: two_thirds_sent_message_def liveness_witness_def two_thirds_def one_third_def situation_has_finitely_many_nodes_def)
 using witness_commits_inner by blast
 
 lemma two_thirds_transfer [simp] :
@@ -1139,7 +1139,7 @@ apply(simp add: more_than_two_thirds_def two_thirds_def)
 done
 
 lemma witness_prepares:
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    prepared
         \<lparr>Nodes = Nodes s,
@@ -1149,11 +1149,11 @@ lemma witness_prepares:
 apply(simp add: prepared_def one_third_slashed_def liveness_witness_def
       two_thirds_sent_message_def)
 apply(drule more_than_two_thirds_imply_two_thirds)
-by (metis (no_types, lifting) mp_two_thirds situation_has_nodes_def)
+by (metis (no_types, lifting) mp_two_thirds situation_has_finitely_many_nodes_def)
 
 
 lemma commit_can_be_after_neg_one:
-"situation_has_nodes s \<Longrightarrow>
+"situation_has_finitely_many_nodes s \<Longrightarrow>
  n \<in> Nodes s \<Longrightarrow>
  \<not> slashed s n \<Longrightarrow>
  (n, Commit (h, M1)) \<in> Messages s \<Longrightarrow>
@@ -1162,7 +1162,7 @@ lemma commit_can_be_after_neg_one:
 	using condition_one_positive' by fastforce
 
 lemma witness_not_slashed_one :
- "situation_has_nodes s \<Longrightarrow>
+ "situation_has_finitely_many_nodes s \<Longrightarrow>
   \<not> one_third_slashed s \<Longrightarrow>
   no_messages_by_honest_after s M2 \<Longrightarrow>
   n \<in> Nodes s \<Longrightarrow>
@@ -1184,7 +1184,7 @@ apply(case_tac "(na, Commit (ha, v)) \<in> Messages s")
  apply(clarsimp)
  apply(drule_tac x = vs in spec)
  apply(simp)
- using prepared_transfer situation_has_nodes_def apply blast
+ using prepared_transfer situation_has_finitely_many_nodes_def apply blast
 apply(simp)
 apply(drule_tac x = M1 in spec)
 apply(subgoal_tac "v = M2 + 1"; simp add: witness_has_certain_view)
@@ -1230,19 +1230,19 @@ apply(simp add: liveness_witness_def)
 done
 
 lemma it_is_somebody_that_prepares :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    prepared s h v v_src \<Longrightarrow>
    \<exists> n. n \<in> Nodes s \<and>
      \<not> slashed s n \<and>
      (n, Prepare (h, v, v_src)) \<in> Messages s
   "
-apply(auto simp add: situation_has_nodes_def one_third_slashed_def prepared_def
+apply(auto simp add: situation_has_finitely_many_nodes_def one_third_slashed_def prepared_def
       two_thirds_sent_message_def)
-using situation_has_nodes_def two_more_two_ex by force
+using situation_has_finitely_many_nodes_def two_more_two_ex by force
 
 lemma slashed_two_transfers :
-   "situation_has_nodes s \<Longrightarrow>
+   "situation_has_finitely_many_nodes s \<Longrightarrow>
           \<not> one_third_slashed s \<Longrightarrow>
           no_messages_by_honest_after s M2 \<Longrightarrow>
           n \<in> Nodes s \<Longrightarrow>
@@ -1268,7 +1268,7 @@ apply(case_tac "(na, Prepare (ha, v, vs)) \<in> Messages s")
  apply clarsimp
  apply(drule_tac x = vs' in spec)
  apply clarsimp
- using prepared_transfer situation_has_nodes_def apply blast
+ using prepared_transfer situation_has_finitely_many_nodes_def apply blast
 apply clarsimp
 apply(subgoal_tac "ha = h_new")
  defer
@@ -1289,7 +1289,7 @@ apply(subgoal_tac "\<exists> h_src. -1 \<le> h_src \<and> h_src < M1 \<and> prep
 apply(clarsimp)
 apply(drule_tac x = h_src in spec)
 apply clarsimp
-using prepared_transfer situation_has_nodes_def by blast
+using prepared_transfer situation_has_finitely_many_nodes_def by blast
 
 lemma no_prepare_after :
   "no_messages_by_honest_after s M2 \<Longrightarrow>
@@ -1314,7 +1314,7 @@ by fastforce
 
 
 lemma slashed_three_transfers :
- " situation_has_nodes s \<Longrightarrow>
+ " situation_has_finitely_many_nodes s \<Longrightarrow>
           \<not> one_third_slashed s \<Longrightarrow>
           no_commits_by_honest_after s M1 \<Longrightarrow>
           no_messages_by_honest_after s M2 \<Longrightarrow>
@@ -1426,7 +1426,7 @@ apply(simp add: slashed_def)
 done
 
 lemma witness_not_guilty [simp]:
-      "situation_has_nodes s \<Longrightarrow>
+      "situation_has_finitely_many_nodes s \<Longrightarrow>
        finite_messages s \<Longrightarrow>
        \<not> one_third_slashed s \<Longrightarrow>
        \<not> no_messages_by_honest s \<Longrightarrow>
@@ -1463,12 +1463,12 @@ where
     (\<exists> h_new. nth_ancestor s diff h_new = Some h \<and> \<not> committed s h_new))"
 
 lemma no_messages_cannot_commit :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
     \<not> one_third_slashed s \<Longrightarrow> no_messages_by_honest s \<Longrightarrow> \<not> committed s h"
 	using committed_implies_prepare it_is_somebody_that_prepares no_messages_by_honest_def by blast
 
 lemma corner_kick :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
     finite_messages s \<Longrightarrow>
     \<not> one_third_slashed s \<Longrightarrow>
     no_messages_by_honest s \<Longrightarrow>
@@ -1492,7 +1492,7 @@ apply auto
    apply(drule_tac x = "-1" in spec)
    apply clarsimp
    apply(simp add: prepared_def two_thirds_sent_message_def)
-   apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds mp_two_thirds not_one_third one_third_slashed_def situation_has_nodes_def)
+   apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds mp_two_thirds not_one_third one_third_slashed_def situation_has_finitely_many_nodes_def)
   apply(simp add: slashed_two_def)
   apply clarsimp
   apply(case_tac "(n, Prepare (h, v, vs)) \<in> Messages s")
@@ -1533,7 +1533,7 @@ done
 
 lemma no_commit_new_slashed_three:
   "no_invalid_view s \<Longrightarrow>
-         situation_has_nodes s \<Longrightarrow>
+         situation_has_finitely_many_nodes s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
          no_messages_by_honest_after s M2 \<Longrightarrow>
@@ -1558,7 +1558,7 @@ done
 
 lemma no_commit_new_slashed_four:
   "no_invalid_view s \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
+   situation_has_finitely_many_nodes s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    no_commits_by_honest s \<Longrightarrow>
    no_messages_by_honest_after s M2 \<Longrightarrow>
@@ -1600,7 +1600,7 @@ done
 
 lemma no_commit_new_slashed_two:
   "no_invalid_view s \<Longrightarrow>
-         situation_has_nodes s \<Longrightarrow>
+         situation_has_finitely_many_nodes s \<Longrightarrow>
          \<not> one_third_slashed s \<Longrightarrow>
          no_commits_by_honest s \<Longrightarrow>
          some_messages_by_honest_at s M2 \<Longrightarrow>
@@ -1626,14 +1626,14 @@ apply(case_tac "(n, Prepare (h, v, vs)) \<in> Messages s"; simp)
   apply simp
   apply(drule_tac x = vs' in spec)
   apply clarsimp
-  apply(simp add: prepared_def situation_has_nodes_def two_thirds_sent_message_transfers)
+  apply(simp add: prepared_def situation_has_finitely_many_nodes_def two_thirds_sent_message_transfers)
  apply fastforce
 apply(simp add: liveness_witness_def)
 done
 
 lemma corner_kick2 :
   "no_invalid_view s \<Longrightarrow>
-   situation_has_nodes s \<Longrightarrow>
+   situation_has_finitely_many_nodes s \<Longrightarrow>
    new_descendant_available s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
    no_commits_by_honest s \<Longrightarrow>
@@ -1666,7 +1666,7 @@ apply(case_tac "slashed s n"; auto)
    apply(subgoal_tac "- 1 \<le> M2")
     apply simp
     apply(simp add: prepared_def two_thirds_sent_message_def)
-    apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds more_than_two_thirds_mp not_one_third one_third_slashed_def situation_has_nodes_def)
+    apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds more_than_two_thirds_mp not_one_third one_third_slashed_def situation_has_finitely_many_nodes_def)
    using at_least_neg_one apply blast
   using no_commit_new_slashed_two apply blast
  using no_commit_new_slashed_three apply blast
@@ -1676,7 +1676,7 @@ done
 section "Plausible Liveness"
 
 lemma plausible_liveness :
-  "situation_has_nodes s \<Longrightarrow>
+  "situation_has_finitely_many_nodes s \<Longrightarrow>
    no_invalid_view s \<Longrightarrow>
    new_descendant_available s \<Longrightarrow>
    finite_messages s \<Longrightarrow>
