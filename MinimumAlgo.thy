@@ -500,7 +500,7 @@ proof(simp add: prepared_def two_thirds_sent_message_def one_third_slashed_def)
   by (metis (no_types, lifting) mp_one_third situation_has_nodes_def slashed_def slashed_four_def)
 qed
 
-lemma commit_prepared_again :
+lemma commit_prepared :
   "situation_has_nodes s \<Longrightarrow>
    x \<noteq> y \<Longrightarrow>
    two_thirds_sent_message s (Commit (y, c_view)) \<Longrightarrow>
@@ -657,10 +657,10 @@ lemma safety_sub_ind' :
    prepared s x v vs1 \<longrightarrow>
    - 1 \<le> vs1 \<longrightarrow> vs1 < v \<longrightarrow> one_third_slashed s"
 apply(induction n; auto)
- using commit_prepared_again apply blast
+ using commit_prepared apply blast
 apply(case_tac "\<not> (v > c_view)")
  apply clarsimp
- using commit_prepared_again apply blast 
+ using commit_prepared apply blast 
 apply(case_tac "vs1 < c_view")
  apply clarsimp
  using between_case apply blast
