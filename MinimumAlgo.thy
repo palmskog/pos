@@ -1568,6 +1568,15 @@ lemma no_commit_new_slashed_four:
          False"
 sorry
 
+lemma two_thirds_sent_message_transfers :
+  "two_thirds_sent_message s m \<Longrightarrow>
+   two_thirds_sent_message
+           \<lparr>Nodes = Nodes s,
+              Messages =
+                Messages s \<union> X,
+              PrevHash = PrevHash s\<rparr> m"
+sorry
+
 lemma no_commit_new_slashed_two:
   "no_invalid_view s \<Longrightarrow>
          situation_has_nodes s \<Longrightarrow>
@@ -1587,7 +1596,23 @@ lemma no_commit_new_slashed_two:
              PrevHash = PrevHash s\<rparr>
           n \<Longrightarrow>
          False"
-sorry
+apply(simp add: slashed_two_def)
+apply clarsimp
+apply(case_tac "(n, Prepare (h, v, vs)) \<in> Messages s"; simp)
+ apply(simp add: slashed_def slashed_two_def)
+ apply clarsimp
+ apply(subgoal_tac "vs = - 1 \<or>
+          (\<exists>h_anc. Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
+                   (\<exists>vs'<vs. - 1 \<le> vs' \<and> prepared s h_anc vs vs'))")
+  apply auto
+  apply(drule_tac x = h_anc in spec)
+  apply simp
+  apply(drule_tac x = vs' in spec)
+  apply clarsimp
+  apply(simp add: prepared_def  two_thirds_sent_message_transfers)
+ apply fastforce
+apply(simp add: liveness_witness_def)
+done
 
 lemma corner_kick2 :
   "no_invalid_view s \<Longrightarrow>
