@@ -71,7 +71,6 @@ fact {
 // Slashing condition [iii]
 fact {
   all c : Commit | c.c_sender in SaneNode implies all p : Prepare | c.c_sender = p.p_sender &&
-    p.p_hash = c.c_hash && 
     p.p_view_src in c.c_hash.h_view.(^v_prev) && c.c_hash.h_view in p.p_hash.h_view.(^v_prev)
     implies 0 = 1
 }
@@ -106,12 +105,12 @@ fact {
 
 pred incompatible_commits {
 
+   some Node &&
    some h0, h1 : Hash | (not h0 in h1.(*h_prev)) &&
     (not h1 in h0.(*h_prev)) &&
     (#{n0 : Node | some c0 : Commit | c0.c_sender = n0 && c0.c_hash = h0}).mul[3] >= (#Node).mul[2] &&
     (#{n1 : Node | some c1 : Commit | c1.c_sender = n1 && c1.c_hash = h1}).mul[3] >= (#Node).mul[2] &&
-    (#SlashedNode).mul[3] <= (#Node)
-
+    (#SlashedNode).mul[3] < (#Node)
 }
 
 // how to do the degree of ancestors
