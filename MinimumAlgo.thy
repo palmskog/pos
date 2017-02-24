@@ -1514,6 +1514,80 @@ apply clarsimp
 apply(simp add: liveness_witness_def)
 done
 
+lemma at_least_neg_one :
+        "no_invalid_view s \<Longrightarrow>
+         some_messages_by_honest_at s M2 \<Longrightarrow>
+         - 1 \<le> M2"
+apply(auto simp add:
+       no_invalid_view_def some_messages_by_honest_at_def message_has_valid_view_def
+       view_of_message_def)
+apply(drule_tac x = n in spec)
+apply(drule_tac x = m in spec)
+apply(case_tac m; auto)
+done
+
+lemma no_commit_new_slashed_three:
+  "no_invalid_view s \<Longrightarrow>
+         situation_has_nodes s \<Longrightarrow>
+         new_descendant_available s \<Longrightarrow>
+         finite_messages s \<Longrightarrow>
+         \<not> one_third_slashed s \<Longrightarrow>
+         \<not> no_messages_by_honest s \<Longrightarrow>
+         no_commits_by_honest s \<Longrightarrow>
+         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
+         some_messages_by_honest_at s M2 \<Longrightarrow>
+         no_messages_by_honest_after s M2 \<Longrightarrow>
+         n \<in> Nodes s \<Longrightarrow>
+         \<not> slashed s n \<Longrightarrow>
+         slashed_three
+          \<lparr>Nodes = Nodes s,
+             Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) M2 {n \<in> Nodes s. \<not> slashed s n},
+             PrevHash = PrevHash s\<rparr>
+          n \<Longrightarrow>
+         False"
+sorry
+
+lemma no_commit_new_slashed_four:
+  "no_invalid_view s \<Longrightarrow>
+         situation_has_nodes s \<Longrightarrow>
+         new_descendant_available s \<Longrightarrow>
+         finite_messages s \<Longrightarrow>
+         \<not> one_third_slashed s \<Longrightarrow>
+         \<not> no_messages_by_honest s \<Longrightarrow>
+         no_commits_by_honest s \<Longrightarrow>
+         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
+         some_messages_by_honest_at s M2 \<Longrightarrow>
+         no_messages_by_honest_after s M2 \<Longrightarrow>
+         n \<in> Nodes s \<Longrightarrow>
+         \<not> slashed s n \<Longrightarrow>
+         slashed_four
+          \<lparr>Nodes = Nodes s,
+             Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) M2 {n \<in> Nodes s. \<not> slashed s n},
+             PrevHash = PrevHash s\<rparr>
+          n \<Longrightarrow>
+         False"
+sorry
+
+lemma no_commit_new_slashed_two:
+  "no_invalid_view s \<Longrightarrow>
+         situation_has_nodes s \<Longrightarrow>
+         new_descendant_available s \<Longrightarrow>
+         finite_messages s \<Longrightarrow>
+         \<not> one_third_slashed s \<Longrightarrow>
+         \<not> no_messages_by_honest s \<Longrightarrow>
+         no_commits_by_honest s \<Longrightarrow>
+         \<not> some_commits_by_honest_at s (- 1) \<Longrightarrow>
+         some_messages_by_honest_at s M2 \<Longrightarrow>
+         no_messages_by_honest_after s M2 \<Longrightarrow>
+         n \<in> Nodes s \<Longrightarrow>
+         \<not> slashed s n \<Longrightarrow>
+         slashed_two
+          \<lparr>Nodes = Nodes s,
+             Messages = Messages s \<union> liveness_witness (Hash 0) (- 1) M2 {n \<in> Nodes s. \<not> slashed s n},
+             PrevHash = PrevHash s\<rparr>
+          n \<Longrightarrow>
+         False"
+sorry
 
 lemma corner_kick2 :
   "no_invalid_view s \<Longrightarrow>
@@ -1554,7 +1628,11 @@ apply(case_tac "slashed s n"; auto)
     apply simp
     apply(simp add: prepared_def two_thirds_sent_message_def)
     apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds more_than_two_thirds_mp not_one_third one_third_slashed_def situation_has_nodes_def)
-sorry
+   using at_least_neg_one apply blast
+  using no_commit_new_slashed_two apply blast
+ using no_commit_new_slashed_three apply blast
+using no_commit_new_slashed_four apply blast
+done
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>
