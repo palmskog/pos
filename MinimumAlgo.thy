@@ -168,7 +168,7 @@ where
     (\<exists> x1 x2 v vs1 vs2.
       (n, Prepare (x1, v, vs1)) \<in> Messages s \<and>
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
-      (x1 \<noteq> x2 \<or> vs1 \<noteq> vs2)))"
+      (x1 \<noteq> x2)))"
 
 
 (* Practically, this can be achieved by ignoring all messages with invalid view.  *)
@@ -393,10 +393,7 @@ apply(auto simp add: slashed_four_def)
 apply(rule_tac x = x in exI)
 apply(rule_tac x = y in exI)
 apply(rule_tac x = v2 in exI)
-apply(rule_tac x = vs1 in exI)
-apply(simp)
-apply(rule_tac x = vs2 in exI)
-apply(auto)
+apply auto
 done
 
 
@@ -1375,6 +1372,7 @@ apply(case_tac "(na, Prepare (x1, v, vs1)) \<in> Messages s")
   apply(case_tac "(na, Prepare (x2, v, vs2)) \<in> Messages s"; simp)
    apply(simp add: slashed_def)
    apply(simp add: slashed_four_def)
+   apply blast
   apply(subgoal_tac "v = M2 + 1")
    apply linarith
   apply (simp add: witness_prepares_certain_view)
@@ -1580,6 +1578,7 @@ apply clarsimp
 apply(erule disjE)
  apply(erule disjE)
   apply(simp add: slashed_def slashed_four_def)
+  apply blast
  apply(simp add: liveness_witness_def)
  apply clarsimp
  using no_prepare_after apply fastforce
