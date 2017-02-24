@@ -1545,7 +1545,16 @@ lemma no_commit_new_slashed_three:
              PrevHash = PrevHash s\<rparr>
           n \<Longrightarrow>
          False"
-sorry
+apply(simp add: slashed_three_def)
+apply clarsimp
+ apply(case_tac "(n, Commit (x, v)) \<in> Messages s"; simp)
+ using no_commits_by_honest_def apply blast
+apply(case_tac "(n, Prepare (y, w, u)) \<in> Messages s"; simp)
+ apply(simp add: liveness_witness_def)
+ apply clarsimp
+ using no_prepare_after apply fastforce
+apply(simp add: liveness_witness_def)
+done
 
 lemma no_commit_new_slashed_four:
   "no_invalid_view s \<Longrightarrow>
@@ -1566,16 +1575,32 @@ lemma no_commit_new_slashed_four:
              PrevHash = PrevHash s\<rparr>
           n \<Longrightarrow>
          False"
-sorry
+apply(simp add: slashed_four_def)
+apply clarsimp
+apply(erule disjE)
+ apply(erule disjE)
+  apply(simp add: slashed_def slashed_four_def)
+ apply(simp add: liveness_witness_def)
+ apply clarsimp
+ using no_prepare_after apply fastforce
+apply(erule disjE)
+ apply(simp add: liveness_witness_def)
+ using no_prepare_after apply fastforce
+apply(simp add: liveness_witness_def)
+done
+
 
 lemma two_thirds_sent_message_transfers :
-  "two_thirds_sent_message s m \<Longrightarrow>
+  "finite (Nodes s) \<Longrightarrow>
+   two_thirds_sent_message s m \<Longrightarrow>
    two_thirds_sent_message
            \<lparr>Nodes = Nodes s,
               Messages =
                 Messages s \<union> X,
               PrevHash = PrevHash s\<rparr> m"
-sorry
+apply(simp add: two_thirds_sent_message_def)
+apply(rule mp_two_thirds; simp)
+done
 
 lemma no_commit_new_slashed_two:
   "no_invalid_view s \<Longrightarrow>
@@ -1609,7 +1634,7 @@ apply(case_tac "(n, Prepare (h, v, vs)) \<in> Messages s"; simp)
   apply simp
   apply(drule_tac x = vs' in spec)
   apply clarsimp
-  apply(simp add: prepared_def  two_thirds_sent_message_transfers)
+  apply(simp add: prepared_def situation_has_nodes_def two_thirds_sent_message_transfers)
  apply fastforce
 apply(simp add: liveness_witness_def)
 done
