@@ -17,6 +17,12 @@ where
    Commit (h, v) \<Rightarrow> v
  | Prepare (h, v, v_src) \<Rightarrow> v)"
 
+definition message_has_valid_view :: "message \<Rightarrow> bool"
+where
+"message_has_valid_view m = (case m of 
+   Commit (h,v) \<Rightarrow> 0 \<le> v
+ | Prepare (h, v, v_src) \<Rightarrow> -1 \<le> v)"
+
 datatype node = Node int
 
 type_synonym sent = "node * message"
@@ -163,6 +169,15 @@ where
       (n, Prepare (x1, v, vs1)) \<in> Messages s \<and>
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
       (x1 \<noteq> x2 \<or> vs1 \<noteq> vs2)))"
+
+
+(* Practically, this can be achieved by ignoring all messages with invalid view.  *)
+definition no_invalid_view :: "situation \<Rightarrow> bool"
+where
+"no_invalid_view s =
+  (\<forall> n m. (n, m) \<in> Messages s \<longrightarrow>
+          message_has_valid_view m)
+"
 
 definition slashed :: "situation \<Rightarrow> node \<Rightarrow> bool"
 where
@@ -1501,7 +1516,8 @@ done
 
 
 lemma corner_kick2 :
-  "situation_has_nodes s \<Longrightarrow>
+  "no_invalid_view s \<Longrightarrow>
+   situation_has_nodes s \<Longrightarrow>
           new_descendant_available s \<Longrightarrow>
           finite_messages s \<Longrightarrow>
           \<not> one_third_slashed s \<Longrightarrow>
@@ -1538,11 +1554,11 @@ apply(case_tac "slashed s n"; auto)
     apply simp
     apply(simp add: prepared_def two_thirds_sent_message_def)
     apply (metis (no_types, lifting) more_than_two_thirds_imply_two_thirds more_than_two_thirds_mp not_one_third one_third_slashed_def situation_has_nodes_def)
-   using sane_prepare_view_ge_negone apply blast
-
+sorry
 
 lemma plausible_liveness :
   "situation_has_nodes s \<Longrightarrow>
+   no_invalid_view s \<Longrightarrow>
    new_descendant_available s \<Longrightarrow>
    finite_messages s \<Longrightarrow>
    \<not> one_third_slashed s \<Longrightarrow>
