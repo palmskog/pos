@@ -76,12 +76,18 @@ definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash
 where
 "not_on_same_chain s x y = ((\<not> is_descendant s x y) \<and> (\<not> is_descendant s y x))"
 
-
+text "We can lift any predicate about a validator into a predicate about a situation:
+two thirds of the validators satisfy the predicate.}"
 
 definition two_thirds :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
 "two_thirds s f =
    (2 * card (Validators s) \<le> 3 * card ({n. n \<in> Validators s \<and> f n}))"
+
+definition one_third :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
+where
+"one_third s f =
+   (card (Validators s) \<le> 3 * card ({n. n \<in> Validators s \<and> f n}))"
 
 definition more_than_two_thirds :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -93,69 +99,28 @@ where
 "more_than_one_third s f =
    (card (Validators s) < 3 * card ({n. n \<in> Validators s \<and> f n}))"
 
-definition one_third :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
-where
-"one_third s f =
-   (card (Validators s) \<le> 3 * card ({n. n \<in> Validators s \<and> f n}))"
-
-lemma mp_one_third :
-  "finite (Validators s) \<Longrightarrow>
-   \<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
-   one_third s f \<Longrightarrow> one_third s g"
-proof (simp add: one_third_def)
-  assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
-  moreover assume "finite (Validators s)"
-  ultimately have "card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
-    proof -
-      assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
-      then have "{n \<in> Validators s. f n} \<subseteq> {n \<in> Validators s. g n}"
-        by blast
-      moreover assume "finite (Validators s)"
-      ultimately show ?thesis
-        by (simp add: card_mono)
-    qed
-  moreover assume "card (Validators s) \<le> 3 * card {n \<in> Validators s. f n}"
-  ultimately show "card (Validators s) \<le> 3 * card {n \<in> Validators s. g n}"
-    by auto
-qed
-
-lemma mp_two_thirds :
-  "finite (Validators s) \<Longrightarrow>
-   \<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
-   two_thirds s f \<Longrightarrow> two_thirds s g"
-proof (simp add: two_thirds_def)
-  assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
-  moreover assume "finite (Validators s)"
-  ultimately have "card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
-    proof -
-      assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
-      then have "{n \<in> Validators s. f n} \<subseteq> {n \<in> Validators s. g n}"
-        by blast
-      moreover assume "finite (Validators s)"
-      ultimately show ?thesis
-        by (simp add: card_mono)
-    qed
-  moreover assume "2 * card (Validators s) \<le> 3 * card {n \<in> Validators s. f n}"
-  ultimately show "2 * card (Validators s) \<le> 3 * card {n \<in> Validators s. g n}"
-    by auto
-qed
-
-
 definition two_thirds_sent_message :: "situation \<Rightarrow> message \<Rightarrow> bool"
 where
 "two_thirds_sent_message s m =
    two_thirds s (\<lambda> n. (n, m) \<in> Messages s)"
+
+text "A hash is prepared when two-thirds of the validators have sent a certain message."
 
 definition prepared :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
 "prepared s h v vs =
    (two_thirds_sent_message s (Prepare (h, v, vs)))"
 
+text "A hash is prepared when two-thirds of the validators have sent a certain message."
+
 definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "committed s h = (\<exists> v. two_thirds_sent_message s (Commit (h, v)))"
 
 section "The Slashing Conditions"
+
+text "[i] A validator is slashed when it has sent a commit message of a hash
+      that is not prepared yet."
 
 definition slashed_one :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -164,6 +129,9 @@ where
     (\<exists> h v.
       ((n, Commit (h, v)) \<in> Messages s \<and>
     (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s h v vs) ))))"
+
+text "[ii] A validator is slashed when it has sent a prepare message whose
+      view_src is not -1 but has no supporting preparation in the view_src."
 
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -177,6 +145,9 @@ where
            Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
            prepared s h_anc vs vs')))))"
 
+text "[iii] A validator is slashed when it has sent a commit message and a prepare message
+     containing view numbers in a specific constellation."
+
 definition slashed_three :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
 "slashed_three s n =
@@ -185,6 +156,8 @@ where
       (n, Commit (x, v)) \<in> Messages s \<and>
       (n, Prepare (y, w, u)) \<in> Messages s \<and>
       u < v \<and> v < w))"
+
+text "[iv] A validator is slashed when it has sent two conflicting Prepare messages at the same view."
 
 definition slashed_four :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -195,6 +168,8 @@ where
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
       (x1 \<noteq> x2)))"
 
+
+text "A validator is slashed when at least one of the above conditions [i]--[iv] hold."
 
 definition slashed :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -327,14 +302,6 @@ apply(rule more_than_one_third_exists)
 apply(rule two_more_two; simp)
 done
 
-
-lemma committed_implies_prepare :
-  "situation_has_finitely_many_validators s \<Longrightarrow>
-   committed s x \<Longrightarrow> (\<exists> v vs. prepared s x v vs \<and> -1 \<le> vs \<and> vs < v) \<or> one_third_slashed s"
-apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_third_slashed_def)
-apply(rule condition_one_positive)
-using two_more_two_ex by blast
-
 lemma commit_expand:
   "situation_has_finitely_many_validators s \<Longrightarrow> 
    two_thirds_sent_message s (Commit (x, v)) \<Longrightarrow>
@@ -343,6 +310,17 @@ apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_
 apply(rule condition_one_positive')
 using two_more_two_ex by blast
 
+lemma card_conj_le :
+  "finite s \<Longrightarrow>
+     card ({n \<in> s. f n} \<inter> {n \<in> s. g n})
+   = card {n \<in> s. f n} + card { n \<in> s. g n} - card ({n \<in> s. f n} \<union> {n \<in> s. g n})"
+proof -
+ assume "finite s"
+ then have "card {n \<in> s. f n} + card { n \<in> s. g n} = card ({n \<in> s. f n} \<union> {n \<in> s. g n}) + card ({n \<in> s. f n} \<inter> {n \<in> s. g n})"
+   by (rule_tac Finite_Set.card_Un_Int; auto)
+ then show ?thesis
+   by auto
+qed
 
 lemma two_two_set :
  "2 * card s \<le> 3 * card {n \<in> s. f n} \<Longrightarrow>
@@ -411,6 +389,52 @@ apply auto
 done
 
 
+lemma inclusion_card_le :
+  "\<forall>n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
+   finite (Validators s) \<Longrightarrow>
+   card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
+proof -
+  assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
+  moreover assume "finite (Validators s)"
+  ultimately show "card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
+    proof -
+      assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
+      then have "{n \<in> Validators s. f n} \<subseteq> {n \<in> Validators s. g n}"
+        by blast
+      moreover assume "finite (Validators s)"
+      ultimately show ?thesis
+        by (simp add: card_mono)
+    qed
+qed
+
+lemma mp_one_third :
+  "finite (Validators s) \<Longrightarrow>
+   \<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
+   one_third s f \<Longrightarrow> one_third s g"
+proof (simp add: one_third_def)
+  assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
+  moreover assume "finite (Validators s)"
+  ultimately have "card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
+    using inclusion_card_le by blast
+  moreover assume "card (Validators s) \<le> 3 * card {n \<in> Validators s. f n}"
+  ultimately show "card (Validators s) \<le> 3 * card {n \<in> Validators s. g n}"
+    by auto
+qed
+
+lemma mp_two_thirds :
+  "finite (Validators s) \<Longrightarrow>
+   \<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
+   two_thirds s f \<Longrightarrow> two_thirds s g"
+proof (simp add: two_thirds_def)
+  assume "\<forall> n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n"
+  moreover assume "finite (Validators s)"
+  ultimately have "card {n \<in> Validators s. f n} \<le> card {n \<in> Validators s. g n}"
+    using inclusion_card_le by blast
+  moreover assume "2 * card (Validators s) \<le> 3 * card {n \<in> Validators s. f n}"
+  ultimately show "2 * card (Validators s) \<le> 3 * card {n \<in> Validators s. g n}"
+    by auto
+qed
+
 lemma prepare_direct_conflict :
  "not_on_same_chain s x y \<Longrightarrow>
   finite (Validators s) \<Longrightarrow>
@@ -461,13 +485,6 @@ lemma commit_prepare :
 apply(auto simp add: committed_def prepared_def two_thirds_sent_message_def one_third_slashed_def)
 apply(rule condition_one_positive')
 using two_more_two_ex by blast
-
-lemma negone_commit :
-  "situation_has_finitely_many_validators s \<Longrightarrow>
-   two_thirds_sent_message s (Commit (y, v2)) \<Longrightarrow>
-   v2 \<le> - 1 \<Longrightarrow> one_third_slashed s"
-	using commit_expand by fastforce
-
 
 lemma one_third_prepared_conflict :
  "x \<noteq> y \<Longrightarrow>
@@ -664,7 +681,7 @@ apply(case_tac "vs1 < c_view")
  using between_case apply blast
 apply(case_tac "c_view \<le> -1")
  apply(clarsimp)
- using negone_commit apply blast
+ using commit_expand apply fastforce
 apply(clarsimp)
 apply(drule_tac x = c_view in spec)
 apply(drule_tac x = s in spec)
@@ -1469,7 +1486,7 @@ where
 lemma no_messages_cannot_commit :
   "situation_has_finitely_many_validators s \<Longrightarrow>
     \<not> one_third_slashed s \<Longrightarrow> no_messages_by_honest s \<Longrightarrow> \<not> committed s h"
-	using committed_implies_prepare it_is_somebody_that_prepares no_messages_by_honest_def by blast
+	by (meson commit_expand committed_def it_is_somebody_that_prepares no_messages_by_honest_def)
 
 lemma corner_kick :
   "situation_has_finitely_many_validators s \<Longrightarrow>
