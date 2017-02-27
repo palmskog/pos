@@ -20,7 +20,7 @@ imports Main
 
 begin
 
-section "Definition of the Protocol"
+section "Definition of the Protocol (Not Skippable)"
 
 text "In this development we do not know much about hashes.  There are many hashes.
 Two hashes might be equal or not."
@@ -53,8 +53,6 @@ record situation =
   Messages :: "sent set"
   PrevHash :: "hash \<Rightarrow> hash option"
 (* The slashing condition should be a function of the situation *)
-
-section "More Terminology"
 
 definition situation_has_finitely_many_validators :: "situation \<Rightarrow> bool"
 where
@@ -117,7 +115,7 @@ definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "committed s h = (\<exists> v. two_thirds_sent_message s (Commit (h, v)))"
 
-section "The Slashing Conditions"
+section "The Slashing Conditions (not skippable)"
 
 text "[i] A validator is slashed when it has sent a commit message of a hash
       that is not prepared yet."
@@ -182,7 +180,7 @@ definition one_third_slashed :: "situation \<Rightarrow> bool"
 where
 "one_third_slashed s = one_third s (slashed s)"
 
-section "Useful Lemmas for Accountable Safety"
+section "Useful Lemmas for Accountable Safety (can be skipped)"
 
 lemma card_not [simp] :
   "finite s \<Longrightarrow>
@@ -375,9 +373,8 @@ apply(rule_tac x = 0 in exI)
 apply(simp)
 done
 
-lemma prepare_direct_conflict' :
+lemma prepare_direct_conflict :
  "not_on_same_chain s x y \<Longrightarrow>
-  finite (Validators s) \<Longrightarrow>
   n \<in> Validators s \<Longrightarrow>
   (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
   (n, Prepare (y, v2, vs2)) \<in> Messages s \<Longrightarrow> slashed_four s n"
@@ -435,14 +432,6 @@ proof (simp add: two_thirds_def)
     by auto
 qed
 
-lemma prepare_direct_conflict :
- "not_on_same_chain s x y \<Longrightarrow>
-  finite (Validators s) \<Longrightarrow>
-  n \<in> Validators s \<Longrightarrow>
-  (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
-  (n, Prepare (y, v2, vs2)) \<in> Messages s \<Longrightarrow> slashed s n"
-apply(auto simp add: slashed_def prepare_direct_conflict')
-done
 
 lemma safety_case1' :
    "situation_has_finitely_many_validators s \<Longrightarrow>
@@ -460,7 +449,8 @@ proof -
   moreover assume "not_on_same_chain s x y"
   moreover assume "situation_has_finitely_many_validators s"
   ultimately show "one_third s (slashed s)"
-    by (rule_tac mp_one_third; auto simp add: situation_has_finitely_many_validators_def prepare_direct_conflict)
+    by (rule_tac mp_one_third; auto simp add: situation_has_finitely_many_validators_def
+        prepare_direct_conflict slashed_def)
 qed
 
 lemma safety_case1 :
@@ -657,6 +647,8 @@ apply(subgoal_tac
 apply(simp add: slashed_two_def)
 by fastforce
 
+text "The following lemma is a core of the accountable safety proof.
+It requires the mathematical induction."
 
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
@@ -690,7 +682,7 @@ lemma safety_sub_ind'' :
    - 1 \<le> vs1 \<Longrightarrow> vs1 < v \<Longrightarrow> one_third_slashed s"
 using safety_sub_ind' by blast
 
-lemma no_pependency_ancestor [simp] :
+lemma not_on_chain_not_ancestor [simp] :
  "not_on_same_chain s x y \<Longrightarrow>
   nth_ancestor s m x \<noteq> Some y"
 apply(simp add: not_on_same_chain_def is_descendant_def)
@@ -750,7 +742,7 @@ apply(auto simp add: safety_sub')
 done
 
 
-section "Accountable Safety"
+section "Accountable Safety (don't skip)"
 
 lemma accountable_safety :
   "situation_has_finitely_many_validators s \<Longrightarrow>
@@ -784,8 +776,18 @@ definition no_invalid_view :: "situation \<Rightarrow> bool"
 where
 "no_invalid_view s =
   (\<forall> n m. (n, m) \<in> Messages s \<longrightarrow>
-          message_has_valid_view m)
-"
+          message_has_valid_view m)"
+
+definition finite_messages :: "situation \<Rightarrow> bool"
+where
+"finite_messages s = finite (Messages s)"
+
+definition new_descendant_available :: "situation \<Rightarrow> bool"
+where
+"new_descendant_available s =
+  (\<forall> n h v diff.
+    (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
+    (\<exists> h_new. nth_ancestor s diff h_new = Some h \<and> \<not> committed s h_new))"
 
 definition authors :: "(validator * message) set \<Rightarrow> validator set"
 where
@@ -803,6 +805,13 @@ where
   Validators s_new = Validators s \<and>
   Messages s_new = Messages s \<union> new_messages \<and>
   PrevHash s_new = PrevHash s_new)"
+
+definition no_new_slashed :: "situation \<Rightarrow> situation \<Rightarrow> bool"
+where
+"no_new_slashed s s_new =
+  (\<forall> n. n \<in> Validators s \<longrightarrow> slashed s_new n \<longrightarrow> slashed s n)"
+
+section "Useful Lemmas for Plausible Liveness (skippable)"
 
 definition no_commits_by_honest :: "situation \<Rightarrow> bool"
 where
@@ -839,8 +848,7 @@ where
    (\<forall> n \<in> Validators s. (\<forall> h v.
      (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
      v \<le> v_latest \<or> slashed s n
-     ))
-"
+     ))"
 
 definition no_messages_by_honest_after :: "situation \<Rightarrow> view \<Rightarrow> bool"
 where
@@ -861,10 +869,6 @@ lemma some_messages_by_honest_intro :
 apply(auto simp add: some_messages_by_honest_at_def)
 done
 
-
-definition finite_messages :: "situation \<Rightarrow> bool"
-where
-"finite_messages s = finite (Messages s)"
 
 lemma finite_commits_by_honest :
   "finite_messages s \<Longrightarrow>
@@ -1001,11 +1005,6 @@ apply(drule some_messages_by_honest_intro)
 apply(drule finite_messages_by_honest)
 apply(rule_tac M2_prop_sub2)
 using finite_views_have_max by blast
-
-definition no_new_slashed :: "situation \<Rightarrow> situation \<Rightarrow> bool"
-where
-"no_new_slashed s s_new =
-  (\<forall> n. n \<in> Validators s \<longrightarrow> slashed s_new n \<longrightarrow> slashed s n)"
 
 lemma no_messages_no_commits [simp] :
  "no_messages_by_honest s \<Longrightarrow> no_commits_by_honest s"
@@ -1469,13 +1468,6 @@ apply(auto)
 apply(rule_tac slashed_four_transfers; blast)
 done
 
-definition new_descendant_available :: "situation \<Rightarrow> bool"
-where
-"new_descendant_available s =
-  (\<forall> n h v diff.
-    (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
-    (\<exists> h_new. nth_ancestor s diff h_new = Some h \<and> \<not> committed s h_new))"
-
 lemma no_messages_cannot_commit :
   "situation_has_finitely_many_validators s \<Longrightarrow>
     \<not> one_third_slashed s \<Longrightarrow> no_messages_by_honest s \<Longrightarrow> \<not> committed s h"
@@ -1687,7 +1679,7 @@ apply(case_tac "slashed s n"; auto)
 using no_commit_new_slashed_four apply blast
 done
 
-section "Plausible Liveness"
+section "Plausible Liveness (don't skip)"
 
 lemma plausible_liveness :
   "situation_has_finitely_many_validators s \<Longrightarrow>
