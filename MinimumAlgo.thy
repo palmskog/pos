@@ -655,12 +655,8 @@ apply(subgoal_tac
   apply(simp add: slashed_def)
  apply (metis (mono_tags, lifting) not_one_third one_third_slashed_def prepared_def two_more_two_ex two_thirds_sent_message_def)
 apply(simp add: slashed_two_def)
-apply(drule_tac x = x in spec)
-apply(drule_tac x = x in spec)
-apply(drule_tac x = v in spec)
-apply(drule_tac x = vs1 in spec)
-apply auto
-done
+by fastforce
+
 
 lemma safety_sub_ind' :
   "\<forall> c_view s x y v vs1.
@@ -682,9 +678,6 @@ apply(case_tac "vs1 < c_view")
 apply(case_tac "c_view \<le> -1")
  apply(clarsimp)
  using commit_expand apply fastforce
-apply(clarsimp)
-apply(drule_tac x = c_view in spec)
-apply(drule_tac x = s in spec)
 using the_induction by blast
 
 lemma safety_sub_ind'' :
