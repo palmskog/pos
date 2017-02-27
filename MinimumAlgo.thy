@@ -55,6 +55,11 @@ record situation =
 
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
+text "We will be talking about two conflicting commits.  To define 'conflicting' one needs to look at the
+hashes."
+
+text "A situation contains information which hash is the parent of which hash.  We can follow this link n-times.
+"
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
 where
@@ -64,13 +69,20 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
+text "And also we are allowed to talk if two hashes are in ancestor-descendant relation.
+It does not matter if this is computable."
+
 definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
+text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
+
 definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
+
+text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
 text "We can lift any predicate about a validator into a predicate about a situation:
 two thirds of the validators satisfy the predicate."
@@ -79,6 +91,8 @@ definition two_thirds :: "situation \<Rightarrow> (validator \<Rightarrow> bool)
 where
 "two_thirds s f =
    (2 * card (Validators s) \<le> 3 * card ({n. n \<in> Validators s \<and> f n}))"
+
+text "Similarly for one-third, more-than-two-thirds, and more-than-one-third."
 
 definition one_third :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -107,7 +121,7 @@ where
 "prepared s h v vs =
    (two_thirds_sent_message s (Prepare (h, v, vs)))"
 
-text "A hash is prepared when two-thirds of the validators have sent a certain message."
+text "A hash is committed when two-thirds of the validators have sent a certain message."
 
 definition committed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -162,7 +176,7 @@ where
     (\<exists> x1 x2 v vs1 vs2.
       (n, Prepare (x1, v, vs1)) \<in> Messages s \<and>
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
-      (x1 \<noteq> x2)))"
+      (x1 \<noteq> x2 \<or> vs1 \<noteq> vs2)))"
 
 
 text "A validator is slashed when at least one of the above conditions [i]--[iv] hold."
@@ -385,11 +399,7 @@ lemma prepare_direct_conflict :
   (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
   (n, Prepare (y, v2, vs2)) \<in> Messages s \<Longrightarrow> slashed_four s n"
 apply(auto simp add: slashed_four_def)
-apply(rule_tac x = x in exI)
-apply(rule_tac x = y in exI)
-apply(rule_tac x = v2 in exI)
-apply auto
-done
+by fastforce
 
 
 lemma inclusion_card_le :
@@ -1398,7 +1408,6 @@ apply(case_tac "(na, Prepare (x1, v, vs1)) \<in> Messages s")
   apply(case_tac "(na, Prepare (x2, v, vs2)) \<in> Messages s"; simp)
    apply(simp add: slashed_def)
    apply(simp add: slashed_four_def)
-   apply blast
   apply(subgoal_tac "v = M2 + 1")
    apply linarith
   apply (simp add: witness_prepares_certain_view)
@@ -1587,7 +1596,6 @@ apply clarsimp
 apply(erule disjE)
  apply(erule disjE)
   apply(simp add: slashed_def slashed_four_def)
-  apply blast
  apply(simp add: liveness_witness_def)
  apply clarsimp
  using no_prepare_after apply fastforce
