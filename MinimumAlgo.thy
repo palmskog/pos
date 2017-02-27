@@ -52,11 +52,9 @@ record situation =
   Validators :: "validator set"
   Messages :: "sent set"
   PrevHash :: "hash \<Rightarrow> hash option"
-(* The slashing condition should be a function of the situation *)
 
-definition situation_has_finitely_many_validators :: "situation \<Rightarrow> bool"
-where
-"situation_has_finitely_many_validators s = (Validators s \<noteq> {} \<and> finite (Validators s))"
+text "In the next section, we are going to determine which of the validators are slashed in a situation."
+
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
 where
@@ -66,13 +64,13 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
-definition is_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
-"is_descendant s x y = (\<exists> n. nth_ancestor s n x = Some y)"
+"is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
 definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
-"not_on_same_chain s x y = ((\<not> is_descendant s x y) \<and> (\<not> is_descendant s y x))"
+"not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
 
 text "We can lift any predicate about a validator into a predicate about a situation:
 two thirds of the validators satisfy the predicate."
@@ -179,6 +177,14 @@ where
 definition one_third_slashed :: "situation \<Rightarrow> bool"
 where
 "one_third_slashed s = one_third s (slashed s)"
+
+text "However, since cardinality of an infinite set is defined to be zero, we should be talking
+about situations where the set of validators is finite."
+
+definition situation_has_finitely_many_validators :: "situation \<Rightarrow> bool"
+where
+"situation_has_finitely_many_validators s = (Validators s \<noteq> {} \<and> finite (Validators s))"
+
 
 section "Useful Lemmas for Accountable Safety (can be skipped)"
 
@@ -368,7 +374,7 @@ done
 lemma dependency_self [simp]:
   "\<not> not_on_same_chain s y y"
 apply(simp add: not_on_same_chain_def)
-apply(simp add: is_descendant_def)
+apply(simp add: is_descendant_or_self_def)
 apply(rule_tac x = 0 in exI)
 apply(simp)
 done
@@ -685,7 +691,7 @@ using safety_sub_ind' by blast
 lemma not_on_chain_not_ancestor [simp] :
  "not_on_same_chain s x y \<Longrightarrow>
   nth_ancestor s m x \<noteq> Some y"
-apply(simp add: not_on_same_chain_def is_descendant_def)
+apply(simp add: not_on_same_chain_def is_descendant_or_self_def)
 done
 
 lemma safety_sub_ind :
