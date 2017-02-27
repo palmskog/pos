@@ -75,7 +75,7 @@ where
 "not_on_same_chain s x y = ((\<not> is_descendant s x y) \<and> (\<not> is_descendant s y x))"
 
 text "We can lift any predicate about a validator into a predicate about a situation:
-two thirds of the validators satisfy the predicate.}"
+two thirds of the validators satisfy the predicate."
 
 definition two_thirds :: "situation \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -129,7 +129,7 @@ where
     (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s h v vs) ))))"
 
 text "[ii] A validator is slashed when it has sent a prepare message whose
-      view_src is not -1 but has no supporting preparation in the view_src."
+      view src is not -1 but has no supporting preparation in the view src."
 
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
