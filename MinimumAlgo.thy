@@ -27,7 +27,8 @@ Two hashes might be equal or not."
 
 datatype hash = Hash int
 
-text "Views are numbers."
+text "Views are numbers.  We actually need the fact that views are in total order.
+Otherwise accountable safety can be broken."
 
 type_synonym view = int
 
@@ -37,25 +38,12 @@ datatype message =
   Commit "hash * view"
 | Prepare "hash * view * view"
 
-definition view_of_message :: "message \<Rightarrow> view"
-where
-"view_of_message m = (case m of
-   Commit (h, v) \<Rightarrow> v
- | Prepare (h, v, v_src) \<Rightarrow> v)"
-
-definition message_has_valid_view :: "message \<Rightarrow> bool"
-where
-"message_has_valid_view m = (case m of 
-   Commit (h,v) \<Rightarrow> 0 \<le> v
- | Prepare (h, v, v_src) \<Rightarrow> -1 \<le> v)"
+text "Sometimes we want to talk about the view of a message."
 
 datatype node = Node int
 
 type_synonym sent = "node * message"
 
-definition view_of_sent_message :: "(node * message) \<Rightarrow> view"
-where
-"view_of_sent_message = view_of_message o snd"
 
 text "A situation might be seen from a global point of view where every sent messages can be seen,
 or more likely seen from a local point of view."
@@ -207,6 +195,22 @@ where
       (n, Prepare (x2, v, vs2)) \<in> Messages s \<and>
       (x1 \<noteq> x2)))"
 
+
+definition view_of_message :: "message \<Rightarrow> view"
+where
+"view_of_message m = (case m of
+   Commit (h, v) \<Rightarrow> v
+ | Prepare (h, v, v_src) \<Rightarrow> v)"
+
+definition message_has_valid_view :: "message \<Rightarrow> bool"
+where
+"message_has_valid_view m = (case m of 
+   Commit (h,v) \<Rightarrow> 0 \<le> v
+ | Prepare (h, v, v_src) \<Rightarrow> -1 \<le> v)"
+
+definition view_of_sent_message :: "(node * message) \<Rightarrow> view"
+where
+"view_of_sent_message = view_of_message o snd"
 
 (* Practically, this can be achieved by ignoring all messages with invalid view.  *)
 definition no_invalid_view :: "situation \<Rightarrow> bool"
