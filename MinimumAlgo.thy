@@ -27,38 +27,45 @@ Two hashes might be equal or not."
 
 datatype hash = Hash int
 
-text "Views are numbers.  We actually need the fact that views are in total order.
+text "Views are numbers.  We actually need the fact that views are lines up in a total order.
 Otherwise accountable safety can be broken."
 
 type_synonym view = int
 
-text "We have two kinds of messages."
+text "We have two kinds of messages.  A Commit message contains a hash and a view.  A prepare message contains a hash and two views.
+At this point a message is not signed by anybody."
 
 datatype message =
   Commit "hash * view"
 | Prepare "hash * view * view"
 
-text "Sometimes we want to talk about the view of a message."
+text "We need a set of validators.  Here, we just define a datatype containing infinitely many
+validators.
+Afterwards, when we look at a particular situation, the situation would contain a finite set
+of validators."
 
 datatype validator = Validator int
 
-type_synonym sent = "validator * message"
+text "A message signed by a validator can be represented as a pair of a validator and a message."
 
+type_synonym signed_message = "validator * message"
+
+text "Almost everything in this document depends on situations.  A situation contains a set
+of validators, a set of signed messages, and a function specifying parents of hashes."
 
 text "A situation might be seen from a global point of view where every sent messages can be seen,
 or more likely seen from a local point of view."
 
 record situation =
   Validators :: "validator set"
-  Messages :: "sent set"
+  Messages :: "signed_message set"
   PrevHash :: "hash \<Rightarrow> hash option"
 
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
-text "We will be talking about two conflicting commits.  To define 'conflicting' one needs to look at the
-hashes."
-
-text "A situation contains information which hash is the parent of which hash.  We can follow this link n-times.
+text "We will be talking about two conflicting commits.  To define `conflicting' one needs to look at the
+hashes and their parent-children relation.
+A situation contains information which hash is the parent of which hash.  We can follow this link n-times.
 "
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
@@ -70,7 +77,7 @@ where
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
 text "And also we are allowed to talk if two hashes are in ancestor-descendant relation.
-It does not matter if this is computable."
+It does not matter if there is an algorithm to decide this."
 
 definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -167,7 +174,7 @@ where
       (n, Prepare (y, w, u)) \<in> Messages s \<and>
       u < v \<and> v < w))"
 
-text "[iv] A validator is slashed when it has sent two conflicting Prepare messages at the same view."
+text "[iv] A validator is slashed when it has signed two different Prepare messages at the same view."
 
 definition slashed_four :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -192,7 +199,8 @@ definition one_third_slashed :: "situation \<Rightarrow> bool"
 where
 "one_third_slashed s = one_third s (slashed s)"
 
-text "However, since cardinality of an infinite set is defined to be zero, we should be talking
+text "However, since it does not make sense to divide the cardinality of an infinite set by three,
+we should be talking
 about situations where the set of validators is finite."
 
 definition situation_has_finitely_many_validators :: "situation \<Rightarrow> bool"
@@ -760,6 +768,10 @@ done
 
 section "Accountable Safety (don't skip)"
 
+text "The statement of accountable safety is simple.  If a situation has a finite number of validators (but not zero),
+if two hashes x and y are committed in the situation, but if the two hashes are not on the same chain,
+at least one-third of the validators are slashed in the situation."
+
 lemma accountable_safety :
   "situation_has_finitely_many_validators s \<Longrightarrow>
    committed s x \<Longrightarrow> committed s y \<Longrightarrow>
@@ -769,7 +781,10 @@ using accountable_safety_sub commit_expand by blast
 
 (* what happens with half_slashed? *)
 
-section "More Terminology for Liveness"
+section "More Terminology for Liveness (not skippable)"
+
+text "For plausible liveness, one needs to construct a new set of messages that are to be added to
+a situation.  For doing that, it's convenient to look at the view numbers of the existing messages."
 
 definition view_of_message :: "message \<Rightarrow> view"
 where
@@ -777,26 +792,38 @@ where
    Commit (h, v) \<Rightarrow> v
  | Prepare (h, v, v_src) \<Rightarrow> v)"
 
+text "The proof gets complicated when we have a Commit with -2 view, so we just choose to ignore such
+messages in a situation.  For ignoring messages with invalid view numbers, we need a predicate."
+
 definition message_has_valid_view :: "message \<Rightarrow> bool"
 where
 "message_has_valid_view m = (case m of 
    Commit (h,v) \<Rightarrow> 0 \<le> v
- | Prepare (h, v, v_src) \<Rightarrow> -1 \<le> v)"
+ | Prepare (h, v, v_src) \<Rightarrow> -1 \<le> v \<and> v < v_src)"
 
-definition view_of_sent_message :: "(validator * message) \<Rightarrow> view"
+text "We frequently talk about the view number of a signed message.  So here is a function for doing that."
+
+definition view_of_signed_message :: "(validator * message) \<Rightarrow> view"
 where
-"view_of_sent_message = view_of_message o snd"
+"view_of_signed_message = view_of_message o snd"
 
-(* Practically, this can be achieved by ignoring all messages with invalid view.  *)
+text "
+This condition says the situation does not contain certain messages with invalid view numbers.
+Practically, this can be achieved by ignoring all unqualified messages in the situation."
+
 definition no_invalid_view :: "situation \<Rightarrow> bool"
 where
 "no_invalid_view s =
   (\<forall> n m. (n, m) \<in> Messages s \<longrightarrow>
           message_has_valid_view m)"
 
+text "Sometimes we want to say there are only finitely many messages in a situation.  Otherwise all views might have been occupied."
+
 definition finite_messages :: "situation \<Rightarrow> bool"
 where
 "finite_messages s = finite (Messages s)"
+
+text "For liveness we need new hashes to be committed."
 
 definition new_descendant_available :: "situation \<Rightarrow> bool"
 where
@@ -805,13 +832,19 @@ where
     (n, Commit (h, v)) \<in> Messages s \<longrightarrow>
     (\<exists> h_new. nth_ancestor s diff h_new = Some h \<and> \<not> committed s h_new))"
 
+text "Authors of a set of sent messages:"
+
 definition authors :: "(validator * message) set \<Rightarrow> validator set"
 where
   "authors ms = {n. \<exists> m. (n, m) \<in> ms}"
 
+text "The set of validators not slashed in a situation:"
+
 definition unslashed_validators :: "situation \<Rightarrow> validator set"
 where
   "unslashed_validators s = {n \<in> Validators s. \<not> slashed s n}"
+
+text "Sometimes those unslashed validators can send messages and turn a situation into another."
 
 definition unslashed_can_extend :: "situation \<Rightarrow> situation \<Rightarrow> bool"
 where
@@ -821,6 +854,8 @@ where
   Validators s_new = Validators s \<and>
   Messages s_new = Messages s \<union> new_messages \<and>
   PrevHash s_new = PrevHash s_new)"
+
+text "In that case, it's desirable none of these validators are slashed."
 
 definition no_new_slashed :: "situation \<Rightarrow> situation \<Rightarrow> bool"
 where
@@ -902,11 +937,11 @@ proof -
    by blast
  then have "finite {m \<in> Messages s. \<exists> n h v. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v))}"
    using calculation infinite_super by auto
- then have "finite {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}"
+ then have "finite {view_of_signed_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}"
    by(rule Finite_Set.finite_image_set)
- moreover have " {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}
+ moreover have " {view_of_signed_message m | m. m \<in> Messages s \<and> (\<exists> n h v. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, Commit (h, v)))}
                = {M1. some_commits_by_honest_at s M1}"
-   apply (auto simp add: some_commits_by_honest_at_def view_of_sent_message_def view_of_message_def)
+   apply (auto simp add: some_commits_by_honest_at_def view_of_signed_message_def view_of_message_def)
     apply auto[1]
    by force   
  ultimately show "finite {M1. some_commits_by_honest_at s M1}"
@@ -929,11 +964,11 @@ proof -
    by blast
  then have "finite {m \<in> Messages s. \<exists> n p. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, p)}"
    using calculation infinite_super by auto
- then have "finite {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, p))}"
+ then have "finite {view_of_signed_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, p))}"
    by(rule Finite_Set.finite_image_set)
- moreover have " {view_of_sent_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, p))}
+ moreover have " {view_of_signed_message m | m. m \<in> Messages s \<and> (\<exists> n p. n \<in> Validators s \<and> (\<not> slashed s n) \<and> m = (n, p))}
                = {M1. some_messages_by_honest_at s M1}"
-   by (auto simp add: some_messages_by_honest_at_def view_of_sent_message_def view_of_message_def)
+   by (auto simp add: some_messages_by_honest_at_def view_of_signed_message_def view_of_message_def)
  ultimately show "finite {M1. some_messages_by_honest_at s M1}"
    by auto
 qed
@@ -1694,6 +1729,15 @@ using no_commit_new_slashed_four apply blast
 done
 
 section "Plausible Liveness (don't skip)"
+
+text "The plausible liveness has a more complicated statement than account safety's.
+If a situation has a finite number of validators (but not zero),
+and if the situation contains no messages of invalid view numbers,
+and if a new hash is available,
+and if the situation does not contain infinitely many messages,
+and if at most one-third of the validators are slashed,
+there is a set of messages that the not-yet-slashed validators can send,
+after which a new hash is committed but no new validator is slashed."
 
 lemma plausible_liveness :
   "situation_has_finitely_many_validators s \<Longrightarrow>
