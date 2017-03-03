@@ -53,32 +53,33 @@ fact {
 }
 
 // Slashing condition [i]
-fact {
-   all c : Commit |
-      c.c_sender in SaneNode implies
-      (#{n : Node | some p : Prepare | p.p_sender = n && p.p_hash = c.c_hash}). mul[ 3]  >= mul[ #{n : Node}, 2 ]
+pred slashed1 (s : Node) {
+   some c : Commit |
+      s in c.c_sender &&
+      (#{n : Node | some p : Prepare | p.p_sender = n && p.p_hash = c.c_hash}). mul[ 3]  < mul[ #{n : Node}, 2 ]
 }
 
 // Slashing condition [ii]
-fact {
-  all p : Prepare |
-     (p.p_sender in SaneNode && some p.p_view_src.v_prev) implies
+pred slashed2 (s : Node) {
+  some p : Prepare |
+     (s in p.p_sender && some p.p_view_src.v_prev) &&
+     not (
      some h_anc : Hash | some v_src : View |
       h_anc in p.p_hash.(^h_prev) && h_anc.h_view = p.p_view_src &&
-      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash = h_anc && p'.p_view_src = v_src }). mul[ 3]  >= (#{n : Node}).mul[ 2 ]
+      (#{n : Node | some p' : Prepare | p'.p_sender = n && p'.p_hash = h_anc && p'.p_view_src = v_src }). mul[ 3]  >= (#{n : Node}).mul[ 2 ])
 }
 
 // Slashing condition [iii]
-fact {
-  all c : Commit | c.c_sender in SaneNode implies all p : Prepare | c.c_sender = p.p_sender &&
+pred slashed3 (s : Node) {
+  some c : Commit | s in c.c_sender && not (all p : Prepare | c.c_sender = p.p_sender &&
     p.p_view_src in c.c_hash.h_view.(^v_prev) && c.c_hash.h_view in p.p_hash.h_view.(^v_prev)
-    implies 0 = 1
+    implies 0 = 1)
 }
 
 // Slashing condition [iv]
-fact {
-  all p0: Prepare | all p1:Prepare | p0.p_sender = p1.p_sender && p1.p_sender in SaneNode && p0.p_hash.h_view = p1.p_hash.h_view implies
-    p0.p_view_src = p1.p_view_src && p0.p_hash = p1.p_hash
+pred slashed4 (s : Node) {
+  some p0: Prepare | some p1:Prepare | s in p0.p_sender && p0.p_sender = p1.p_sender && p0.p_hash.h_view = p1.p_hash.h_view && not
+    (p0.p_view_src = p1.p_view_src && p0.p_hash = p1.p_hash)
 }
 
 pred some_commit {
@@ -100,6 +101,10 @@ fact {
 
 fact {
   all v0, v1 : View | v0 in v1.(*v_prev) or v1 in v0.(*v_prev)
+}
+
+fact {
+   all n : Node | (n.slashed1 or n.slashed2 or n.slashed3 or n.slashed4) implies not (n in SaneNode)
 }
 
 
