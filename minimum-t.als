@@ -104,7 +104,7 @@ fact {
 }
 
 fact {
-   all n : Node | (n.slashed1 or n.slashed2 or n.slashed3 or n.slashed4) implies not (n in SaneNode)
+   {n : Node | n.slashed1 or n.slashed2 or n.slashed3 or n.slashed4} = { n : Node | not n in SaneNode }
 }
 
 
