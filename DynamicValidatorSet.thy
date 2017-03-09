@@ -144,6 +144,26 @@ definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> has
 where
 "committed s vs h = (\<exists> v. two_thirds_sent_message s vs (Commit (h, v)))"
 
+section "Electing the New Validators (not skippable)"
+
+fun transfer_of_power :: "situation \<Rightarrow> validator set \<Rightarrow> validator set \<Rightarrow> bool"
+where
+"transfer_of_power s vs vs' = 
+   (\<exists> h.
+    RearValidators s h = vs \<and>
+    FwdValidators s h = vs' \<and>
+    committed s vs h \<and>
+    committed s vs' h)"
+
+inductive successor :: "situation \<Rightarrow>
+                        validator set \<Rightarrow> 
+                        validator set \<Rightarrow> bool"
+where
+  successor_self : "successor s vs vs"
+| successor_elected :
+    "successor s vs vs' \<Longrightarrow> transfer_of_power s vs' vs'' \<Longrightarrow>
+     successor s vs vs''"
+
 section "The Slashing Conditions (not skippable)"
 
 text "[i] A validator is slashed when it has sent a commit message of a hash
@@ -414,6 +434,8 @@ lemma accountable_safety :
  committed s vs2 h2 \<Longrightarrow>
  \<exists> vs'.
    successor s vs' vs \<and>
-   two_thirds_slashed s vs'"
+   one_third_slashed s vs'"
+
+oops
 
 end
