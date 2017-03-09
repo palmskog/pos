@@ -408,11 +408,12 @@ at least one-third of the validators are slashed in the situation."
 (* TODO: state it again *)
 
 lemma accountable_safety :
-"fork h h1 h2 \<Longrightarrow>
- commit vs h \<Longrightarrow>
- commit vs1 h1 \<Longrightarrow>
- commit vs2 h2 \<Longrightarrow>
- successor vs' vs \<and>
- two_thirds_slashed vs'"
+"fork s h h1 h2 \<Longrightarrow>
+ committed s vs h \<Longrightarrow>
+ committed s vs1 h1 \<Longrightarrow>
+ committed s vs2 h2 \<Longrightarrow>
+ \<exists> vs'.
+   successor s vs' vs \<and>
+   two_thirds_slashed s vs'"
 
 end
