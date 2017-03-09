@@ -84,11 +84,20 @@ definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> 
 where
 "is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
+definition is_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"is_descendant s x y = (\<exists> n. nth_ancestor s n x = Some y)"
+
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
 definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
+
+definition fork :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"fork s root h1 h2 =
+  (not_on_same_chain s h1 h2 \<and> is_descendant s root h1 \<and> is_descendant s root h2)"
 
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
@@ -397,5 +406,13 @@ if two hashes x and y are committed in the situation, but if the two hashes are 
 at least one-third of the validators are slashed in the situation."
 
 (* TODO: state it again *)
+
+lemma accountable_safety :
+"fork h h1 h2 \<Longrightarrow>
+ commit vs h \<Longrightarrow>
+ commit vs1 h1 \<Longrightarrow>
+ commit vs2 h2 \<Longrightarrow>
+ successor vs' vs \<and>
+ two_thirds_slashed vs'"
 
 end
