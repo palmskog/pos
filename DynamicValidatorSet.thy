@@ -221,6 +221,19 @@ where
                 slashed_three s n \<or>
                 slashed_four s n)"
 
+fun hash_of_message :: "message \<Rightarrow> hash"
+where
+"hash_of_message (Commit (h, v)) = h"
+|"hash_of_message (Prepare (h, v, vs)) = h"
+
+definition prepare_commit_only_from_rear_or_fwd :: "situation \<Rightarrow> bool"
+where
+"prepare_commit_only_from_rear_or_fwd s =
+  (\<forall> m. m \<in> Messages s \<longrightarrow>
+     (fst m \<in> RearValidators s (hash_of_message (snd m)) \<or>
+      fst m \<in> FwdValidators s (hash_of_message (snd m)))
+  )"
+
 definition one_third_slashed :: "situation \<Rightarrow> validator set \<Rightarrow> bool"
 where
 "one_third_slashed s vs = one_third vs (slashed s)"
@@ -431,8 +444,16 @@ definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash 
 where
 "decided s vs h = (committed s vs h \<and> RearValidators s h = vs)"
 
+(* Maybe add a slashing condition
+   when a hash does not get committed from both fwd and rear,
+   changing the fwd rear would be slashed
+*)
+
 lemma accountable_safety :
-"fork s h h1 h2 \<Longrightarrow>
+"(* TODO prevhash_respects_fwd_rear s; this is not necessary if we strengthen
+    the third slashing condition *)
+ prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ fork s h h1 h2 \<Longrightarrow>
  decided s vs h \<Longrightarrow>
  decided s vs1 h1 \<Longrightarrow>
  decided s vs2 h2 \<Longrightarrow>
