@@ -427,11 +427,15 @@ at least one-third of the validators are slashed in the situation."
 
 (* TODO: state it again *)
 
+definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> bool"
+where
+"decided s vs h = (committed s vs h \<and> RearValidators s h = vs)"
+
 lemma accountable_safety :
 "fork s h h1 h2 \<Longrightarrow>
- committed s vs h \<Longrightarrow>
- committed s vs1 h1 \<Longrightarrow>
- committed s vs2 h2 \<Longrightarrow>
+ decided s vs h \<Longrightarrow>
+ decided s vs1 h1 \<Longrightarrow>
+ decided s vs2 h2 \<Longrightarrow>
  \<exists> vs'.
    successor s vs' vs \<and>
    one_third_slashed s vs'"
