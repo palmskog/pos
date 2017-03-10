@@ -474,7 +474,7 @@ lemma accountable_safety :
  decided s vs1 h1 \<Longrightarrow>
  decided s vs2 h2 \<Longrightarrow>
  \<exists> vs'.
-   successor s vs' vs \<and>
+   successor s vs vs' \<and>
    one_third_slashed s vs'"
 
 oops
