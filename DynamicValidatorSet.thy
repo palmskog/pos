@@ -77,6 +77,26 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
+(* TODO: consider allow changing the FWD set during this. *)
+definition prev_hash_under_same_validators :: "situation \<Rightarrow> hash \<Rightarrow> hash option"
+where
+  "prev_hash_under_same_validators s h =
+    (case PrevHash s h of
+       None \<Rightarrow> None
+     | Some h' \<Rightarrow>
+        (if RearValidators s h = RearValidators s h' \<and> FwdValidators s h = FwdValidators s h' then
+            Some h'
+         else
+            None))"
+
+fun nth_ancestor_under_same_validators  :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
+where
+  "nth_ancestor_under_same_validators _ 0 h = Some h"
+| "nth_ancestor_under_same_validators s (Suc n) h =
+    (case prev_hash_under_same_validators s h of
+       None \<Rightarrow> None
+     | Some h' \<Rightarrow> nth_ancestor_under_same_validators s n h')"
+
 text "And also we are allowed to talk if two hashes are in ancestor-descendant relation.
 It does not matter if there is an algorithm to decide this."
 
@@ -168,13 +188,12 @@ where
     prepared s vs' h v v_src)"
 
 inductive heir :: "situation \<Rightarrow>
-                   validator set \<Rightarrow> 
-                   validator set \<Rightarrow> bool"
+                   (hash \<times> validator set) \<Rightarrow> 
+                   (hash \<times> validator set) \<Rightarrow> bool"
 where
-  heir_self : "heir s vs vs"
-| heir_elected :
-    "heir s vs vs' \<Longrightarrow> transfer_of_power s vs' vs'' \<Longrightarrow>
-     heir s vs vs''"
+  heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
+(* step *)
+
 
 section "The Slashing Conditions (not skippable)"
 
