@@ -239,20 +239,18 @@ where
    nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
    validators_change s h h')"
 
-(* TODO: separately define the sourcing relation. *)
+definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+where
+"sourcing s p0 p1 = (normal_sourcing s p0 p1 \<or> sourcing_switching_validators s p0 p1)"
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
                    (hash \<times> validator set) \<Rightarrow> bool"
 where
   heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
-| heir_normal : "heir s (h, vs) (h', vs') \<Longrightarrow>
-                 normal_sourcing s (h', vs') (h'', vs'') \<Longrightarrow>
+| heir_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
+                 sourcing s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
-| heir_switching_validators :
-    "heir s (h, vs) (h', vs') \<Longrightarrow>
-     sourcing_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
-     heir s (h, vs) (h'', vs'')"
 
 (* This is to be used in a definition of fork *)
 
