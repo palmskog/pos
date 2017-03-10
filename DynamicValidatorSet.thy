@@ -212,16 +212,19 @@ where
     prepared s vs h v v_src \<and>
     prepared s vs' h v v_src)"
 
-fun normal_sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+fun normal_sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"normal_sourcing s (h, vs) (h', vs') =
-  (\<exists> v_ss v v_src.
+"normal_sourcing s (h, vs) (h', v', v_src) =
+  (\<exists> v_ss.
    prepared_by_rear s vs h v_src v_ss \<and>
-   prepared_by_rear s vs' h' v v_src \<and>
    -1 \<le> v_src \<and>
-   v_src < v \<and>
-   nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
+   v_src < v' \<and>
+   nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_match s h h' )"
+
+(* TODO: below line needs to go where sourcing is used
+   prepared_by_rear s vs' h' v' v_src \<and>
+*)
 
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -229,22 +232,33 @@ where
    (FwdValidators s next = RearValidators s ancient)"
 
 fun sourcing_switching_validators ::
-"situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+"situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"sourcing_switching_validators s (h, vs) (h', vs') =
-  (\<exists> v_ss old new v v_src.
-   prepared_by_rear s old h v_src v_ss \<and>
-   committed_by_rear s old h v_src \<and>
+"sourcing_switching_validators s (h, vs) (h', v', v_src) =
+  (\<exists> v_ss new.
+   prepared_by_rear s vs h v_src v_ss \<and>
+   committed_by_rear s vs h v_src \<and>
    committed_by_fwd s new h v_src \<and>
-   prepared_by_rear s new h' v v_src \<and>
    -1 \<le> v_src \<and>
-   v_src < v \<and>
-   nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
+   v_src < v' \<and>
+   nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_change s h h')"
 
-definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+(* TODO: say this when sourcing is used
+   prepared_by_rear s new h' v v_src \<and>
+*)
+
+definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"sourcing s p0 p1 = (normal_sourcing s p0 p1 \<or> sourcing_switching_validators s p0 p1)"
+"sourcing s p0 tri = (normal_sourcing s p0 tri \<or> sourcing_switching_validators s p0 tri)"
+
+fun inherit :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow>
+                       (hash \<times> validator set) \<Rightarrow> bool"
+where
+"inherit s (h_old, vs_old) (h_new, vs_new) =
+   (\<exists> v v_src.
+    prepared_by_rear s vs_new h_new v v_src \<and>
+    sourcing s (h_old, vs_old) (h_new, v, v_src))"
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
@@ -252,7 +266,7 @@ inductive heir :: "situation \<Rightarrow>
 where
   heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
 | heir_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
-                 sourcing s (h', vs') (h'', vs'') \<Longrightarrow>
+                 inherit s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
 
 (* This is to be used in a definition of fork *)
