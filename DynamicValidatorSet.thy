@@ -104,9 +104,10 @@ definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> 
 where
 "is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
-definition is_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+definition is_descendant_under_same_validators :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
-"is_descendant s x y = (\<exists> n. nth_ancestor s n x = Some y)"
+"is_descendant_under_same_validators s x y =
+   (\<exists> n. nth_ancestor_under_same_validators s n x = Some y)"
 
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
@@ -114,10 +115,13 @@ definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash
 where
 "not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
 
+
+
+(* This definition needs to be lifted on the pairs (hash, validator set) *)
 definition fork :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "fork s root h1 h2 =
-  (not_on_same_chain s h1 h2 \<and> is_descendant s h1 root \<and> is_descendant s h2 root)"
+  (not_on_same_chain s h1 h2 \<and> is_descendant_or_self s h1 root \<and> is_descendant_or_self s h2 root)"
 
 definition fork_of_size :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> nat \<Rightarrow> bool"
 where
@@ -128,7 +132,7 @@ where
 
 lemma fork_has_size :
   "fork s root h1 h2 = (\<exists> sz. fork_of_size s root h1 h2 sz)"
-apply(auto simp add: fork_def is_descendant_def fork_of_size_def)
+apply(auto simp add: fork_def is_descendant_or_self_def fork_of_size_def)
 done
 
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
@@ -187,13 +191,24 @@ where
     prepared s vs h v v_src \<and>
     prepared s vs' h v v_src)"
 
+(* TODO: define normal_sourcing *)
+
+(* TODO: define sourcing_switching_validators *)
+
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
                    (hash \<times> validator set) \<Rightarrow> bool"
 where
   heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
-(* step *)
+| heir_normal : "heir s (h, vs) (h', vs') \<Longrightarrow>
+                 normal_sourcing (h', vs') (h'', vs'') \<Longrightarrow>
+                 heir s (h, vs) (h'', vs'')"
+| heir_switching_validators :
+    "heir s (h, vs) (h', vs') \<Longrightarrow>
+     sourcing_switching_validators (h', vs') (h'', vs'') \<Longrightarrow>
+     heir s (h, vs) (h'', vs'')"
 
+(* This is to be used in a definition of fork *)
 
 section "The Slashing Conditions (not skippable)"
 
