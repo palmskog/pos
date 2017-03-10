@@ -218,10 +218,11 @@ where
   (\<exists> v_ss v v_src.
    prepared_by_rear s vs h v_src v_ss \<and>
    prepared_by_rear s vs' h' v v_src \<and>
+   -1 \<le> v_src \<and>
+   v_src < v \<and>
    nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
    validators_match s h h' )"
 
-(* TODO: define validators_change *)
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "validators_change s ancient next =
@@ -236,6 +237,8 @@ where
    committed_by_rear s old h v_src \<and>
    committed_by_fwd s new h v_src \<and>
    prepared_by_rear s new h' v v_src \<and>
+   -1 \<le> v_src \<and>
+   v_src < v \<and>
    nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
    validators_change s h h')"
 
