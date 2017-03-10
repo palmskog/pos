@@ -291,26 +291,14 @@ where
 "validators_transition s h0 h1 =
   (FwdValidators s h0 = RearValidators s h1)"
 
-(* TODO: state this using the sourcing relations *)
-
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
 "slashed_two s n =
-  (\<exists> h v vs.
-       ((n, Prepare (h, v, vs)) \<in> Messages s \<and>
-       vs \<noteq> -1 \<and>
-       (\<not> (\<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs \<and>
-           Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
-           validators_match s h_anc h \<and>
-           prepared s (RearValidators s h_anc) h_anc vs vs')) \<and>
-       (\<not> (\<exists> h_anc vs'.
-           -1 \<le> vs' \<and> vs' < vs \<and>
-           Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
-           validators_transition s h_anc h \<and>
-           prepared s (RearValidators s h_anc) h_anc vs vs' \<and>
-           committed s (RearValidators s h_anc) h_anc vs \<and>
-           committed s (FwdValidators s h_anc) h_anc vs))))"
+  (\<exists> h v v_src.
+       ((n, Prepare (h, v, v_src)) \<in> Messages s \<and>
+       v_src \<noteq> -1 \<and>
+       (\<not> (\<exists> h_anc vs_anc.
+               sourcing s (h_anc, vs_anc) (h, v, v_src)))))"
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
