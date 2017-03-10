@@ -206,7 +206,8 @@ where
            Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
            validators_transition s h_anc h \<and>
            prepared s (RearValidators s h_anc) h_anc vs vs' \<and>
-           prepared s (FwdValidators s h_anc) h_anc vs vs'))))"
+           committed s (RearValidators s h_anc) h_anc \<and>
+           committed s (FwdValidators s h_anc) h_anc))))"
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
