@@ -475,10 +475,18 @@ definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash 
 where
 "decided s vs h = (committed s vs h \<and> RearValidators s h = vs)"
 
-(* Maybe add a slashing condition
-   when a hash does not get committed from both fwd and rear,
-   changing the fwd rear would be slashed
-*)
+lemma accountable_safety' :
+"\<forall> s h h1 h2 vs vs1 vs2.
+ prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+ fork_of_size s h h1 h2 sz \<longrightarrow>
+ decided s vs h \<longrightarrow>
+ decided s vs1 h1 \<longrightarrow>
+ decided s vs2 h2 \<longrightarrow>
+ (\<exists> vs'.
+   successor s vs vs' \<and>
+   one_third_slashed s vs')"
+sorry
+
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -489,7 +497,6 @@ lemma accountable_safety :
  \<exists> vs'.
    successor s vs vs' \<and>
    one_third_slashed s vs'"
-
-oops
+by (meson accountable_safety' fork_has_size)
 
 end
