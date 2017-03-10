@@ -149,11 +149,11 @@ section "Electing the New Validators (not skippable)"
 fun transfer_of_power :: "situation \<Rightarrow> validator set \<Rightarrow> validator set \<Rightarrow> bool"
 where
 "transfer_of_power s vs vs' = 
-   (\<exists> h.
+   (\<exists> h v v_src.
     RearValidators s h = vs \<and>
     FwdValidators s h = vs' \<and>
-    committed s vs h \<and>
-    committed s vs' h)"
+    prepared s vs h v v_src \<and>
+    prepared s vs' h v v_src)"
 
 inductive successor :: "situation \<Rightarrow>
                         validator set \<Rightarrow> 
@@ -179,6 +179,17 @@ where
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
 
+definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_match s h0 h1 =
+ (RearValidators s h0 = RearValidators s h1 \<and>
+  FwdValidators s h0 = FwdValidators s h1)"
+
+definition validators_transition :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_transition s h0 h1 =
+  (FwdValidators s h0 = RearValidators s h1)"
+
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
 "slashed_two s n =
@@ -188,7 +199,14 @@ where
        (\<not> (\<exists> h_anc vs'.
            -1 \<le> vs' \<and> vs' < vs \<and>
            Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
-           prepared s (RearValidators s h) h_anc vs vs'))))"
+           validators_match s h_anc h \<and>
+           prepared s (RearValidators s h_anc) h_anc vs vs')) \<and>
+       (\<not> (\<exists> h_anc vs'.
+           -1 \<le> vs' \<and> vs' < vs \<and>
+           Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
+           validators_transition s h_anc h \<and>
+           prepared s (RearValidators s h_anc) h_anc vs vs' \<and>
+           prepared s (FwdValidators s h_anc) h_anc vs vs'))))"
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
@@ -450,9 +468,7 @@ where
 *)
 
 lemma accountable_safety :
-"(* TODO prevhash_respects_fwd_rear s; this is not necessary if we strengthen
-    the third slashing condition *)
- prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+"prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork s h h1 h2 \<Longrightarrow>
  decided s vs h \<Longrightarrow>
  decided s vs1 h1 \<Longrightarrow>
