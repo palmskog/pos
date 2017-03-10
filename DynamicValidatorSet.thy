@@ -97,7 +97,14 @@ where
 definition fork :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "fork s root h1 h2 =
-  (not_on_same_chain s h1 h2 \<and> is_descendant s root h1 \<and> is_descendant s root h2)"
+  (not_on_same_chain s h1 h2 \<and> is_descendant s h1 root \<and> is_descendant s h2 root)"
+
+definition fork_of_size :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> nat \<Rightarrow> bool"
+where
+"fork_of_size s root h1 h2 sz =
+  (\<exists> m n.
+   not_on_same_chain s h1 h2 \<and> nth_ancestor s m h1 = Some root \<and> nth_ancestor s n h2 = Some root \<and>
+   m + n \<le> sz)"
 
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
