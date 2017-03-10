@@ -533,9 +533,13 @@ proof -
    )"
    (is "?case1 \<or> ?case2")
   	using smaller_fork_or_direct_fork by blast
-  then show "?IH \<Longrightarrow> ?conc"
+  then show "?IH \<Longrightarrow> ?f \<Longrightarrow> ?conc"
   proof
-    show "?case1 \<Longrightarrow> ?thesis"
+    show "?f \<Longrightarrow> ?case1 \<Longrightarrow> ?thesis"
+     (* This seems not simple enough.  because the validators might have changed meanwhile still
+      * If I say, all hashes in between have the same validator set, that would be too much?
+      * I don't know anything about the un-committed hashes.
+      *)
       sorry
   next
     show "?case2 \<Longrightarrow> ?IH \<Longrightarrow> ?thesis"
