@@ -187,9 +187,19 @@ where
 
 text "A hash is committed when two-thirds of the validators have sent a certain message."
 
-definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> bool"
+definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
-"committed s vs h = (\<exists> v. two_thirds_sent_message s vs (Commit (h, v)))"
+"committed s vs h v = two_thirds_sent_message s vs (Commit (h, v))"
+
+definition committed_by_rear :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
+where
+"committed_by_rear s vs h v =
+   (RearValidators s h = vs \<and> committed s vs h v)"
+
+definition committed_by_fwd :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
+where
+"committed_by_fwd s vs h v =
+   (FwdValidators s h = vs \<and> committed s vs h v)"
 
 section "Electing the New Validators (not skippable)"
 
@@ -211,9 +221,25 @@ where
    nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
    validators_match s h h' )"
 
-(* TODO: define sourcing_switching_validators *)
+(* TODO: define validators_change *)
+definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_change s ancient next =
+   (FwdValidators s next = RearValidators s ancient)"
 
-definition sourcing_switching_validators :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+fun sourcing_switching_validators ::
+"situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+where
+"sourcing_switching_validators s (h, vs) (h', vs') =
+  (\<exists> v_ss old new v v_src.
+   prepared_by_rear s old h v_src v_ss \<and>
+   committed_by_rear s old h v_src \<and>
+   committed_by_fwd s new h v_src \<and>
+   prepared_by_rear s new h' v v_src \<and>
+   nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
+   validators_change s h h')"
+
+(* TODO: separately define the sourcing relation. *)
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
@@ -245,16 +271,12 @@ where
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
 
-definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"validators_match s h0 h1 =
- (RearValidators s h0 = RearValidators s h1 \<and>
-  FwdValidators s h0 = FwdValidators s h1)"
-
 definition validators_transition :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "validators_transition s h0 h1 =
   (FwdValidators s h0 = RearValidators s h1)"
+
+(* TODO: state this using the sourcing relations *)
 
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -272,8 +294,8 @@ where
            Some h_anc = nth_ancestor s (nat (v - vs)) h \<and>
            validators_transition s h_anc h \<and>
            prepared s (RearValidators s h_anc) h_anc vs vs' \<and>
-           committed s (RearValidators s h_anc) h_anc \<and>
-           committed s (FwdValidators s h_anc) h_anc))))"
+           committed s (RearValidators s h_anc) h_anc vs \<and>
+           committed s (FwdValidators s h_anc) h_anc vs))))"
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
@@ -525,54 +547,24 @@ at least one-third of the validators are slashed in the situation."
 
 (* TODO: state it again *)
 
-definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> bool"
+definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
-"decided s vs h = (committed s vs h \<and> RearValidators s h = vs)"
+"decided s vs h v = (committed s vs h v \<and> RearValidators s h = vs)"
 
 lemma fork_of_size_zero :
   "\<not> fork_of_size s h h1 h2 0"
 apply(auto simp add: fork_of_size_def not_on_same_chain_def is_descendant_or_self_def)
 using nth_ancestor.simps(1) by blast
 
-
-lemma accountable_safety_ind :
-       "\<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
-           (\<forall>h h1 h2.
-               fork_of_size s h h1 h2 sz \<longrightarrow>
-               (\<forall>vs. decided s vs h \<longrightarrow>
-                     (\<exists>vs1. decided s vs1 h1) \<longrightarrow>
-                     (\<exists>vs2. decided s vs2 h2) \<longrightarrow>
-                     (\<exists>vs'. successor s vs vs' \<and> one_third_slashed s vs'))) \<Longrightarrow>
-       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-       fork_of_size s h h1 h2 (Suc sz) \<Longrightarrow>
-       decided s vs h \<Longrightarrow>
-       decided s vs1 h1 \<Longrightarrow> decided s vs2 h2 \<Longrightarrow> \<exists>vs'. successor s vs vs' \<and> one_third_slashed s vs'"
-(is "?IH \<Longrightarrow> ?of \<Longrightarrow> ?f \<Longrightarrow> ?dh \<Longrightarrow> ?d1 \<Longrightarrow> ?d2 \<Longrightarrow> ?conc")
-proof -
-oops
-
-lemma accountable_safety' :
-"\<forall> s h h1 h2 vs vs1 vs2.
- prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
- fork_of_size s h h1 h2 sz \<longrightarrow>
- decided s vs h \<longrightarrow>
- decided s vs1 h1 \<longrightarrow>
- decided s vs2 h2 \<longrightarrow>
- (\<exists> vs'.
-   successor s vs vs' \<and>
-   one_third_slashed s vs')"
-apply(induction sz; auto simp add: fork_of_size_zero accountable_safety_ind)
-done
-
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
- fork s h h1 h2 \<Longrightarrow>
- decided s vs h \<Longrightarrow>
- decided s vs1 h1 \<Longrightarrow>
- decided s vs2 h2 \<Longrightarrow>
+ fork s h h1 h2 \<Longrightarrow> (* TODO: use the heir relation to replace this *)
+ decided s vs h v \<Longrightarrow>
+ decided s vs1 h1 v1 \<Longrightarrow>
+ decided s vs2 h2 v2 \<Longrightarrow>
  \<exists> vs'.
    successor s vs vs' \<and>
    one_third_slashed s vs'"
-by (meson accountable_safety' fork_has_size)
+oops
 
 end
