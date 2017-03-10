@@ -121,26 +121,6 @@ definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash
 where
 "not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
 
-
-
-(* This definition needs to be lifted on the pairs (hash, validator set) *)
-definition fork :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"fork s root h1 h2 =
-  (not_on_same_chain s h1 h2 \<and> is_descendant_or_self s h1 root \<and> is_descendant_or_self s h2 root)"
-
-definition fork_of_size :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> nat \<Rightarrow> bool"
-where
-"fork_of_size s root h1 h2 sz =
-  (\<exists> m n.
-   not_on_same_chain s h1 h2 \<and> nth_ancestor s m h1 = Some root \<and> nth_ancestor s n h2 = Some root \<and>
-   m + n \<le> sz)"
-
-lemma fork_has_size :
-  "fork s root h1 h2 = (\<exists> sz. fork_of_size s root h1 h2 sz)"
-apply(auto simp add: fork_def is_descendant_or_self_def fork_of_size_def)
-done
-
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
 text "We can lift any predicate about a validator into a predicate about a situation:
@@ -259,6 +239,15 @@ where
 | heir_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
                  inherit s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
+
+fun fork :: "situation \<Rightarrow>
+                    (hash \<times> validator set) \<Rightarrow>
+                    (hash \<times> validator set) \<Rightarrow>
+                    (hash \<times> validator set) \<Rightarrow> bool"
+where
+"fork s (root, vs) (h1, vs1) (h2, vs2) =
+  (not_on_same_chain s h1 h2 \<and> heir s (root, vs) (h1, vs1) \<and> heir s (root, vs) (h2, vs2))"
+
 
 (* This is to be used in a definition of fork *)
 
@@ -545,14 +534,9 @@ definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash 
 where
 "decided s vs h v = (committed s vs h v \<and> RearValidators s h = vs)"
 
-lemma fork_of_size_zero :
-  "\<not> fork_of_size s h h1 h2 0"
-apply(auto simp add: fork_of_size_def not_on_same_chain_def is_descendant_or_self_def)
-using nth_ancestor.simps(1) by blast
-
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
- fork s h h1 h2 \<Longrightarrow> (* TODO: use the heir relation to replace this *)
+ fork s (h, vs) (h1, vs1) (h2, vs2) \<Longrightarrow>
  decided s vs h v \<Longrightarrow>
  decided s vs1 h1 v1 \<Longrightarrow>
  decided s vs2 h2 v2 \<Longrightarrow>
