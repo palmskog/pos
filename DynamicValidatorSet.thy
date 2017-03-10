@@ -167,14 +167,14 @@ where
     prepared s vs h v v_src \<and>
     prepared s vs' h v v_src)"
 
-inductive successor :: "situation \<Rightarrow>
-                        validator set \<Rightarrow> 
-                        validator set \<Rightarrow> bool"
+inductive heir :: "situation \<Rightarrow>
+                   validator set \<Rightarrow> 
+                   validator set \<Rightarrow> bool"
 where
-  successor_self : "successor s vs vs"
-| successor_elected :
-    "successor s vs vs' \<Longrightarrow> transfer_of_power s vs' vs'' \<Longrightarrow>
-     successor s vs vs''"
+  heir_self : "heir s vs vs"
+| heir_elected :
+    "heir s vs vs' \<Longrightarrow> transfer_of_power s vs' vs'' \<Longrightarrow>
+     heir s vs vs''"
 
 section "The Slashing Conditions (not skippable)"
 
@@ -481,25 +481,6 @@ apply(auto simp add: fork_of_size_def not_on_same_chain_def is_descendant_or_sel
 using nth_ancestor.simps(1) by blast
 
 
-lemma smaller_fork_or_direct_fork :
- "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-  fork_of_size s h h1 h2 (Suc sz) \<Longrightarrow>
-  decided s vs h \<Longrightarrow>
-  decided s vs1 h1 \<Longrightarrow> decided s vs2 h2 \<Longrightarrow>
-  (\<exists> common_vs.
-     decided s common_vs h \<and>
-     decided s common_vs h1 \<and>
-     decided s common_vs h2) \<or>
-  (\<exists> h' h1' h2' vs' vs1' vs2'.
-    fork_of_size s h' h1' h2' sz \<and>
-    decided s vs' h' \<and>
-    decided s vs1' h1' \<and>
-    decided s vs2' h2' \<and>
-    successor s vs vs'
-  )"
-sorry
-       
-
 lemma accountable_safety_ind :
        "\<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
            (\<forall>h h1 h2.
@@ -514,38 +495,7 @@ lemma accountable_safety_ind :
        decided s vs1 h1 \<Longrightarrow> decided s vs2 h2 \<Longrightarrow> \<exists>vs'. successor s vs vs' \<and> one_third_slashed s vs'"
 (is "?IH \<Longrightarrow> ?of \<Longrightarrow> ?f \<Longrightarrow> ?dh \<Longrightarrow> ?d1 \<Longrightarrow> ?d2 \<Longrightarrow> ?conc")
 proof -
-  assume ?of
-  moreover assume ?f
-  moreover assume ?dh
-  moreover assume ?d1
-  moreover assume ?d2
-  ultimately have c : 
-  "(\<exists> common_vs.
-     decided s common_vs h \<and>
-     decided s common_vs h1 \<and>
-     decided s common_vs h2) \<or>
-   ( \<exists> h' h1' h2' vs' vs1' vs2'.
-     fork_of_size s h' h1' h2' sz \<and>
-     decided s vs' h' \<and>
-     decided s vs1' h1' \<and>
-     decided s vs2' h2' \<and>
-     successor s vs vs'
-   )"
-   (is "?case1 \<or> ?case2")
-  	using smaller_fork_or_direct_fork by blast
-  then show "?IH \<Longrightarrow> ?f \<Longrightarrow> ?conc"
-  proof
-    show "?f \<Longrightarrow> ?case1 \<Longrightarrow> ?thesis"
-     (* This seems not simple enough.  because the validators might have changed meanwhile still
-      * If I say, all hashes in between have the same validator set, that would be too much?
-      * I don't know anything about the un-committed hashes.
-      *)
-      sorry
-  next
-    show "?case2 \<Longrightarrow> ?IH \<Longrightarrow> ?thesis"
-      sorry
-  qed
-qed
+oops
 
 lemma accountable_safety' :
 "\<forall> s h h1 h2 vs vs1 vs2.
