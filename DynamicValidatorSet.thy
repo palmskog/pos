@@ -106,6 +106,11 @@ where
    not_on_same_chain s h1 h2 \<and> nth_ancestor s m h1 = Some root \<and> nth_ancestor s n h2 = Some root \<and>
    m + n \<le> sz)"
 
+lemma fork_has_size :
+  "fork s root h1 h2 = (\<exists> sz. fork_of_size s root h1 h2 sz)"
+apply(auto simp add: fork_def is_descendant_def fork_of_size_def)
+done
+
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
 text "We can lift any predicate about a validator into a predicate about a situation:
