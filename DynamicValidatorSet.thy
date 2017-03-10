@@ -62,6 +62,12 @@ record situation =
   Messages :: "signed_message set"
   PrevHash :: "hash \<Rightarrow> hash option"
 
+definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_match s h0 h1 =
+  (RearValidators s h0 = RearValidators s h1 \<and>
+   FwdValidators s h0 = FwdValidators s h1)"
+
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
 text "We will be talking about two conflicting commits.  To define `conflicting' one needs to look at the
@@ -174,6 +180,11 @@ where
 "prepared s vs h v vsrc =
    (two_thirds_sent_message s vs (Prepare (h, v, vsrc)))"
 
+definition prepared_by_rear :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
+where
+"prepared_by_rear s vs h v vsrc =
+   (RearValidators s h = vs \<and> prepared s vs h v vsrc)"
+
 text "A hash is committed when two-thirds of the validators have sent a certain message."
 
 definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> bool"
@@ -191,9 +202,18 @@ where
     prepared s vs h v v_src \<and>
     prepared s vs' h v v_src)"
 
-(* TODO: define normal_sourcing *)
+fun normal_sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
+where
+"normal_sourcing s (h, vs) (h', vs') =
+  (\<exists> v_ss v v_src.
+   prepared_by_rear s vs h v_src v_ss \<and>
+   prepared_by_rear s vs' h' v v_src \<and>
+   nth_ancestor s (nat (v - v_src)) h' = Some h \<and>
+   validators_match s h h' )"
 
 (* TODO: define sourcing_switching_validators *)
+
+definition sourcing_switching_validators :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> validator set) \<Rightarrow> bool"
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
@@ -201,11 +221,11 @@ inductive heir :: "situation \<Rightarrow>
 where
   heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
 | heir_normal : "heir s (h, vs) (h', vs') \<Longrightarrow>
-                 normal_sourcing (h', vs') (h'', vs'') \<Longrightarrow>
+                 normal_sourcing s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
 | heir_switching_validators :
     "heir s (h, vs) (h', vs') \<Longrightarrow>
-     sourcing_switching_validators (h', vs') (h'', vs'') \<Longrightarrow>
+     sourcing_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
      heir s (h, vs) (h'', vs'')"
 
 (* This is to be used in a definition of fork *)
