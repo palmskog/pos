@@ -203,15 +203,6 @@ where
 
 section "Electing the New Validators (not skippable)"
 
-fun transfer_of_power :: "situation \<Rightarrow> validator set \<Rightarrow> validator set \<Rightarrow> bool"
-where
-"transfer_of_power s vs vs' = 
-   (\<exists> h v v_src.
-    RearValidators s h = vs \<and>
-    FwdValidators s h = vs' \<and>
-    prepared s vs h v v_src \<and>
-    prepared s vs' h v v_src)"
-
 fun normal_sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
 "normal_sourcing s (h, vs) (h', v', v_src) =
@@ -565,8 +556,8 @@ lemma accountable_safety :
  decided s vs h v \<Longrightarrow>
  decided s vs1 h1 v1 \<Longrightarrow>
  decided s vs2 h2 v2 \<Longrightarrow>
- \<exists> vs'.
-   successor s vs vs' \<and>
+ \<exists> vs' h'.
+   heir s (h, vs) (h', vs') \<and>
    one_third_slashed s vs'"
 oops
 
