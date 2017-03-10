@@ -475,6 +475,25 @@ definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash 
 where
 "decided s vs h = (committed s vs h \<and> RearValidators s h = vs)"
 
+lemma fork_of_size_zero :
+  "\<not> fork_of_size s h h1 h2 0"
+apply(auto simp add: fork_of_size_def not_on_same_chain_def is_descendant_or_self_def)
+using nth_ancestor.simps(1) by blast
+
+lemma accountable_safety_ind :
+       "\<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+           (\<forall>h h1 h2.
+               fork_of_size s h h1 h2 sz \<longrightarrow>
+               (\<forall>vs. decided s vs h \<longrightarrow>
+                     (\<exists>vs1. decided s vs1 h1) \<longrightarrow>
+                     (\<exists>vs2. decided s vs2 h2) \<longrightarrow>
+                     (\<exists>vs'. successor s vs vs' \<and> one_third_slashed s vs'))) \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       fork_of_size s h h1 h2 (Suc sz) \<Longrightarrow>
+       decided s vs h \<Longrightarrow>
+       decided s vs1 h1 \<Longrightarrow> decided s vs2 h2 \<Longrightarrow> \<exists>vs'. successor s vs vs' \<and> one_third_slashed s vs'"
+sorry
+
 lemma accountable_safety' :
 "\<forall> s h h1 h2 vs vs1 vs2.
  prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
@@ -485,8 +504,8 @@ lemma accountable_safety' :
  (\<exists> vs'.
    successor s vs vs' \<and>
    one_third_slashed s vs')"
-sorry
-
+apply(induction sz; auto simp add: fork_of_size_zero accountable_safety_ind)
+done
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
