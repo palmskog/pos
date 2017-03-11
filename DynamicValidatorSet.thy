@@ -193,10 +193,6 @@ where
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_match s h h' )"
 
-(* TODO: below line needs to go where sourcing is used
-   prepared_by_rear s vs' h' v' v_src \<and>
-*)
-
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "validators_change s ancient next =
@@ -214,10 +210,6 @@ where
    v_src < v' \<and>
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_change s h h')"
-
-(* TODO: say this when sourcing is used
-   prepared_by_rear s new h' v v_src \<and>
-*)
 
 definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
