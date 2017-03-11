@@ -215,21 +215,35 @@ definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<
 where
 "sourcing s p0 tri = (sourcing_normal s p0 tri \<or> sourcing_switching_validators s p0 tri)"
 
-fun inherit :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow>
+(* The two very similar definitions are not combined
+ * just for easily counting the number of switching.
+ *)
+fun inherit_normal :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow>
                        (hash \<times> validator set) \<Rightarrow> bool"
 where
-"inherit s (h_old, vs_old) (h_new, vs_new) =
+"inherit_normal s (h_old, vs_old) (h_new, vs_new) =
    (\<exists> v v_src.
     prepared_by_rear s vs_new h_new v v_src \<and>
-    sourcing s (h_old, vs_old) (h_new, v, v_src))"
+    sourcing_normal s (h_old, vs_old) (h_new, v, v_src))"
+
+fun inherit_switching_validators :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow>
+                       (hash \<times> validator set) \<Rightarrow> bool"
+where
+"inherit_switching_validators s (h_old, vs_old) (h_new, vs_new) =
+   (\<exists> v v_src.
+    prepared_by_rear s vs_new h_new v v_src \<and>
+    sourcing_switching_validators s (h_old, vs_old) (h_new, v, v_src))"
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
                    (hash \<times> validator set) \<Rightarrow> bool"
 where
   heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
-| heir_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
-                 inherit s (h', vs') (h'', vs'') \<Longrightarrow>
+| heir_normal_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
+                 inherit_normal s (h', vs') (h'', vs'') \<Longrightarrow>
+                 heir s (h, vs) (h'', vs'')"
+| heir_switching_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
+                 inherit_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
 
 fun fork :: "situation \<Rightarrow>
