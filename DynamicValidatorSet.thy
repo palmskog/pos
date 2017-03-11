@@ -246,6 +246,25 @@ where
                  inherit_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
 
+inductive heir_after_n_switching ::
+   "nat \<Rightarrow> situation \<Rightarrow>
+    (hash \<times> validator set) \<Rightarrow>
+    (hash \<times> validator set) \<Rightarrow> bool"
+where
+  heir_n_self : "decided s vs h \<Longrightarrow>
+    heir_after_n_switching 0 s (h, vs) (h, vs)"
+| heir_n_normal_step :
+   "heir_after_n_switching n s (h, vs) (h', vs') \<Longrightarrow>
+    inherit_normal s (h', vs') (h'', vs'') \<Longrightarrow>
+    heir_after_n_switching n s (h, vs) (h'', vs'')"
+| heir_n_switching_step :
+   "heir_after_n_switchinig n s (h, vs) (h', vs') \<Longrightarrow>
+    inherit_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
+    heir_after_n_switching (Suc n) s (h, vs) (h'', vs'')"
+
+(* TODO: lemma about heir and heir_after_n_switching *)
+
+
 fun fork :: "situation \<Rightarrow>
                     (hash \<times> validator set) \<Rightarrow>
                     (hash \<times> validator set) \<Rightarrow>
@@ -253,6 +272,11 @@ fun fork :: "situation \<Rightarrow>
 where
 "fork s (root, vs) (h1, vs1) (h2, vs2) =
   (not_on_same_chain s h1 h2 \<and> heir s (root, vs) (h1, vs1) \<and> heir s (root, vs) (h2, vs2))"
+
+
+(* define fork_with_n_switching *)
+
+(* prove something about fork and fork_with_n_switching *)
 
 
 (* This is to be used in a definition of fork *)
