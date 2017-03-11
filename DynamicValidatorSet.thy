@@ -183,9 +183,9 @@ where
 
 section "Electing the New Validators (not skippable)"
 
-fun normal_sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
+fun sourcing_normal :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"normal_sourcing s (h, vs) (h', v', v_src) =
+"sourcing_normal s (h, vs) (h', v', v_src) =
   (\<exists> v_ss.
    prepared_by_rear s vs h v_src v_ss \<and>
    -1 \<le> v_src \<and>
@@ -213,7 +213,7 @@ where
 
 definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"sourcing s p0 tri = (normal_sourcing s p0 tri \<or> sourcing_switching_validators s p0 tri)"
+"sourcing s p0 tri = (sourcing_normal s p0 tri \<or> sourcing_switching_validators s p0 tri)"
 
 fun inherit :: "situation \<Rightarrow> (hash \<times> validator set) \<Rightarrow>
                        (hash \<times> validator set) \<Rightarrow> bool"
