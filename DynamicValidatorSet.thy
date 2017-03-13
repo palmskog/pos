@@ -273,6 +273,19 @@ where
 "fork s (root, vs) (h1, vs1) (h2, vs2) =
   (not_on_same_chain s h1 h2 \<and> heir s (root, vs) (h1, vs1) \<and> heir s (root, vs) (h2, vs2))"
 
+fun fork_with_n_switching :: "nat \<Rightarrow> situation \<Rightarrow>
+             (hash \<times> validator set) \<Rightarrow>
+             (hash \<times> validator set) \<Rightarrow>
+             (hash \<times> validator set) \<Rightarrow> bool"
+where
+"fork_with_n_switching
+    n s (root, vs) (h1, vs1) (h2, vs2) =
+   (\<exists> n1 n2.
+    n = n1 + n2 \<and>
+    not_on_same_chain s h1 h2 \<and>
+    heir_after_n_switching n1 s (root, vs) (h1, vs1) \<and>
+    heir_after_n_switching n2 s (root, vs) (h2, vs2))"
+
 
 (* define fork_with_n_switching *)
 
