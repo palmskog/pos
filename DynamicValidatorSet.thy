@@ -215,6 +215,9 @@ definition sourcing :: "situation \<Rightarrow> (hash \<times> validator set) \<
 where
 "sourcing s p0 tri = (sourcing_normal s p0 tri \<or> sourcing_switching_validators s p0 tri)"
 
+(* TODO: I'm wondering if I should keep v and v_src in an existential quantifier here, or
+   expose it as an argument. *)
+
 (* The two very similar definitions are not combined
  * just for easily counting the number of switching.
  *)
@@ -234,11 +237,17 @@ where
     prepared_by_rear s vs_new h_new v v_src \<and>
     sourcing_switching_validators s (h_old, vs_old) (h_new, v, v_src))"
 
+
+definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
+where
+"decided s vs h v = (committed s vs h v \<and> RearValidators s h = vs)"
+
+
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
                    (hash \<times> validator set) \<Rightarrow> bool"
 where
-  heir_self : "decided s vs h \<Longrightarrow> heir s (h, vs) (h, vs)"
+  heir_self : "decided s vs h v \<Longrightarrow> heir s (h, vs) (h, vs)"
 | heir_normal_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
                  inherit_normal s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
@@ -251,7 +260,7 @@ inductive heir_after_n_switching ::
     (hash \<times> validator set) \<Rightarrow>
     (hash \<times> validator set) \<Rightarrow> bool"
 where
-  heir_n_self : "decided s vs h \<Longrightarrow>
+  heir_n_self : "decided s vs h v \<Longrightarrow>
     heir_after_n_switching 0 s (h, vs) (h, vs)"
 | heir_n_normal_step :
    "heir_after_n_switching n s (h, vs) (h', vs') \<Longrightarrow>
@@ -262,8 +271,17 @@ where
     inherit_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
     heir_after_n_switching (Suc n) s (h, vs) (h'', vs'')"
 
-(* TODO: lemma about heir and heir_after_n_switching *)
-
+lemma every_heir_is_after_n_switching :
+"heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
+apply(induction rule: heir.induct)
+  apply(rule_tac x = 0 in exI)
+  using heir_n_self apply blast
+ apply clarify
+ apply(rule_tac x = "n" in exI)
+ using heir_n_normal_step apply blast
+apply clarify
+apply(rule_tac x = "Suc n" in exI)
+using heir_n_switching_step by blast
 
 fun fork :: "situation \<Rightarrow>
                     (hash \<times> validator set) \<Rightarrow>
@@ -572,10 +590,6 @@ if two hashes x and y are committed in the situation, but if the two hashes are 
 at least one-third of the validators are slashed in the situation."
 
 (* TODO: state it again *)
-
-definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
-where
-"decided s vs h v = (committed s vs h v \<and> RearValidators s h = vs)"
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
