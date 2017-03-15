@@ -238,16 +238,12 @@ where
     sourcing_switching_validators s (h_old, vs_old) (h_new, v, v_src))"
 
 
-definition decided :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
-where
-"decided s vs h v = (committed s vs h v \<and> RearValidators s h = vs)"
-
 
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> validator set) \<Rightarrow> 
                    (hash \<times> validator set) \<Rightarrow> bool"
 where
-  heir_self : "decided s vs h v \<Longrightarrow> heir s (h, vs) (h, vs)"
+  heir_self : "committed_by_rear s vs h v \<Longrightarrow> heir s (h, vs) (h, vs)"
 | heir_normal_step : "heir s (h, vs) (h', vs') \<Longrightarrow>
                  inherit_normal s (h', vs') (h'', vs'') \<Longrightarrow>
                  heir s (h, vs) (h'', vs'')"
@@ -260,14 +256,13 @@ inductive heir_after_n_switching ::
     (hash \<times> validator set) \<Rightarrow>
     (hash \<times> validator set) \<Rightarrow> bool"
 where
-  heir_n_self : "decided s vs h v \<Longrightarrow>
-    heir_after_n_switching 0 s (h, vs) (h, vs)"
+  heir_n_self : "heir_after_n_switching 0 s (h, vs) (h, vs)"
 | heir_n_normal_step :
    "heir_after_n_switching n s (h, vs) (h', vs') \<Longrightarrow>
     inherit_normal s (h', vs') (h'', vs'') \<Longrightarrow>
     heir_after_n_switching n s (h, vs) (h'', vs'')"
 | heir_n_switching_step :
-   "heir_after_n_switchinig n s (h, vs) (h', vs') \<Longrightarrow>
+   "heir_after_n_switching n s (h, vs) (h', vs') \<Longrightarrow>
     inherit_switching_validators s (h', vs') (h'', vs'') \<Longrightarrow>
     heir_after_n_switching (Suc n) s (h, vs) (h'', vs'')"
 
@@ -586,24 +581,159 @@ text "The statement of accountable safety is simple.  If a situation has a finit
 if two hashes x and y are committed in the situation, but if the two hashes are not on the same chain,
 at least one-third of the validators are slashed in the situation."
 
+lemma accountable_safety_with_no_validator_change :
+ "\<forall>s h vs h1 vs1 h2 vs2 v v1 v2.
+       prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+       fork_with_n_switching 0 s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
+       committed_by_rear s vs h v \<longrightarrow>
+       committed_by_rear s vs1 h1 v1 \<longrightarrow> committed_by_rear s vs2 h2 v2 \<longrightarrow> (\<exists>vs' h'. heir s (h, vs) (h', vs') \<and> one_third_slashed s vs')"
+sorry
+
+
+lemma sum_is_suc_dest :
+   "Suc n = n1 + n2 \<Longrightarrow>
+    ((\<exists> n1'. n1 = Suc n1' \<and> n = n1' + n2) \<or>
+     (\<exists> n2'. n2 = Suc n2' \<and> n = n1 + n2'))
+   "
+apply (case_tac n1; auto)
+done
+
+lemma heir_after_suc_switching_dest:
+ "heir_after_n_switching sn s (h, vs) (h1, vs1) \<Longrightarrow>
+  sn = Suc n \<Longrightarrow>
+  \<exists> h' vs' h'' vs''.
+  heir_after_n_switching n s (h, vs) (h', vs') \<and>
+  inherit_switching_validators s (h', vs') (h'', vs'') \<and>
+  heir_after_n_switching 0 s (h'', vs'') (h1, vs1) "
+apply(induction rule: heir_after_n_switching.induct; auto)
+ apply(rule_tac x = "h'a" in exI)
+ apply(rule_tac x = "vs'a" in exI)
+ apply auto
+ apply(rule_tac x = "h''a" in exI)
+ apply(rule_tac x = "vs''a" in exI)
+ apply auto
+ apply(rule_tac h' = h' and vs' = vs' in heir_n_normal_step)
+  apply blast
+ apply simp
+ apply(rule_tac x = v in exI)
+ apply(rule_tac x = v_src in exI)
+ apply simp
+ apply blast
+apply(rule_tac x = h' in exI)
+apply(rule_tac x = vs' in exI)
+apply auto
+apply(rule_tac x = h'' in exI)
+apply(rule_tac x = vs'' in exI)
+apply auto
+using heir_n_self by blast
+
+lemma induction_case_one :
+  "\<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+           (\<forall>h vs h1 vs1 h2 vs2.
+               (\<exists>n1 n2a. n1' + n2 = n1 + n2a \<and>
+                         not_on_same_chain s h1 h2 \<and>
+                         heir_after_n_switching n1 s (h, vs) (h1, vs1) \<and>
+                         heir_after_n_switching n2a s (h, vs) (h2, vs2)) \<longrightarrow>
+               Ex (committed_by_rear s vs h) \<longrightarrow>
+               Ex (committed_by_rear s vs1 h1) \<longrightarrow>
+               Ex (committed_by_rear s vs2 h2) \<longrightarrow> (\<exists>vs'. (\<exists>h'. heir s (h, vs) (h', vs')) \<and> one_third_slashed s vs')) \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       not_on_same_chain s h1 h2 \<Longrightarrow>
+       heir_after_n_switching (Suc n1') s (h, vs) (h1, vs1) \<Longrightarrow>
+       heir_after_n_switching n2 s (h, vs) (h2, vs2) \<Longrightarrow>
+       committed_by_rear s vs h x \<Longrightarrow>
+       committed_by_rear s vs1 h1 xa \<Longrightarrow>
+       committed_by_rear s vs2 h2 xb \<Longrightarrow> n = n1' + n2 \<Longrightarrow> \<exists>vs'. (\<exists>h'. heir s (h, vs) (h', vs')) \<and> one_third_slashed s vs'"
+apply(drule_tac sn = "Suc n1'" and n = "n1'" in heir_after_suc_switching_dest)
+ apply simp
+apply(drule_tac x = s in spec)
+apply clarify
+apply(drule_tac x = h in spec)
+apply(drule_tac x = vs in spec)
+apply(drule_tac x = h' in spec)
+apply(drule_tac x = vs' in spec)
+apply(drule_tac x = h2 in spec)
+apply(drule_tac x = vs2 in spec)
+
+(*
+This might not be the case when h' is in the same chain as h2.
+
+apply(subgoal_tac "\<exists>n1 n2a. n1' + n2 = n1 + n2a \<and>
+                 not_on_same_chain s h' h2 \<and>
+                 heir_after_n_switching n1 s (h, vs) (h', vs') \<and> heir_after_n_switching n2a s (h, vs) (h2, vs2)")
+ apply simp
+ apply(case_tac "Ex (committed_by_rear s vs h)"; simp)
+ apply clarify
+ apply(case_tac "Ex (committed_by_rear s vs' h')"; simp)
+ apply(case_tac " Ex (committed_by_rear s vs2 h2)"; simp)
+apply(rule_tac x = "n1'" in exI)
+apply(rule_tac x = n2 in exI)
+apply simp
+
+*)
+ 
+
+sorry
+
+
+lemma induction_case_two :
+      "\<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+           (\<forall>h vs h1 vs1 h2 vs2.
+               (\<exists>n1a n2. n1 + n2' = n1a + n2 \<and>
+                         not_on_same_chain s h1 h2 \<and>
+                         heir_after_n_switching n1a s (h, vs) (h1, vs1) \<and>
+                         heir_after_n_switching n2 s (h, vs) (h2, vs2)) \<longrightarrow>
+               Ex (committed_by_rear s vs h) \<longrightarrow>
+               Ex (committed_by_rear s vs1 h1) \<longrightarrow>
+               Ex (committed_by_rear s vs2 h2) \<longrightarrow> (\<exists>vs'. (\<exists>h'. heir s (h, vs) (h', vs')) \<and> one_third_slashed s vs')) \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       not_on_same_chain s h1 h2 \<Longrightarrow>
+       heir_after_n_switching n1 s (h, vs) (h1, vs1) \<Longrightarrow>
+       heir_after_n_switching (Suc n2') s (h, vs) (h2, vs2) \<Longrightarrow>
+       committed_by_rear s vs h x \<Longrightarrow>
+       committed_by_rear s vs1 h1 xa \<Longrightarrow>
+       committed_by_rear s vs2 h2 xb \<Longrightarrow> n = n1 + n2' \<Longrightarrow> \<exists>vs'. (\<exists>h'. heir s (h, vs) (h', vs')) \<and> one_third_slashed s vs' "
+sorry
+
+lemma accountable_safety_induction_step :
+  "\<forall>s h vs h1 vs1 h2 vs2 v v1 v2.
+            prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            fork_with_n_switching n s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
+            committed_by_rear s vs h v \<longrightarrow>
+            committed_by_rear s vs1 h1 v1 \<longrightarrow>
+            committed_by_rear s vs2 h2 v2 \<longrightarrow> (\<exists>vs' h'. heir s (h, vs) (h', vs') \<and> one_third_slashed s vs') \<Longrightarrow>
+         \<forall>s h vs h1 vs1 h2 vs2 v v1 v2.
+            prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            fork_with_n_switching (Suc n) s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
+            committed_by_rear s vs h v \<longrightarrow>
+            committed_by_rear s vs1 h1 v1 \<longrightarrow> committed_by_rear s vs2 h2 v2 \<longrightarrow> (\<exists>vs' h'. heir s (h, vs) (h', vs') \<and> one_third_slashed s vs')"
+apply auto
+apply (drule sum_is_suc_dest; auto)
+ apply(rule induction_case_one; blast)
+apply(rule induction_case_two; blast)
+done
+
 lemma accountable_safety_with_degrees :
 "\<forall> s h vs h1 vs1 h2 vs2 v v1 v2.
  prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
  fork_with_n_switching n s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
- decided s vs h v \<longrightarrow>
- decided s vs1 h1 v1 \<longrightarrow>
- decided s vs2 h2 v2 \<longrightarrow>
+ committed_by_rear s vs h v \<longrightarrow>
+ committed_by_rear s vs1 h1 v1 \<longrightarrow>
+ committed_by_rear s vs2 h2 v2 \<longrightarrow>
  (\<exists> vs' h'.
    heir s (h, vs) (h', vs') \<and>
    one_third_slashed s vs')"
-sorry
+apply(induction n)
+ apply(rule accountable_safety_with_no_validator_change)
+apply(rule accountable_safety_induction_step; blast)
+done
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork s (h, vs) (h1, vs1) (h2, vs2) \<Longrightarrow>
- decided s vs h v \<Longrightarrow>
- decided s vs1 h1 v1 \<Longrightarrow>
- decided s vs2 h2 v2 \<Longrightarrow>
+ committed_by_rear s vs h v \<Longrightarrow>
+ committed_by_rear s vs1 h1 v1 \<Longrightarrow>
+ committed_by_rear s vs2 h2 v2 \<Longrightarrow>
  \<exists> vs' h'.
    heir s (h, vs) (h', vs') \<and>
    one_third_slashed s vs'"
