@@ -304,13 +304,10 @@ where
     heir_after_n_switching n1 s (root, vs) (h1, vs1) \<and>
     heir_after_n_switching n2 s (root, vs) (h2, vs2))"
 
-
-(* define fork_with_n_switching *)
-
-(* prove something about fork and fork_with_n_switching *)
-
-
-(* This is to be used in a definition of fork *)
+lemma fork_has_n_switching :
+  "fork s (r, vs) (h1, vs1) (h2, vs2) \<Longrightarrow> \<exists> n. fork_with_n_switching n s (r, vs) (h1, vs1) (h2, vs2)"
+apply(simp)
+using every_heir_is_after_n_switching by blast
 
 section "The Slashing Conditions (not skippable)"
 
