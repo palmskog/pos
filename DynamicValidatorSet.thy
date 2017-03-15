@@ -605,6 +605,12 @@ lemma sum_is_suc_dest :
 apply (case_tac n1; auto)
 done
 
+lemma sum_is_at_most_suc_dest :
+  "n1 + n2 \<le> Suc s \<Longrightarrow>
+   n1 + n2 \<le> s \<or> (\<exists> n1'. n1 = Suc n1' \<and> s = n1' + n2) \<or>
+     (\<exists> n2'. n2 = Suc n2' \<and> s = n1 + n2')"
+by (metis le_SucE sum_is_suc_dest)
+
 lemma heir_after_suc_switching_dest:
  "heir_after_n_switching sn s (h, vs, v) (h1, vs1, v1) \<Longrightarrow>
   sn = Suc n \<Longrightarrow>
@@ -646,9 +652,72 @@ lemma accountable_safety_base :
 "
 sorry
 
+lemma ind_case_one :
+" \<forall>n\<le>m_pre + n'.
+              prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+                  (\<forall>h vs v h1 vs1 v1 h2 vs2 v2.
+                      (\<exists>n1 n2. n = n1 + n2 \<and>
+                               not_on_same_chain s h1 h2 \<and>
+                               heir_after_n_switching n1 s (h, vs, v) (h1, vs1, v1) \<and>
+                               heir_after_n_switching n2 s (h, vs, v) (h2, vs2, v2)) \<longrightarrow>
+                      committed_by_rear s vs h v \<longrightarrow>
+                      committed_by_rear s vs1 h1 v1 \<longrightarrow>
+                      committed_by_rear s vs2 h2 v2 \<longrightarrow>
+                      (\<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs')) \<Longrightarrow>
+           prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+           not_on_same_chain s h_one h_two \<Longrightarrow>
+           heir_after_n_switching (Suc m_pre) s (h, vs, v) (h_one, vs1, v_one) \<Longrightarrow>
+           heir_after_n_switching n' s (h, vs, v) (h2, vs2, v2) \<Longrightarrow>
+           committed_by_rear s vs h v \<Longrightarrow>
+           committed_by_rear s vs1 h_one v_one \<Longrightarrow>
+           committed_by_rear s vs2 h_two v2 \<Longrightarrow>
+           switch_number = m_pre + n' \<Longrightarrow>
+           n1 = Suc n1' \<Longrightarrow> \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'"
+sorry
+
+lemma ind_case_two :
+  "\<forall>n\<le>n1 + n2'.
+              prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+                  (\<forall>h vs v h1 vs1 v1 h2 vs2 v2.
+                      (\<exists>n1 n2. n = n1 + n2 \<and>
+                               not_on_same_chain s h1 h2 \<and>
+                               heir_after_n_switching n1 s (h, vs, v) (h1, vs1, v1) \<and>
+                               heir_after_n_switching n2 s (h, vs, v) (h2, vs2, v2)) \<longrightarrow>
+                      committed_by_rear s vs h v \<longrightarrow>
+                      committed_by_rear s vs1 h1 v1 \<longrightarrow>
+                      committed_by_rear s vs2 h2 v2 \<longrightarrow>
+                      (\<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs')) \<Longrightarrow>
+           prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+           not_on_same_chain s h1 h2 \<Longrightarrow>
+           heir_after_n_switching n1 s (h, vs, v) (h1, vs1, v1) \<Longrightarrow>
+           heir_after_n_switching (Suc n2') s (h, vs, v) (h2, vs2, v2) \<Longrightarrow>
+           committed_by_rear s vs h v \<Longrightarrow>
+           committed_by_rear s vs1 h1 v1 \<Longrightarrow>
+           committed_by_rear s vs2 h2 v2 \<Longrightarrow>
+           switch_number = n1 + n2' \<Longrightarrow>
+           n2 = Suc n2' \<Longrightarrow> \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'"
+apply(rule_tac s = s and m_pre = n2' and n' = n1 and h = h and vs = vs and v = v and h_one = h2 and
+      h_two = h1 and v_one = v2
+    in ind_case_one)
+         apply clarify
+         apply (drule_tac x = "n1a + n2a" in spec)
+         apply simp
+         apply(drule_tac x = ha in spec)
+         apply(drule_tac x = vsa in spec)
+         apply(drule_tac x = va in spec)
+         apply(drule_tac x = h1a in spec)
+         apply(drule_tac x = vs1a in spec)
+         apply(drule_tac x = v1a in spec)
+         apply(drule_tac x = h2a in spec)
+         apply(drule_tac x = vs2a in spec)
+         apply(drule_tac x = v2a in spec)
+         apply simp
+         apply auto
+done
+
 lemma accountable_safety_induction :
       "\<forall>n\<le>switch_number.
-          \<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+          prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
               (\<forall>h vs v h1 vs1 v1 h2 vs2 v2.
                   (\<exists>n1 n2. n = n1 + n2 \<and>
                            not_on_same_chain s h1 h2 \<and>
@@ -667,10 +736,13 @@ lemma accountable_safety_induction :
        committed_by_rear s vs1 h1 v1 \<Longrightarrow>
        committed_by_rear s vs2 h2 v2 \<Longrightarrow>
        \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'"
-sorry
+apply(drule sum_is_at_most_suc_dest; auto)
+  apply blast
+ using ind_case_one apply blast
+using ind_case_two by blast
 
 lemma accountable_safety_with_size :
-"\<forall> n s h vs v h1 vs1 v1 h2 vs2 v2.
+"\<forall> n h vs v h1 vs1 v1 h2 vs2 v2.
  n \<le> switch_number \<longrightarrow>
  prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
  fork_with_n_switching n s (h, vs, v) (h1, vs1, v1) (h2, vs2, v2) \<longrightarrow>
