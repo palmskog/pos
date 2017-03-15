@@ -635,6 +635,18 @@ apply(rule_tac x = vs'' in exI)
 apply auto
 using heir_n_self by blast
 
+lemma accountable_safety_with_size :
+"\<forall> n s h vs v h1 vs1 v1 h2 vs2 v2.
+ n \<le> switch_number \<longrightarrow>
+ prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+ fork_with_n_switching n s (h, vs, v) (h1, vs1, v1) (h2, vs2, v2) \<longrightarrow>
+ committed_by_rear s vs h v \<longrightarrow>
+ committed_by_rear s vs1 h1 v1 \<longrightarrow>
+ committed_by_rear s vs2 h2 v2 \<longrightarrow>
+ (\<exists> vs' h' v'.
+   heir s (h, vs, v) (h', vs', v') \<and>
+   one_third_slashed s vs')"
+sorry
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -645,6 +657,7 @@ lemma accountable_safety :
  \<exists> vs' h' v'.
    heir s (h, vs, v) (h', vs', v') \<and>
    one_third_slashed s vs'"
-oops
+by (meson accountable_safety_with_size fork_has_n_switching order_refl)
+
 
 end
