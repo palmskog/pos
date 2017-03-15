@@ -586,7 +586,17 @@ text "The statement of accountable safety is simple.  If a situation has a finit
 if two hashes x and y are committed in the situation, but if the two hashes are not on the same chain,
 at least one-third of the validators are slashed in the situation."
 
-(* TODO: state it again *)
+lemma accountable_safety_with_degrees :
+"\<forall> s h vs h1 vs1 h2 vs2 v v1 v2.
+ prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+ fork_with_n_switching n s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
+ decided s vs h v \<longrightarrow>
+ decided s vs1 h1 v1 \<longrightarrow>
+ decided s vs2 h2 v2 \<longrightarrow>
+ (\<exists> vs' h'.
+   heir s (h, vs) (h', vs') \<and>
+   one_third_slashed s vs')"
+sorry
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -597,6 +607,6 @@ lemma accountable_safety :
  \<exists> vs' h'.
    heir s (h, vs) (h', vs') \<and>
    one_third_slashed s vs'"
-oops
+by (meson accountable_safety_with_degrees fork_has_n_switching)
 
 end
