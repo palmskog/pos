@@ -596,14 +596,6 @@ text "The statement of accountable safety is simple.  If a situation has a finit
 if two hashes x and y are committed in the situation, but if the two hashes are not on the same chain,
 at least one-third of the validators are slashed in the situation."
 
-lemma accountable_safety_with_no_validator_change :
- "\<forall>s h vs h1 vs1 h2 vs2 v v1 v2.
-       prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
-       fork_with_n_switching 0 s (h, vs) (h1, vs1) (h2, vs2) \<longrightarrow>
-       committed_by_rear s vs h v \<longrightarrow>
-       committed_by_rear s vs1 h1 v1 \<longrightarrow> committed_by_rear s vs2 h2 v2 \<longrightarrow> (\<exists>vs' h'. heir s (h, vs) (h', vs') \<and> one_third_slashed s vs')"
-sorry
-
 
 lemma sum_is_suc_dest :
    "Suc n = n1 + n2 \<Longrightarrow>
