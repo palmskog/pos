@@ -635,6 +635,40 @@ apply(rule_tac x = vs'' in exI)
 apply auto
 using heir_n_self by blast
 
+lemma accountable_safety_base :
+"       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       not_on_same_chain s h1 h2 \<Longrightarrow>
+       heir_after_n_switching 0 s (h, vs, v) (h1, vs1, v1) \<Longrightarrow>
+       heir_after_n_switching 0 s (h, vs, v) (h2, vs2, v2) \<Longrightarrow>
+       committed_by_rear s vs h v \<Longrightarrow>
+       committed_by_rear s vs1 h1 v1 \<Longrightarrow>
+       committed_by_rear s vs2 h2 v2 \<Longrightarrow> \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'
+"
+sorry
+
+lemma accountable_safety_induction :
+      "\<forall>n\<le>switch_number.
+          \<forall>s. prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+              (\<forall>h vs v h1 vs1 v1 h2 vs2 v2.
+                  (\<exists>n1 n2. n = n1 + n2 \<and>
+                           not_on_same_chain s h1 h2 \<and>
+                           heir_after_n_switching n1 s (h, vs, v) (h1, vs1, v1) \<and>
+                           heir_after_n_switching n2 s (h, vs, v) (h2, vs2, v2)) \<longrightarrow>
+                  committed_by_rear s vs h v \<longrightarrow>
+                  committed_by_rear s vs1 h1 v1 \<longrightarrow>
+                  committed_by_rear s vs2 h2 v2 \<longrightarrow>
+                  (\<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs')) \<Longrightarrow>
+       n1 + n2 \<le> Suc switch_number \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       not_on_same_chain s h1 h2 \<Longrightarrow>
+       heir_after_n_switching n1 s (h, vs, v) (h1, vs1, v1) \<Longrightarrow>
+       heir_after_n_switching n2 s (h, vs, v) (h2, vs2, v2) \<Longrightarrow>
+       committed_by_rear s vs h v \<Longrightarrow>
+       committed_by_rear s vs1 h1 v1 \<Longrightarrow>
+       committed_by_rear s vs2 h2 v2 \<Longrightarrow>
+       \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'"
+sorry
+
 lemma accountable_safety_with_size :
 "\<forall> n s h vs v h1 vs1 v1 h2 vs2 v2.
  n \<le> switch_number \<longrightarrow>
@@ -646,7 +680,11 @@ lemma accountable_safety_with_size :
  (\<exists> vs' h' v'.
    heir s (h, vs, v) (h', vs', v') \<and>
    one_third_slashed s vs')"
-sorry
+apply(induction switch_number)
+ apply clarsimp
+ using accountable_safety_base apply blast
+apply clarsimp
+using accountable_safety_induction by blast
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
