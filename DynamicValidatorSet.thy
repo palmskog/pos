@@ -672,6 +672,28 @@ lemma ind_case_one :
            committed_by_rear s vs_two h_two v_two \<Longrightarrow>
            switch_number = n1' + n2 \<Longrightarrow>
            n1 = Suc n1' \<Longrightarrow> \<exists>vs'. (\<exists>h' v'. heir s (h, vs, v) (h', vs', v')) \<and> one_third_slashed s vs'"
+apply(drule heir_after_suc_switching_dest)
+ apply blast
+apply clarify
+apply(case_tac "not_on_same_chain s h' h_two")
+ (* This case is straightforward induction  *)
+ apply(drule_tac x = "n1' + n2" in spec)
+ apply simp
+ apply(drule_tac x = h in spec)
+ apply(drule_tac x = vs in spec)
+ apply(drule_tac x = v in spec)
+ apply simp
+ apply(drule_tac x = h' in spec)
+ apply(drule_tac x = vs' in spec)
+ apply(drule_tac x = v' in spec)
+ apply simp
+ apply(drule_tac x = h_two in spec)
+ apply(drule_tac x = vs_two in spec)
+ apply(drule_tac x = v_two in spec)
+ apply blast
+(* In this case, we need to show hat (h_two, vs_two, v_two) is a heir of (h', vs', v') *)
+apply(simp add: not_on_same_chain_def)
+
 sorry
 
 lemma ind_case_two :
