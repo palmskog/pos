@@ -117,9 +117,9 @@ where
 
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
-definition not_on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
-"not_on_same_chain s x y = ((\<not> is_descendant_or_self s x y) \<and> (\<not> is_descendant_or_self s y x))"
+"on_same_chain s x y = (is_descendant_or_self s x y \<or> is_descendant_or_self s y x)"
 
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
@@ -199,9 +199,6 @@ where
     committed_by_fwd s h v)"
 
 section "Electing the New Validators (not skippable)"
-
-(* TODO: consider changing the ordering of arguments so that
-   left is always older *)
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
@@ -316,7 +313,7 @@ fun fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow> bool"
 where
 "fork s (root, v) (h1, v1) (h2, v2) =
-  (not_on_same_chain s h1 h2 \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
+  (\<not> on_same_chain s h1 h2 \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
 
 fun fork_with_n_switching :: "nat \<Rightarrow> situation \<Rightarrow>
              (hash \<times> view) \<Rightarrow>
@@ -327,7 +324,7 @@ where
     n s (root, v) (h1, v1) (h2, v2) =
    (\<exists> n1 n2.
     n = n1 + n2 \<and>
-    not_on_same_chain s h1 h2 \<and>
+    \<not> on_same_chain s h1 h2 \<and>
     heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
     heir_after_n_switching n2 s (root, v) (h2, v2))"
 
@@ -534,15 +531,15 @@ proof -
 qed
 
 lemma dependency_self [simp]:
-  "\<not> not_on_same_chain s y y"
-apply(simp add: not_on_same_chain_def)
+  "on_same_chain s y y"
+apply(simp add: on_same_chain_def)
 apply(simp add: is_descendant_or_self_def)
 apply(rule_tac x = 0 in exI)
 apply(simp)
 done
 
 lemma prepare_direct_conflict :
- "not_on_same_chain s x y \<Longrightarrow>
+ "\<not> on_same_chain s x y \<Longrightarrow>
   n \<in> Validators s \<Longrightarrow>
   (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
   (n, Prepare (y, v2, vs2)) \<in> Messages s \<Longrightarrow> slashed_four s n"
@@ -569,8 +566,8 @@ proof -
 qed
 
 lemma not_on_same_chain_sym [simp] :
- "not_on_same_chain s x y = not_on_same_chain s y x"
-apply(auto simp add: not_on_same_chain_def)
+ "on_same_chain s x y = on_same_chain s y x"
+apply(auto simp add: on_same_chain_def)
 done
 
 lemma ancestors_ancestor : "
