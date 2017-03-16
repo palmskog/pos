@@ -701,6 +701,59 @@ proof -
    by (clarsimp; blast)
 qed
 
+lemma high_root_is_heir_internal :
+   "heir s (h, v) (h1, v1) \<Longrightarrow>
+    heir s (h', v') (h1, v1) \<Longrightarrow>
+    heir s (h, v) (h2, v2) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    \<forall>h' v'a. v' < v'a \<longrightarrow> committed_by_both s h' v'a \<longrightarrow> heir s (h', v'a) (h2, v2) \<longrightarrow> \<not> heir s (h', v'a) (h1, v1) \<Longrightarrow>
+    heir s (h, v) (h', v')"
+proof -
+  assume " \<forall>h' v'a. v' < v'a \<longrightarrow> committed_by_both s h' v'a \<longrightarrow> heir s (h', v'a) (h2, v2) \<longrightarrow> \<not> heir s (h', v'a) (h1, v1)"
+  then have "v' < v \<longrightarrow> committed_by_both s h v \<longrightarrow> heir s (h, v) (h2, v2) \<longrightarrow> \<not> heir s (h, v) (h1, v1)"
+    by blast
+  moreover assume "committed_by_both s h v"
+  moreover assume "heir s (h, v) (h1, v1)"
+  moreover assume "heir s (h, v) (h2, v2)"
+  ultimately have "v \<le> v'"
+    by linarith
+  moreover assume "heir s (h, v) (h1, v1)"
+  moreover assume "heir s (h', v') (h1, v1)"
+  ultimately show ?thesis
+    sorry
+qed
+
+lemma high_root_is_heir :
+   "fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2) \<Longrightarrow>
+    fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+    heir s (h, v) (h', v')"
+apply auto
+apply (rule high_root_is_heir_internal; blast)
+done
+
+lemma fork_with_commits_choose_high_root_as_heir :
+  "fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> h' v'.
+     fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2) \<and>
+     heir s (h, v) (h', v')
+"
+proof -
+  assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
+  then have "\<exists> h' v'.
+     fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2)"
+    using fork_with_commits_choose_high_root by blast
+  moreover assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
+  ultimately show ?thesis
+    using high_root_is_heir by blast
+qed
+
+lemma accountable_safety_from_fork_with_high_root :
+"prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ fork_with_commits_with_high_root s (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+ \<exists> vs' h' v'.
+   heir s (h, v) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+sorry
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -708,7 +761,10 @@ lemma accountable_safety :
  \<exists> vs' h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-(* first, perform an induction on the view-length of the "common path" of the fork. *)
+apply(drule fork_with_commits_choose_high_root)
+apply(clarify)
+(* I need to see that (h', v') is a heir of (h, v) *)
+
 oops
 
 end
