@@ -276,6 +276,23 @@ where
                  inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
                  heir s (h, v) (h'', v'')"
 
+lemma heir_decomposition :
+  "heir s (h, v) (h'', v'') \<Longrightarrow>
+    ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))
+    )"
+apply(erule_tac DynamicValidatorSet.heir.cases)
+  apply(rule disjI1)
+  apply blast
+ apply(rule disjI2)
+ apply(rule disjI1)
+ apply blast
+apply(rule disjI2)
+apply(rule disjI2)
+by blast
+
+
 lemma heir_increases_view :
   "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
 apply(induction rule: heir.induct; auto)
@@ -602,11 +619,57 @@ lemma view_total [simp]:
 apply auto
 done
 
+lemma follow_back_normal_one :
+    "heir s (ha, va) (h', v'a) \<Longrightarrow>
+    (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+    inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+    v \<le> v' \<Longrightarrow> \<exists>v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (ha, va)"
+sorry
+
 lemma follow_back_heir_case_normal :
   "heir s (ha, va) (h', v'a) \<Longrightarrow>
    (heir s (h, v) (h', v'a) \<Longrightarrow>heir s (h, v) (ha, va)) \<Longrightarrow>
    inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow> heir s (h, v) (h'', v'') \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)"
-sorry
+proof -
+  assume "heir s (h, v) (h'', v'')"
+  then have "
+     (\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))"
+  	using heir_decomposition by blast
+  then show "heir s (ha, va) (h', v'a) \<Longrightarrow>
+             (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+             inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+             v \<le> v' \<Longrightarrow> ?thesis"
+    proof
+      show "heir s (ha, va) (h', v'a) \<Longrightarrow>
+        (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+        inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+        v \<le> v' \<Longrightarrow> \<exists>v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (ha, va)"
+           using follow_back_normal_one by blast
+      next assume "(\<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
+              (\<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))"
+      then show "heir s (ha, va) (h', v'a) \<Longrightarrow>
+         (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+         inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+         v \<le> v' \<Longrightarrow>
+         heir s (h, v) (ha, va)"
+        proof
+          show "heir s (ha, va) (h', v'a) \<Longrightarrow>
+                (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+                inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+                v \<le> v' \<Longrightarrow> \<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'') \<Longrightarrow> heir s (h, v) (ha, va)"
+             sorry
+          next show "heir s (ha, va) (h', v'a) \<Longrightarrow>
+             (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+             inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
+             v \<le> v' \<Longrightarrow>
+             \<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+             heir s (h, v) (ha, va) "
+           sorry
+        qed
+     qed
+qed
 
 lemma follow_back_heir_case_switching :
   "heir s (ha, va) (h', v'a) \<Longrightarrow>
