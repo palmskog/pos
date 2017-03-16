@@ -773,6 +773,13 @@ proof -
    by (clarsimp; blast)
 qed
 
+lemma forget_number_of_switching:
+ "heir_after_n_switching n s (h_twoa, v_twoa) (h_one, v_one)
+  \<Longrightarrow> heir s (h_twoa, v_twoa) (h_one, v_one)"
+apply(induction rule: heir_after_n_switching.induct)
+  apply (simp add: heir_self)
+ using heir_normal_step apply blast
+using heir_switching_step by blast
 
 lemma accountable_safety_from_fork_with_high_root_base :
 "n_one \<le> 1 \<and>
@@ -853,6 +860,16 @@ apply(rule_tac x = v'' in exI)
 apply simp
 using heir_n_self by blast
 
+lemma heir_trans :
+  "heir s (h_r, v_r) (h', v') \<Longrightarrow>
+   heir s (h, v) (h_r, v_r) \<Longrightarrow>
+   heir s (h, v) (h', v')"
+apply(induction rule: heir.induct; auto)
+ apply(rule_tac h' = h' and v' = v' in heir_normal_step; auto)
+apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
+done
+
+
 lemma heir_after_one_or_more_switching_dest :
   "heir_after_n_switching na s (h, v) (h_three, v_three) \<Longrightarrow>
    na > 0 \<Longrightarrow>
@@ -903,7 +920,7 @@ lemma use_highness :
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow> False"
 sorry
 
-lemma smaller_conflict:
+lemma confluence_should_not:
   "1 \<le> n_one_pre \<Longrightarrow>
     \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
     heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
@@ -916,7 +933,22 @@ lemma smaller_conflict:
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_two, v_two) (h_onea, v_onea) \<Longrightarrow> False"
-sorry
+proof -
+  assume "inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa)"
+  then have "heir s (h_onea, v_onea) (h_twoa, v_twoa)"
+    by (meson heir_self heir_switching_step inherit_switching_validators.simps sourcing_switching_validators.simps)
+  moreover assume "heir s (h_two, v_two) (h_onea, v_onea)"
+  ultimately have "heir s (h_two, v_two) (h_twoa, v_twoa)"
+    using \<open>inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa)\<close> heir_switching_step by blast
+  moreover assume "heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one)"
+  then have "heir s (h_twoa, v_twoa) (h_one, v_one)"
+    using forget_number_of_switching by blast
+  ultimately have "heir s (h_two, v_two) (h_one, v_one)"
+    using heir_trans by blast
+  moreover assume " \<not> heir s (h_two, v_two) (h_one, v_one)"
+  ultimately show "False"
+    by blast
+qed
 
 lemma prev_switch_not_on_same_heir_chain :
 "1 \<le> n_one_pre \<Longrightarrow>
@@ -933,7 +965,7 @@ lemma prev_switch_not_on_same_heir_chain :
  \<not> on_same_heir_chain s (h_onea, v_onea) (h_two, v_two)"
 apply(auto simp only: on_same_heir_chain_def)
   using use_highness apply blast
-using smaller_conflict by blast
+using confluence_should_not by blast
 
 lemma reduce_fork :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
@@ -1102,14 +1134,6 @@ lemma accountable_safety_from_fork_with_high_root :
    one_third_of_rear_or_fwd_slashed s h'"
 by (meson accountable_safety_from_fork_with_high_root_with_n fork_with_center_with_high_root_has_n_switching)
 
-lemma heir_trans :
-  "heir s (h_r, v_r) (h', v') \<Longrightarrow>
-   heir s (h, v) (h_r, v_r) \<Longrightarrow>
-   heir s (h, v) (h', v')"
-apply(induction rule: heir.induct; auto)
- apply(rule_tac h' = h' and v' = v' in heir_normal_step; auto)
-apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
-done
 
 lemma accountable_safety_center :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
