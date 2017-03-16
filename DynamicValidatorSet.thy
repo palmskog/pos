@@ -642,7 +642,43 @@ where
 (* It's convenient to have a fork's root as the latest commit immediately before the fork.
  * Otherwise the induction has hairier case analysis.
  *)
+fun fork_with_commits_with_high_root ::
+  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+  "fork_with_commits_with_high_root s (h, v) (h1, v1) (h2, v2) =
+     (fork_with_commits s (h, v) (h1, v1) (h2, v2) \<and>
+      (\<forall> h' v'. v' > v \<longrightarrow>
+        \<not> fork_with_commits s (h', v') (h1, v1) (h2, v2)))"
 
+(* Finding a max element in a set of integers *)
+lemma find_max_ind_step :
+  "\<forall>u. n = nat (u - s) \<longrightarrow> s \<in> (S :: int set) \<longrightarrow> (\<forall>x. x \<in> S \<longrightarrow> x \<le> u)
+                         \<longrightarrow> (\<exists>m. m \<in> S \<and> (\<forall>y>m. y \<notin> S)) \<Longrightarrow>
+   Suc n = nat (u - s) \<Longrightarrow> s \<in> S \<Longrightarrow> \<forall>x. x \<in> S \<longrightarrow> x \<le> u \<Longrightarrow> \<exists>m. m \<in> S \<and> (\<forall>y>m. y \<notin> S)"
+apply(case_tac "\<forall> x. x \<in> S \<longrightarrow> x \<le> u - 1")
+ apply(drule_tac x = "u - 1" in spec)
+ apply simp
+by force
+
+
+lemma find_max_ind :
+  "\<forall> u.
+   n = nat (u - s) \<longrightarrow>
+   s \<in> (S :: int set) \<longrightarrow>
+   (\<forall> x. x \<in> S \<longrightarrow> x \<le> u) \<longrightarrow>
+   (\<exists> m. m \<in> S \<and>
+      (\<forall> y. y > m \<longrightarrow> y \<notin> S))"
+apply(induction n; auto)
+ apply force
+apply(rule_tac n = n and u = u and S = S and s = s in find_max_ind_step; auto)
+done
+
+lemma find_max :
+  "s \<in> (S :: int set) \<Longrightarrow>
+   \<forall> x. x \<in> S \<longrightarrow> x \<le> u \<Longrightarrow>
+   \<exists> m. m \<in> S \<and>
+      (\<forall> y. y > m \<longrightarrow> y \<notin> S)"
+using find_max_ind by auto
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
