@@ -888,7 +888,35 @@ lemma at_least_one_switching_means_higher :
    v < v_onea"
 sorry
 
+lemma use_highness :
+ "1 \<le> n_one_pre \<Longrightarrow>
+    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_one v_one \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow> False"
+sorry
 
+lemma smaller_conflict:
+  "1 \<le> n_one_pre \<Longrightarrow>
+    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_one v_one \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_two, v_two) (h_onea, v_onea) \<Longrightarrow> False"
+sorry
 
 lemma prev_switch_not_on_same_heir_chain :
 "1 \<le> n_one_pre \<Longrightarrow>
@@ -904,9 +932,8 @@ lemma prev_switch_not_on_same_heir_chain :
  heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
  \<not> on_same_heir_chain s (h_onea, v_onea) (h_two, v_two)"
 apply(auto simp only: on_same_heir_chain_def)
- (* name this goal, use highness *)
-(* name this goal, smaller fork h_one and h_two are not on the same chain, so *)
-sorry
+  using use_highness apply blast
+using smaller_conflict by blast
 
 lemma reduce_fork :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
