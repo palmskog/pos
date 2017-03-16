@@ -823,7 +823,13 @@ lemma heir_normal_extend :
            heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
            inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
            heir_after_n_switching 0 s (h_two, v_two) (h'', v''))"
-sorry
+apply clarify
+apply(rule_tac x = h_one in exI)
+apply(rule_tac x = v_one in exI)
+apply(rule_tac x = h_two in exI)
+apply(rule_tac x = v_two in exI)
+apply simp
+using heir_n_normal_step inherit_normal.simps sourcing_normal.simps by blast
 
 lemma heir_found_switch :
       "heir_after_n_switching na s (h, v) (h', v') \<Longrightarrow>
