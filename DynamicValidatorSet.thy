@@ -117,10 +117,6 @@ where
 
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
-definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"on_same_chain s x y = (is_descendant_or_self s x y \<or> is_descendant_or_self s y x)"
-
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
 text "We can lift any predicate about a validator into a predicate about a situation:
@@ -276,6 +272,11 @@ where
                  inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
                  heir s (h, v) (h'', v'')"
 
+definition on_same_heir_chain :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
+
+
 lemma heir_decomposition :
   "heir s (h, v) (h'', v'') \<Longrightarrow>
     ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
@@ -330,7 +331,7 @@ fun fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow> bool"
 where
 "fork s (root, v) (h1, v1) (h2, v2) =
-  (\<not> on_same_chain s h1 h2 \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
+  (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
 
 fun fork_with_n_switching :: "situation \<Rightarrow>
              (hash \<times> view) \<Rightarrow>
@@ -339,7 +340,7 @@ fun fork_with_n_switching :: "situation \<Rightarrow>
 where
 "fork_with_n_switching
    s (root, v) n1 (h1, v1) n2 (h2, v2) =
-   (\<not> on_same_chain s h1 h2 \<and>
+   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
     heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
     heir_after_n_switching n2 s (root, v) (h2, v2))"
 
@@ -544,6 +545,12 @@ proof -
   then show ?thesis
     by auto
 qed
+
+
+definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"on_same_chain s x y = (is_descendant_or_self s x y \<or> is_descendant_or_self s y x)"
+
 
 lemma dependency_self [simp]:
   "on_same_chain s y y"
@@ -863,7 +870,7 @@ lemma high_point_still_high :
 (* remove unnecessary assumptions *)
       "1 \<le> n_one_pre \<Longrightarrow>
        \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-       \<not> on_same_chain s h_one h_two \<Longrightarrow>
+       \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
        heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
        heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
        committed_by_both s h v \<Longrightarrow>
@@ -882,31 +889,11 @@ lemma at_least_one_switching_means_higher :
 sorry
 
 
-lemma use_highness :
-  "1 \<le> n_one_pre \<Longrightarrow>
-    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-    heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
-    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-    committed_by_both s h v \<Longrightarrow>
-    committed_by_both s h_one v_one \<Longrightarrow>
-    committed_by_both s h_two v_two \<Longrightarrow>
-    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
-    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
-    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
-    \<not> is_descendant_or_self s h_two h_one \<Longrightarrow>
-    \<not> is_descendant_or_self s h_one h_two \<Longrightarrow> is_descendant_or_self s h_onea h_two \<Longrightarrow> False"
-apply(drule_tac x = "h_onea" in spec)
-apply(drule_tac x = "v_onea" in spec)
-apply auto
-    using at_least_one_switching_means_higher apply blast
-   
 
-sorry
-
-lemma prev_switch_not_on_same_chain :
+lemma prev_switch_not_on_same_heir_chain :
 "1 \<le> n_one_pre \<Longrightarrow>
 \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
- \<not> on_same_chain s h_one h_two \<Longrightarrow>
+ \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
  heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
  committed_by_both s h v \<Longrightarrow>
@@ -914,9 +901,10 @@ lemma prev_switch_not_on_same_chain :
  committed_by_both s h_two v_two \<Longrightarrow>
  heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
  inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
- heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow> \<not> on_same_chain s h_onea h_two"
-apply(auto simp only: on_same_chain_def)
- using use_highness apply blast
+ heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+ \<not> on_same_heir_chain s (h_onea, v_onea) (h_two, v_two)"
+apply(auto simp only: on_same_heir_chain_def)
+ (* name this goal, use highness *)
 (* name this goal, smaller fork h_one and h_two are not on the same chain, so *)
 sorry
 
@@ -940,7 +928,7 @@ apply(rule_tac x = "v_onea" in exI)
 apply(rule conjI)
  apply(rule conjI)
   apply(rule conjI)
-   using prev_switch_not_on_same_chain apply blast
+   using prev_switch_not_on_same_heir_chain apply blast
   apply auto[1]
  apply auto[1]
 using high_point_still_high by blast
@@ -965,13 +953,18 @@ apply (subgoal_tac
  apply blast
 using reduce_fork by blast
 
+lemma on_same_heir_chain_sym :
+ "on_same_heir_chain s (h_one, v_one) (h_two, v_two) =
+  on_same_heir_chain s (h_two, v_two) (h_one, v_one)"
+	using on_same_heir_chain_def by auto
+
 lemma fork_with_center_with_high_root_with_n_switching_sym :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
      n_two (h_two, v_two) \<Longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
      n_one (h_one, v_one)"
 apply auto
-done
+using on_same_heir_chain_sym by blast
 
 lemma some_symmetry :
   "\<forall>n_onea n_two h_one v_one h_two v_two.
