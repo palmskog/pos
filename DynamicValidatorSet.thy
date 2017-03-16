@@ -663,6 +663,23 @@ where
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
+fun fork_with_center_with_n_switching :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
+      (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
+   (fork_with_n_switching s (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
+    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+lemma fork_with_center_has_n_switching :
+  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2.
+    fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
+apply simp
+using every_heir_is_after_n_switching by blast
+
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "fork_with_commits s (h, v) (h1, v1) (h2, v2) =
@@ -717,6 +734,22 @@ where
       (\<forall> h' v'. v' > v \<longrightarrow>
         \<not> fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
 
+fun fork_with_center_with_high_root_with_n_switching ::
+  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
+                nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+  "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
+     (fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
+      (\<forall> h' v'. v' > v \<longrightarrow>
+        \<not> fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
+
+lemma fork_with_center_with_high_root_has_n_switching :
+  "fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2.
+     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
+apply simp
+using every_heir_is_after_n_switching by blast
+
 lemma fork_with_center_choose_high_root :
   "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
    \<exists> h' v'. fork_with_center_with_high_root s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)"
@@ -734,14 +767,23 @@ proof -
 qed
 
 
+
+lemma accountable_safety_from_fork_with_high_root_with_n :
+"prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ fork_with_center_with_high_root_with_n_switching
+    s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
+ \<exists> h' v'.
+   heir s (h_orig, v_orig) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+sorry
+
 lemma accountable_safety_from_fork_with_high_root :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-(* This is the biggest goal right now.  Maybe solve later *)
-sorry
+by (meson accountable_safety_from_fork_with_high_root_with_n fork_with_center_with_high_root_has_n_switching)
 
 lemma heir_trans :
   "heir s (h_r, v_r) (h', v') \<Longrightarrow>
