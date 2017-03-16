@@ -619,74 +619,40 @@ lemma view_total [simp]:
 apply auto
 done
 
-lemma follow_back_normal_one :
-    "heir s (ha, va) (h', v'a) \<Longrightarrow>
-    (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-    inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-    v \<le> v' \<Longrightarrow> \<exists>v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (ha, va)"
-sorry
+lemma heir_same_height :
+ "heir s (h', v) (h, v) \<Longrightarrow>
+  h' = h"
+apply(drule heir_decomposition)
+using heir_increases_view apply force
+done
 
-lemma follow_back_heir_case_normal :
-  "heir s (ha, va) (h', v'a) \<Longrightarrow>
-   (heir s (h, v) (h', v'a) \<Longrightarrow>heir s (h, v) (ha, va)) \<Longrightarrow>
-   inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow> heir s (h, v) (h'', v'') \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)"
+lemma follow_back_heir_self :
+ "prepared_by_both s h v v_src \<Longrightarrow> heir s (h', v') (h, v) \<Longrightarrow>
+  snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
 proof -
-  assume "heir s (h, v) (h'', v'')"
-  then have "
-     (\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))"
-  	using heir_decomposition by blast
-  then show "heir s (ha, va) (h', v'a) \<Longrightarrow>
-             (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-             inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-             v \<le> v' \<Longrightarrow> ?thesis"
-    proof
-      show "heir s (ha, va) (h', v'a) \<Longrightarrow>
-        (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-        inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-        v \<le> v' \<Longrightarrow> \<exists>v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (ha, va)"
-           using follow_back_normal_one by blast
-      next assume "(\<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
-              (\<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))"
-      then show "heir s (ha, va) (h', v'a) \<Longrightarrow>
-         (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-         inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-         v \<le> v' \<Longrightarrow>
-         heir s (h, v) (ha, va)"
-        proof
-          show "heir s (ha, va) (h', v'a) \<Longrightarrow>
-                (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-                inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-                v \<le> v' \<Longrightarrow> \<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'') \<Longrightarrow> heir s (h, v) (ha, va)"
-             sorry
-          next show "heir s (ha, va) (h', v'a) \<Longrightarrow>
-             (heir s (h, v) (h', v'a) \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-             inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow>
-             v \<le> v' \<Longrightarrow>
-             \<exists>h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-             heir s (h, v) (ha, va) "
-           sorry
-        qed
-     qed
+ assume " heir s (h', v') (h, v) "
+ then have "v' \<le> v"
+   using heir_increases_view by auto
+ moreover assume "snd (h, v) \<le> v'"
+ ultimately have v_eq: "v = v'"
+   by simp
+ moreover assume hair_rev : "heir s (h', v') (h, v)"
+ ultimately have h_eq: "h' = h"
+   by (simp add: heir_same_height)
+ show ?thesis
+   using h_eq hair_rev v_eq by blast
 qed
 
-lemma follow_back_heir_case_switching :
-  "heir s (ha, va) (h', v'a) \<Longrightarrow>
-   (heir s (h, v) (h', v'a) \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
-   inherit_switching_validators s (h', v'a) (h'', v'') \<Longrightarrow>
-   heir s (h, v) (h'', v'') \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)"
-sorry
-
 lemma follow_back_heir_relation :
-   "heir s (h', v') (h1, v1) \<Longrightarrow>
-    heir s (h, v) (h1, v1) \<Longrightarrow>
-    v \<le> v' \<Longrightarrow>
+   "heir s (h, v) (h1, v1) \<Longrightarrow>
+    heir s (h', v') (h1, v1) \<Longrightarrow>
+    snd (h, v) \<le> v' \<Longrightarrow>
     heir s (h, v) (h', v')"
 apply(induction rule: heir.induct)
-  apply simp
- using follow_back_heir_case_normal apply blast
-using follow_back_heir_case_switching by blast
+  apply (simp add: follow_back_heir_self)
+(* some more *)
+
+sorry
 
 section "Accountable Safety (don't skip)"
 
