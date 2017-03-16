@@ -639,17 +639,6 @@ where
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
-(* It's convenient to have a fork's root as the latest commit immediately before the fork.
- * Otherwise the induction has hairier case analysis.
- *)
-fun fork_with_commits_with_high_root ::
-  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-  "fork_with_commits_with_high_root s (h, v) (h1, v1) (h2, v2) =
-     (fork_with_commits s (h, v) (h1, v1) (h2, v2) \<and>
-      (\<forall> h' v'. v' > v \<longrightarrow>
-        \<not> fork_with_commits s (h', v') (h1, v1) (h2, v2)))"
-
 (* Finding a max element in a set of integers *)
 lemma find_max_ind_step :
   "\<forall>u. n = nat (u - s) \<longrightarrow> s \<in> (S :: int set) \<longrightarrow> (\<forall>x. x \<in> S \<longrightarrow> x \<le> u)
@@ -679,6 +668,39 @@ lemma find_max :
    \<exists> m. m \<in> S \<and>
       (\<forall> y. y > m \<longrightarrow> y \<notin> S)"
 using find_max_ind by auto
+
+fun fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
+where
+"fork_root_views s (h1, v1) (h2, v2) =
+  { v. (\<exists> h. fork_with_commits s (h, v) (h1, v1) (h2, v2)) }"
+
+(* It's convenient to have a fork's root as the latest commit immediately before the fork.
+ * Otherwise the induction has hairier case analysis.
+ *)
+fun fork_with_commits_with_high_root ::
+  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+  "fork_with_commits_with_high_root s (h, v) (h1, v1) (h2, v2) =
+     (fork_with_commits s (h, v) (h1, v1) (h2, v2) \<and>
+      (\<forall> h' v'. v' > v \<longrightarrow>
+        \<not> fork_with_commits s (h', v') (h1, v1) (h2, v2)))"
+
+lemma fork_with_commits_choose_high_root :
+  "fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> h' v'. fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2)"
+proof -
+ assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
+ then have "v \<in> fork_root_views s (h1, v1) (h2, v2)"
+   by auto
+ moreover have "\<forall> x. x \<in> fork_root_views s (h1, v1) (h2, v2) \<longrightarrow> x \<le> v1"
+   using heir_increases_view by auto
+ ultimately have "\<exists> m. m \<in> fork_root_views s (h1, v1) (h2, v2) \<and>
+                   (\<forall> y. y > m \<longrightarrow> y \<notin> fork_root_views s (h1, v1) (h2, v2))"
+   by(rule_tac find_max; auto)
+ then show ?thesis
+   by (clarsimp; blast)
+qed
+
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
