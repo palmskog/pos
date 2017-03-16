@@ -903,7 +903,8 @@ lemma at_least_one_switching_means_higher :
   "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
    Suc 0 \<le> n_one_pre \<Longrightarrow>
    snd (h, v) < snd (h_onea, v_onea)"
-sorry
+apply(induction rule: heir_after_n_switching.induct; auto)
+using forget_number_of_switching heir_increases_view by fastforce
 
 lemma shallower_fork :
    "heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
