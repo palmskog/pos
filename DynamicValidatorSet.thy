@@ -813,6 +813,15 @@ lemma sum_suc :
  "
 using sum_eq_case1 sum_eq_case2 by auto
 
+lemma heir_after_one_or_more_switching_dest :
+  "heir_after_n_switching (Suc n) s (h, v) (h_three, v_three) \<Longrightarrow>
+   \<exists> h_one v_one h_two v_two.
+    heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
+    inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+    heir_after_n_switching 0 s (h_two, v_two) (h_three, v_three)
+  "
+sorry
+
 lemma reduce_fork :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
      n_two (h_two, v_two) \<Longrightarrow>
@@ -820,6 +829,14 @@ lemma reduce_fork :
     \<exists>h_one' v_one'.
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
         n_two (h_two, v_two)"
+apply (simp only: fork_with_center_with_high_root_with_n_switching.simps)
+apply (simp only: fork_with_center_with_n_switching.simps)
+apply (simp only: fork_with_n_switching.simps)
+apply clarify
+apply(drule
+ heir_after_one_or_more_switching_dest)
+(* looks promising, so finish the lemma first *)
+
 sorry
 
 lemma switching_induction_case_one :
