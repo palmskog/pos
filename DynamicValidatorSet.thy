@@ -900,10 +900,29 @@ lemma high_point_still_high :
 sorry
 
 lemma at_least_one_switching_means_higher :
-  "Suc 0 \<le> n_one_pre \<Longrightarrow>
-   heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
+  "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
+   Suc 0 \<le> n_one_pre \<Longrightarrow>
    v < v_onea"
 sorry
+
+lemma shallower_fork :
+   "heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_one v_one \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow>
+    v < v_onea \<Longrightarrow> fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
+apply(simp only: fork_with_center.simps)
+apply(rule conjI)
+ apply(simp only:fork.simps)
+  apply (meson forget_number_of_switching heir_self heir_switching_step heir_trans inherit_switching_validators.simps on_same_heir_chain_def sourcing_switching_validators.simps)
+by (meson forget_number_of_switching heir_trans inherit_switching_validators.simps sourcing_switching_validators.simps)
 
 lemma use_highness :
  "1 \<le> n_one_pre \<Longrightarrow>
@@ -918,7 +937,14 @@ lemma use_highness :
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow> False"
-sorry
+apply(drule_tac x = h_onea in spec)
+apply(drule_tac x = v_onea in spec)
+apply(subgoal_tac "v < v_onea")
+ defer
+ apply (simp add: at_least_one_switching_means_higher)
+apply(subgoal_tac "fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)")
+ apply blast
+using shallower_fork by blast
 
 lemma confluence_should_not:
   "1 \<le> n_one_pre \<Longrightarrow>
