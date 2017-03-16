@@ -897,7 +897,12 @@ lemma high_point_still_high :
        inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
        heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
        \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
-sorry
+apply(rule allI)
+apply(rule allI)
+apply(drule_tac x = h' in spec)
+apply(drule_tac x = v' in spec)
+apply(rule impI)
+by (metis forget_number_of_switching fork.simps fork_with_center.simps heir_switching_step heir_trans)
 
 lemma at_least_one_switching_means_higher :
   "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
