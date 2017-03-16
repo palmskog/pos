@@ -806,7 +806,8 @@ lemma fork_with_center_with_high_root_with_n_switching_sym :
      n_two (h_two, v_two) \<Longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
      n_one (h_one, v_one)"
-sorry
+apply auto
+done
 
 lemma some_symmetry :
   "\<forall>n_onea n_two h_one v_one h_two v_two.
