@@ -643,6 +643,20 @@ proof -
    using h_eq hair_rev v_eq by blast
 qed
 
+lemma follow_back_heir_normal :
+  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
+   (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
+   inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
+   heir s (h', v') (h'', v'') \<Longrightarrow> snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
+sorry
+
+lemma follow_back_heir_switching :
+   "heir s (h, v) (h'a, v'a) \<Longrightarrow>
+    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
+    inherit_switching_validators s (h'a, v'a) (h'', v'') \<Longrightarrow>
+    heir s (h', v') (h'', v'') \<Longrightarrow> snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
+sorry
+
 lemma follow_back_heir_relation :
    "heir s (h, v) (h1, v1) \<Longrightarrow>
     heir s (h', v') (h1, v1) \<Longrightarrow>
@@ -650,9 +664,8 @@ lemma follow_back_heir_relation :
     heir s (h, v) (h', v')"
 apply(induction rule: heir.induct)
   apply (simp add: follow_back_heir_self)
-(* some more *)
-
-sorry
+ using follow_back_heir_normal apply blast
+using follow_back_heir_switching by blast
 
 section "Accountable Safety (don't skip)"
 
