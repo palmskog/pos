@@ -813,6 +813,15 @@ lemma sum_suc :
  "
 using sum_eq_case1 sum_eq_case2 by auto
 
+lemma reduce_fork :
+   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
+     n_two (h_two, v_two) \<Longrightarrow>
+    1 \<le> n_one_pre \<Longrightarrow>
+    \<exists>h_one' v_one'.
+       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
+        n_two (h_two, v_two)"
+sorry
+
 lemma switching_induction_case_one :
   "\<forall>n_one n_twoa h_one v_one h_two v_two.
     n_one + n_twoa \<le> n_one_pre + n_two \<longrightarrow>
@@ -826,7 +835,12 @@ lemma switching_induction_case_one :
     1 \<le> n_one_pre \<Longrightarrow>
     k = n_one_pre + n_two \<Longrightarrow>
     \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
-sorry
+apply (subgoal_tac
+"\<exists> h_one' v_one'.
+ fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
+  n_two (h_two, v_two)")
+ apply blast
+using reduce_fork by blast
 
 lemma fork_with_center_with_high_root_with_n_switching_sym :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
