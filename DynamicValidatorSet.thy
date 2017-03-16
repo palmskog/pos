@@ -315,22 +315,20 @@ where
 "fork s (root, v) (h1, v1) (h2, v2) =
   (\<not> on_same_chain s h1 h2 \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
 
-fun fork_with_n_switching :: "nat \<Rightarrow> situation \<Rightarrow>
+fun fork_with_n_switching :: "situation \<Rightarrow>
              (hash \<times> view) \<Rightarrow>
-             (hash \<times> view) \<Rightarrow>
-             (hash \<times> view) \<Rightarrow> bool"
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "fork_with_n_switching
-    n s (root, v) (h1, v1) (h2, v2) =
-   (\<exists> n1 n2.
-    n = n1 + n2 \<and>
-    \<not> on_same_chain s h1 h2 \<and>
+   s (root, v) n1 (h1, v1) n2 (h2, v2) =
+   (\<not> on_same_chain s h1 h2 \<and>
     heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
     heir_after_n_switching n2 s (root, v) (h2, v2))"
 
 lemma fork_has_n_switching :
   "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> n. fork_with_n_switching n s (r, v) (h1, v1) (h2, v2)"
+   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
 apply(simp)
 using every_heir_is_after_n_switching by blast
 
