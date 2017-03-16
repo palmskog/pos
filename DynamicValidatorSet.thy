@@ -902,7 +902,7 @@ sorry
 lemma at_least_one_switching_means_higher :
   "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
    Suc 0 \<le> n_one_pre \<Longrightarrow>
-   v < v_onea"
+   snd (h, v) < snd (h_onea, v_onea)"
 sorry
 
 lemma shallower_fork :
@@ -941,7 +941,7 @@ apply(drule_tac x = h_onea in spec)
 apply(drule_tac x = v_onea in spec)
 apply(subgoal_tac "v < v_onea")
  defer
- apply (simp add: at_least_one_switching_means_higher)
+ apply (metis One_nat_def at_least_one_switching_means_higher diff_Suc_1 snd_conv)
 apply(subgoal_tac "fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)")
  apply blast
 using shallower_fork by blast
