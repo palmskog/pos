@@ -767,6 +767,28 @@ proof -
 qed
 
 
+lemma accountable_safety_from_fork_with_high_root_base :
+"n_one \<le> 1 \<and>
+ n_two \<le> 1 \<and>
+ prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ fork_with_center_with_high_root_with_n_switching
+    s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
+ \<exists> h' v'.
+   heir s (h_orig, v_orig) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+(* the forward set of h should have one-third slashed here. *)
+sorry
+
+lemma accountable_safety_from_fork_with_high_root_with_n_ind :
+"\<forall> n_one n_two h_one v_one h_two v_two.
+ n_one + n_two \<le> k \<longrightarrow>
+ prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+ fork_with_center_with_high_root_with_n_switching
+    s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<longrightarrow>
+ (\<exists> h' v'.
+   heir s (h_orig, v_orig) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h')"
+sorry
 
 lemma accountable_safety_from_fork_with_high_root_with_n :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -775,7 +797,7 @@ lemma accountable_safety_from_fork_with_high_root_with_n :
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-sorry
+using accountable_safety_from_fork_with_high_root_with_n_ind by blast
 
 lemma accountable_safety_from_fork_with_high_root :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
