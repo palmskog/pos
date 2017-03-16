@@ -603,6 +603,13 @@ apply auto
 done
 
 
+lemma follow_back_heir_relation :
+   "v \<le> v' \<Longrightarrow>
+    heir s (h, v) (h1, v1) \<Longrightarrow>
+    heir s (h', v') (h1, v1) \<Longrightarrow>
+    heir s (h, v) (h', v')"
+sorry
+
 section "Accountable Safety (don't skip)"
 
 text "The statement of accountable safety is simple.  If a situation has a finite number of validators (but not zero),
@@ -720,7 +727,7 @@ proof -
   moreover assume "heir s (h, v) (h1, v1)"
   moreover assume "heir s (h', v') (h1, v1)"
   ultimately show ?thesis
-    sorry
+    using follow_back_heir_relation by blast
 qed
 
 lemma high_root_is_heir :
@@ -750,21 +757,45 @@ qed
 lemma accountable_safety_from_fork_with_high_root :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork_with_commits_with_high_root s (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
- \<exists> vs' h' v'.
+ \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
+(* This is the biggest goal right now.  Maybe solve later *)
 sorry
+
+lemma heir_trans :
+  "heir s (h_r, v_r) (h', v') \<Longrightarrow>
+   heir s (h, v) (h_r, v_r) \<Longrightarrow>
+   heir s (h, v) (h', v')"
+apply(induction rule: heir.induct; auto)
+ apply(rule_tac h' = h' and v' = v' in heir_normal_step; auto)
+apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
+done
+
+lemma bridge_to_high_root :
+  "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+   fork_with_commits_with_high_root s (h_r, v_r) (h1, v1) (h2, v2) \<Longrightarrow>
+   heir s (h, v) (h_r, v_r) \<Longrightarrow> \<exists>h' v'. heir s (h, v) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
+proof -
+  assume "prepare_commit_only_from_rear_or_fwd s"
+  moreover assume "fork_with_commits_with_high_root s (h_r, v_r) (h1, v1) (h2, v2)"
+  ultimately have "\<exists> h' v'.
+   heir s (h_r, v_r) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+    using accountable_safety_from_fork_with_high_root by blast
+  moreover assume "heir s (h, v) (h_r, v_r)"
+  ultimately show ?thesis
+    using heir_trans by blast
+qed
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
- \<exists> vs' h' v'.
+ \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-apply(drule fork_with_commits_choose_high_root)
+apply(drule fork_with_commits_choose_high_root_as_heir)
 apply(clarify)
-(* I need to see that (h', v') is a heir of (h, v) *)
-
-oops
+using bridge_to_high_root by blast
 
 end
