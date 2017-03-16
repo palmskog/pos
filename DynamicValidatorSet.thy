@@ -626,112 +626,6 @@ apply(drule heir_decomposition)
 using heir_increases_view apply force
 done
 
-lemma follow_back_heir_self :
- "prepared_by_both s h v v_src \<Longrightarrow> heir s (h', v') (h, v) \<Longrightarrow>
-  snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
-proof -
- assume " heir s (h', v') (h, v) "
- then have "v' \<le> v"
-   using heir_increases_view by auto
- moreover assume "snd (h, v) \<le> v'"
- ultimately have v_eq: "v = v'"
-   by simp
- moreover assume hair_rev : "heir s (h', v') (h, v)"
- ultimately have h_eq: "h' = h"
-   by (simp add: heir_same_height)
- show ?thesis
-   using h_eq hair_rev v_eq by blast
-qed
-
-lemma follow_back_heir_normal_one :
-  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
-    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
-    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
-    heir s (h', v') (h'', v'') \<Longrightarrow>
-    snd (h, v) \<le> v' \<Longrightarrow> \<exists>v_src. h' = h'' \<and> v' = v'' \<and> prepared_by_both s h' v' v_src \<Longrightarrow>
-    heir s (h, v) (h', v')
-"
-using heir_normal_step by blast
-
-lemma some_injective :
-  "X = Some h'a \<Longrightarrow>
-   X = Some hh' \<Longrightarrow> h'a = hh'"
-by simp
-
-lemma prepared_by_both_points_to_prev :
-  "prepared_by_both s h'' v'' v'a \<Longrightarrow>
-   prepared_by_both s h'' v'' vv' \<Longrightarrow>
-   v'a = vv'"
-apply(simp add: prepared_by_both_def prepared_by_rear_def prepared_by_fwd_def prepared_def)
-(* this depends on the slashing condition already! *)
-oops
-
-lemma inherit_normal_reverse_det :
- "inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
-  inherit_normal s (hh', vv') (h'', v'') \<Longrightarrow> (h'a, v'a) = (hh', vv')"
-apply(subgoal_tac "v'a = vv'")
- apply auto
-
-
-sorry
-
-lemma follow_back_heir_normal_normal :
-  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
-    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
-    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
-    heir s (h', v') (h'', v'') \<Longrightarrow>
-    snd (h, v) \<le> v' \<Longrightarrow>
-    \<exists>hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_normal s (hh', vv') (h'', v'') \<Longrightarrow> heir s (h, v) (h', v')
-"
-apply(clarify)
-apply(subgoal_tac "(h'a, v'a) = (hh', vv')")
- apply blast
-using inherit_normal_reverse_det by blast
-
-lemma follow_back_heir_normal_switching :
-   "heir s (h, v) (h'a, v'a) \<Longrightarrow>
-    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
-    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
-    heir s (h', v') (h'', v'') \<Longrightarrow>
-    snd (h, v) \<le> v' \<Longrightarrow>
-    \<exists>hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_switching_validators s (hh', vv') (h'', v'') \<Longrightarrow>
-    heir s (h, v) (h', v')"
-sorry
-
-lemma follow_back_heir_normal :
-  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
-   (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
-   inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
-   heir s (h', v') (h'', v'') \<Longrightarrow> snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
-apply(subgoal_tac
-  "(\<exists> v_src. h' = h'' \<and> v' = v'' \<and> prepared_by_both s h' v' v_src) \<or>
-   (\<exists> hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_normal s (hh', vv') (h'', v'')) \<or>
-   (\<exists> hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_switching_validators s (hh', vv') (h'', v''))")
- defer
- using heir_decomposition apply blast
-apply(erule disjE)
- using heir_normal_step apply blast
-apply(erule disjE)
- using follow_back_heir_normal_normal apply blast
-using follow_back_heir_normal_switching by blast
-
-lemma follow_back_heir_switching :
-   "heir s (h, v) (h'a, v'a) \<Longrightarrow>
-    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
-    inherit_switching_validators s (h'a, v'a) (h'', v'') \<Longrightarrow>
-    heir s (h', v') (h'', v'') \<Longrightarrow> snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
-sorry
-
-lemma follow_back_heir_relation :
-   "heir s (h, v) (h1, v1) \<Longrightarrow>
-    heir s (h', v') (h1, v1) \<Longrightarrow>
-    snd (h, v) \<le> v' \<Longrightarrow>
-    heir s (h, v) (h', v')"
-apply(induction rule: heir.induct)
-  apply (simp add: follow_back_heir_self)
- using follow_back_heir_normal apply blast
-using follow_back_heir_switching by blast
-
 section "Accountable Safety (don't skip)"
 
 text "The statement of accountable safety is simple.  If a situation has a finite number of validators (but not zero),
@@ -759,6 +653,15 @@ definition one_third_of_rear_or_fwd_slashed :: "situation \<Rightarrow> hash \<R
 where
 "one_third_of_rear_or_fwd_slashed s h =
    (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
+
+fun fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
 
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
@@ -798,89 +701,44 @@ lemma find_max :
       (\<forall> y. y > m \<longrightarrow> y \<notin> S)"
 using find_max_ind by auto
 
-fun fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
+fun fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
 where
-"fork_root_views s (h1, v1) (h2, v2) =
-  { v. (\<exists> h. fork_with_commits s (h, v) (h1, v1) (h2, v2)) }"
+"fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) =
+  { v. (\<exists> h. fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)) }"
 
 (* It's convenient to have a fork's root as the latest commit immediately before the fork.
  * Otherwise the induction has hairier case analysis.
  *)
-fun fork_with_commits_with_high_root ::
-  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+fun fork_with_center_with_high_root ::
+  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-  "fork_with_commits_with_high_root s (h, v) (h1, v1) (h2, v2) =
-     (fork_with_commits s (h, v) (h1, v1) (h2, v2) \<and>
+  "fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
+     (fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<and>
       (\<forall> h' v'. v' > v \<longrightarrow>
-        \<not> fork_with_commits s (h', v') (h1, v1) (h2, v2)))"
+        \<not> fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
 
-lemma fork_with_commits_choose_high_root :
-  "fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> h' v'. fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2)"
+lemma fork_with_center_choose_high_root :
+  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> h' v'. fork_with_center_with_high_root s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)"
 proof -
- assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
- then have "v \<in> fork_root_views s (h1, v1) (h2, v2)"
+ assume "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)"
+ then have "v \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2)"
    by auto
- moreover have "\<forall> x. x \<in> fork_root_views s (h1, v1) (h2, v2) \<longrightarrow> x \<le> v1"
+ moreover have "\<forall> x. x \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<longrightarrow> x \<le> v1"
    using heir_increases_view by auto
- ultimately have "\<exists> m. m \<in> fork_root_views s (h1, v1) (h2, v2) \<and>
-                   (\<forall> y. y > m \<longrightarrow> y \<notin> fork_root_views s (h1, v1) (h2, v2))"
+ ultimately have "\<exists> m. m \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<and>
+                   (\<forall> y. y > m \<longrightarrow> y \<notin> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2))"
    by(rule_tac find_max; auto)
  then show ?thesis
    by (clarsimp; blast)
 qed
 
-lemma high_root_is_heir_internal :
-   "heir s (h, v) (h1, v1) \<Longrightarrow>
-    heir s (h', v') (h1, v1) \<Longrightarrow>
-    heir s (h, v) (h2, v2) \<Longrightarrow>
-    committed_by_both s h v \<Longrightarrow>
-    \<forall>h' v'a. v' < v'a \<longrightarrow> committed_by_both s h' v'a \<longrightarrow> heir s (h', v'a) (h2, v2) \<longrightarrow> \<not> heir s (h', v'a) (h1, v1) \<Longrightarrow>
-    heir s (h, v) (h', v')"
-proof -
-  assume " \<forall>h' v'a. v' < v'a \<longrightarrow> committed_by_both s h' v'a \<longrightarrow> heir s (h', v'a) (h2, v2) \<longrightarrow> \<not> heir s (h', v'a) (h1, v1)"
-  then have "v' < v \<longrightarrow> committed_by_both s h v \<longrightarrow> heir s (h, v) (h2, v2) \<longrightarrow> \<not> heir s (h, v) (h1, v1)"
-    by blast
-  moreover assume "committed_by_both s h v"
-  moreover assume "heir s (h, v) (h1, v1)"
-  moreover assume "heir s (h, v) (h2, v2)"
-  ultimately have "v \<le> v'"
-    by linarith
-  moreover assume "heir s (h, v) (h1, v1)"
-  moreover assume "heir s (h', v') (h1, v1)"
-  ultimately show ?thesis
-    using follow_back_heir_relation by blast
-qed
-
-lemma high_root_is_heir :
-   "fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2) \<Longrightarrow>
-    fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-    heir s (h, v) (h', v')"
-apply auto
-apply (rule high_root_is_heir_internal; blast)
-done
-
-lemma fork_with_commits_choose_high_root_as_heir :
-  "fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> h' v'.
-     fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2) \<and>
-     heir s (h, v) (h', v')
-"
-proof -
-  assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
-  then have "\<exists> h' v'.
-     fork_with_commits_with_high_root s (h', v') (h1, v1) (h2, v2)"
-    using fork_with_commits_choose_high_root by blast
-  moreover assume "fork_with_commits s (h, v) (h1, v1) (h2, v2)"
-  ultimately show ?thesis
-    using high_root_is_heir by blast
-qed
 
 lemma accountable_safety_from_fork_with_high_root :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
- fork_with_commits_with_high_root s (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+ fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
-   heir s (h, v) (h', v') \<and>
+   heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
 (* This is the biggest goal right now.  Maybe solve later *)
 sorry
@@ -894,21 +752,31 @@ apply(induction rule: heir.induct; auto)
 apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
 done
 
-lemma bridge_to_high_root :
-  "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-   fork_with_commits_with_high_root s (h_r, v_r) (h1, v1) (h2, v2) \<Longrightarrow>
-   heir s (h, v) (h_r, v_r) \<Longrightarrow> \<exists>h' v'. heir s (h, v) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
-proof -
-  assume "prepare_commit_only_from_rear_or_fwd s"
-  moreover assume "fork_with_commits_with_high_root s (h_r, v_r) (h1, v1) (h2, v2)"
-  ultimately have "\<exists> h' v'.
-   heir s (h_r, v_r) (h', v') \<and>
+lemma accountable_safety_center :
+"prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+ \<exists> h' v'.
+   heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-    using accountable_safety_from_fork_with_high_root by blast
-  moreover assume "heir s (h, v) (h_r, v_r)"
-  ultimately show ?thesis
-    using heir_trans by blast
-qed
+apply(drule fork_with_center_choose_high_root)
+apply(clarify)
+using accountable_safety_from_fork_with_high_root by blast
+
+lemma heir_initial :
+   "heir s (h, v) (h1, v1)  \<Longrightarrow>
+    heir s (h, v) (h, v)"
+apply(induction rule: heir.induct)
+  using heir_self apply auto[1]
+ apply simp
+apply simp
+done
+
+lemma fork_with_center_and_root :
+  " fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+    fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2)
+  "
+apply simp
+using heir_initial by blast
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
@@ -916,8 +784,7 @@ lemma accountable_safety :
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-apply(drule fork_with_commits_choose_high_root_as_heir)
-apply(clarify)
-using bridge_to_high_root by blast
+using accountable_safety_center fork_with_center_and_root by blast
+
 
 end
