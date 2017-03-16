@@ -602,13 +602,28 @@ lemma view_total [simp]:
 apply auto
 done
 
+lemma follow_back_heir_case_normal :
+  "heir s (ha, va) (h', v'a) \<Longrightarrow>
+   (heir s (h, v) (h', v'a) \<Longrightarrow>heir s (h, v) (ha, va)) \<Longrightarrow>
+   inherit_normal s (h', v'a) (h'', v'') \<Longrightarrow> heir s (h, v) (h'', v'') \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)"
+sorry
+
+lemma follow_back_heir_case_switching :
+  "heir s (ha, va) (h', v'a) \<Longrightarrow>
+   (heir s (h, v) (h', v'a) \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)) \<Longrightarrow>
+   inherit_switching_validators s (h', v'a) (h'', v'') \<Longrightarrow>
+   heir s (h, v) (h'', v'') \<Longrightarrow> v \<le> v' \<Longrightarrow> heir s (h, v) (ha, va)"
+sorry
 
 lemma follow_back_heir_relation :
-   "v \<le> v' \<Longrightarrow>
+   "heir s (h', v') (h1, v1) \<Longrightarrow>
     heir s (h, v) (h1, v1) \<Longrightarrow>
-    heir s (h', v') (h1, v1) \<Longrightarrow>
+    v \<le> v' \<Longrightarrow>
     heir s (h, v) (h', v')"
-sorry
+apply(induction rule: heir.induct)
+  apply simp
+ using follow_back_heir_case_normal apply blast
+using follow_back_heir_case_switching by blast
 
 section "Accountable Safety (don't skip)"
 
