@@ -831,27 +831,94 @@ apply(rule_tac x = v_two in exI)
 apply simp
 using heir_n_normal_step inherit_normal.simps sourcing_normal.simps by blast
 
-lemma heir_found_switch :
-      "heir_after_n_switching na s (h, v) (h', v') \<Longrightarrow>
-       inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-       (\<exists>h_one v_one h_two v_two.
-           heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
-           inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
-           heir_after_n_switching 0 s (h_two, v_two) (h'', v''))"
-sorry
+lemma heir_found_switching :
+  "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+   inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+   0 < Suc n \<Longrightarrow>
+   \<exists>h_one v_one h_two v_two.
+      heir_after_n_switching (Suc n - 1) s (h, v) (h_one, v_one) \<and>
+      inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+      heir_after_n_switching 0 s (h_two, v_two) (h'', v'')"
+apply(rule_tac x = h' in exI)
+apply(rule_tac x = v' in exI)
+apply(rule_tac x = h'' in exI)
+apply(rule_tac x = v'' in exI)
+apply simp
+using heir_n_self by blast
 
 lemma heir_after_one_or_more_switching_dest :
-  "heir_after_n_switching (Suc n) s (h, v) (h_three, v_three) \<Longrightarrow>
-   Suc n = 0 \<or>
+  "heir_after_n_switching na s (h, v) (h_three, v_three) \<Longrightarrow>
+   na > 0 \<Longrightarrow>
    (\<exists> h_one v_one h_two v_two.
-    heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
+    heir_after_n_switching (na - 1) s (h, v) (h_one, v_one) \<and>
     inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
     heir_after_n_switching 0 s (h_two, v_two) (h_three, v_three))
   "
 apply(induction rule: heir_after_n_switching.induct)
   apply simp
  using heir_normal_extend apply blast
-using heir_found_switch by blast
+using heir_found_switching by blast
+
+lemma high_point_still_high :
+(* remove unnecessary assumptions *)
+      "1 \<le> n_one_pre \<Longrightarrow>
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+       \<not> on_same_chain s h_one h_two \<Longrightarrow>
+       heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+       heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       committed_by_both s h_one v_one \<Longrightarrow>
+       committed_by_both s h_two v_two \<Longrightarrow>
+       heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+       inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+       heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
+sorry
+
+lemma at_least_one_switching_means_higher :
+  "Suc 0 \<le> n_one_pre \<Longrightarrow>
+   heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
+   v < v_onea"
+sorry
+
+
+lemma use_highness :
+  "1 \<le> n_one_pre \<Longrightarrow>
+    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_one v_one \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+    \<not> is_descendant_or_self s h_two h_one \<Longrightarrow>
+    \<not> is_descendant_or_self s h_one h_two \<Longrightarrow> is_descendant_or_self s h_onea h_two \<Longrightarrow> False"
+apply(drule_tac x = "h_onea" in spec)
+apply(drule_tac x = "v_onea" in spec)
+apply auto
+    using at_least_one_switching_means_higher apply blast
+   
+
+sorry
+
+lemma prev_switch_not_on_same_chain :
+"1 \<le> n_one_pre \<Longrightarrow>
+\<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+ \<not> on_same_chain s h_one h_two \<Longrightarrow>
+ heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+ heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+ committed_by_both s h v \<Longrightarrow>
+ committed_by_both s h_one v_one \<Longrightarrow>
+ committed_by_both s h_two v_two \<Longrightarrow>
+ heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+ inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+ heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow> \<not> on_same_chain s h_onea h_two"
+apply(auto simp only: on_same_chain_def)
+ using use_highness apply blast
+(* name this goal, smaller fork h_one and h_two are not on the same chain, so *)
+sorry
 
 lemma reduce_fork :
    "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
@@ -866,9 +933,17 @@ apply (simp only: fork_with_n_switching.simps)
 apply clarify
 apply(drule
  heir_after_one_or_more_switching_dest)
-(* looks promising, so finish the lemma first *)
-
-sorry
+ apply simp
+apply clarify
+apply(rule_tac x = "h_onea" in exI)
+apply(rule_tac x = "v_onea" in exI)
+apply(rule conjI)
+ apply(rule conjI)
+  apply(rule conjI)
+   using prev_switch_not_on_same_chain apply blast
+  apply auto[1]
+ apply auto[1]
+using high_point_still_high by blast
 
 lemma switching_induction_case_one :
   "\<forall>n_one n_twoa h_one v_one h_two v_two.
