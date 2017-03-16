@@ -781,6 +781,43 @@ apply(induction rule: heir_after_n_switching.induct)
  using heir_normal_step apply blast
 using heir_switching_step by blast
 
+
+lemma accountable_safety_from_fork_with_high_root_base_one_longer :
+"n_one \<le> 1 \<and>
+ n_two \<le> 1 \<and>
+ prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ v_one \<ge> v_two \<Longrightarrow>
+ fork_with_center_with_high_root_with_n_switching
+    s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
+ \<exists> h' v'.
+   heir s (h_orig, v_orig) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+sorry
+
+lemma accountable_safety_from_fork_with_high_root_base_two_longer :
+"n_one \<le> 1 \<and>
+ n_two \<le> 1 \<and>
+ prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ v_one \<le> v_two \<Longrightarrow>
+ fork_with_center_with_high_root_with_n_switching
+    s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
+ \<exists> h' v'.
+   heir s (h_orig, v_orig) (h', v') \<and>
+   one_third_of_rear_or_fwd_slashed s h'"
+apply(rule_tac
+      n_one = n_two
+      and n_two = n_one
+      and v_one = v_two
+      and v_two = v_one
+      and h_two = h_one
+      and h_one = h_two
+      and h = h and v = v
+      in
+      accountable_safety_from_fork_with_high_root_base_one_longer)
+  apply blast
+ apply simp
+using on_same_heir_chain_def by auto
+
 lemma accountable_safety_from_fork_with_high_root_base :
 "n_one \<le> 1 \<and>
  n_two \<le> 1 \<and>
@@ -791,7 +828,13 @@ lemma accountable_safety_from_fork_with_high_root_base :
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
 (* the forward set of h should have one-third slashed here. *)
-sorry
+(* Take the longer chain and do an induction
+   and so, (prepared_view, prepared) and (committed, committed_view) is not in the relation
+   make prepared shorter and shorter...!
+ *)
+apply(subgoal_tac "v_one \<le> v_two \<or> v_two \<le> v_one")
+ apply (meson accountable_safety_from_fork_with_high_root_base_one_longer accountable_safety_from_fork_with_high_root_base_two_longer)
+by linarith
 
 lemma sum_suc_disj :
  "n_one + n_two \<le> Suc k \<Longrightarrow>
