@@ -779,6 +779,110 @@ lemma accountable_safety_from_fork_with_high_root_base :
 (* the forward set of h should have one-third slashed here. *)
 sorry
 
+lemma sum_suc :
+ "n_one + n_two \<le> Suc k \<Longrightarrow>
+  n_one + n_two \<le> k \<or>
+  (\<exists> n_one_pre. n_one = Suc n_one_pre \<and> n_one_pre + n_two = k) \<or>
+  (\<exists> n_two_pre. n_two = Suc n_two_pre \<and> n_one + n_two_pre = k)
+ "
+by (metis le_SucE sum_is_suc_dest)
+
+lemma switching_induction_case_one :
+  "\<forall>n_one n_twoa h_one v_one h_two v_two.
+    n_one + n_twoa \<le> n_one_pre + n_two \<longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_twoa
+     (h_two, v_two) \<longrightarrow>
+     (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
+    n_two (h_two, v_two) \<Longrightarrow>
+    k = n_one_pre + n_two \<Longrightarrow>
+    \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
+sorry
+
+lemma fork_with_center_with_high_root_with_n_switching_sym :
+   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
+     n_two (h_two, v_two) \<Longrightarrow>
+    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
+     n_one (h_one, v_one)"
+sorry
+
+lemma some_symmetry :
+  "\<forall>n_onea n_two h_one v_one h_two v_two.
+       n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
+        (h_two, v_two) \<longrightarrow>
+       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+    \<forall>n_onea n_twoa h_one v_one h_two v_two.
+       n_onea + n_twoa \<le> n_two_pre + n_one \<longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_twoa
+        (h_two, v_two) \<longrightarrow>
+       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h')"
+apply clarify
+apply (drule_tac x = n_onea in spec)
+apply (drule_tac x = n_twoa in spec)
+apply(drule_tac x = h_one in spec)
+apply(drule_tac x = v_one in spec)
+apply(drule_tac x = h_two in spec)
+apply(drule_tac x = v_two in spec)
+apply(erule impE)
+ apply auto[1]
+apply(erule impE)
+ apply simp
+apply(erule impE)
+ apply blast
+apply blast
+done
+
+
+lemma switching_induction_case_two :
+"       \<forall>n_onea n_two h_one v_one h_two v_two.
+          n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
+          prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+          fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
+           (h_two, v_two) \<longrightarrow>
+          (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
+        (Suc n_two_pre) (h_two, v_two) \<Longrightarrow>
+       k = n_one + n_two_pre \<Longrightarrow>
+       \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
+apply(rule_tac k = k and n_two = n_one and n_one_pre = n_two_pre and h = h and v = v
+      and h_one = h_two and v_one = v_two and h_two = h_one and v_two = v_one
+ in switching_induction_case_one)
+defer
+apply simp
+using fork_with_center_with_high_root_with_n_switching_sym apply blast
+using add.commute apply blast
+by (simp add: add.commute)
+
+lemma switching_induction :
+  "\<forall>n_one n_two h_one v_one h_two v_two.
+            n_one + n_two \<le> k \<longrightarrow>
+            prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
+             (h_two, v_two) \<longrightarrow>
+            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+         \<forall>n_one n_two h_one v_one h_two v_two.
+            n_one + n_two \<le> Suc k \<longrightarrow>
+            prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
+             (h_two, v_two) \<longrightarrow>
+            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h')"
+apply clarify
+apply (drule sum_suc)
+apply (erule disjE)
+ apply blast
+apply (erule disjE)
+ apply clarify
+ using switching_induction_case_one apply blast
+apply clarify
+using switching_induction_case_two apply blast
+done
+
 lemma accountable_safety_from_fork_with_high_root_with_n_ind :
 "\<forall> n_one n_two h_one v_one h_two v_two.
  n_one + n_two \<le> k \<longrightarrow>
@@ -788,7 +892,9 @@ lemma accountable_safety_from_fork_with_high_root_with_n_ind :
  (\<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h')"
-sorry
+apply(induction k)
+ using accountable_safety_from_fork_with_high_root_base apply blast
+using switching_induction by blast
 
 lemma accountable_safety_from_fork_with_high_root_with_n :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
