@@ -631,12 +631,22 @@ where
 "one_third_of_rear_or_fwd_slashed s h =
    (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
 
+fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+(* It's convenient to have a fork's root as the latest commit immediately before the fork.
+ * Otherwise the induction has hairier case analysis.
+ *)
+
+
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
- fork s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
- committed_by_both s h v \<Longrightarrow>
- committed_by_both s h1 v1 \<Longrightarrow>
- committed_by_both s h2 v2 \<Longrightarrow>
+ fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> vs' h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
