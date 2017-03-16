@@ -643,12 +643,77 @@ proof -
    using h_eq hair_rev v_eq by blast
 qed
 
+lemma follow_back_heir_normal_one :
+  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
+    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
+    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
+    heir s (h', v') (h'', v'') \<Longrightarrow>
+    snd (h, v) \<le> v' \<Longrightarrow> \<exists>v_src. h' = h'' \<and> v' = v'' \<and> prepared_by_both s h' v' v_src \<Longrightarrow>
+    heir s (h, v) (h', v')
+"
+using heir_normal_step by blast
+
+lemma some_injective :
+  "X = Some h'a \<Longrightarrow>
+   X = Some hh' \<Longrightarrow> h'a = hh'"
+by simp
+
+lemma prepared_by_both_points_to_prev :
+  "prepared_by_both s h'' v'' v'a \<Longrightarrow>
+   prepared_by_both s h'' v'' vv' \<Longrightarrow>
+   v'a = vv'"
+apply(simp add: prepared_by_both_def prepared_by_rear_def prepared_by_fwd_def prepared_def)
+(* this depends on the slashing condition already! *)
+oops
+
+lemma inherit_normal_reverse_det :
+ "inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
+  inherit_normal s (hh', vv') (h'', v'') \<Longrightarrow> (h'a, v'a) = (hh', vv')"
+apply(subgoal_tac "v'a = vv'")
+ apply auto
+
+
+sorry
+
+lemma follow_back_heir_normal_normal :
+  "heir s (h, v) (h'a, v'a) \<Longrightarrow>
+    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
+    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
+    heir s (h', v') (h'', v'') \<Longrightarrow>
+    snd (h, v) \<le> v' \<Longrightarrow>
+    \<exists>hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_normal s (hh', vv') (h'', v'') \<Longrightarrow> heir s (h, v) (h', v')
+"
+apply(clarify)
+apply(subgoal_tac "(h'a, v'a) = (hh', vv')")
+ apply blast
+using inherit_normal_reverse_det by blast
+
+lemma follow_back_heir_normal_switching :
+   "heir s (h, v) (h'a, v'a) \<Longrightarrow>
+    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
+    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
+    heir s (h', v') (h'', v'') \<Longrightarrow>
+    snd (h, v) \<le> v' \<Longrightarrow>
+    \<exists>hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_switching_validators s (hh', vv') (h'', v'') \<Longrightarrow>
+    heir s (h, v) (h', v')"
+sorry
+
 lemma follow_back_heir_normal :
   "heir s (h, v) (h'a, v'a) \<Longrightarrow>
    (heir s (h', v') (h'a, v'a) \<Longrightarrow> heir s (h, v) (h', v')) \<Longrightarrow>
    inherit_normal s (h'a, v'a) (h'', v'') \<Longrightarrow>
    heir s (h', v') (h'', v'') \<Longrightarrow> snd (h, v) \<le> v' \<Longrightarrow> heir s (h, v) (h', v')"
-sorry
+apply(subgoal_tac
+  "(\<exists> v_src. h' = h'' \<and> v' = v'' \<and> prepared_by_both s h' v' v_src) \<or>
+   (\<exists> hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_normal s (hh', vv') (h'', v'')) \<or>
+   (\<exists> hh' vv'. heir s (h', v') (hh', vv') \<and> inherit_switching_validators s (hh', vv') (h'', v''))")
+ defer
+ using heir_decomposition apply blast
+apply(erule disjE)
+ using heir_normal_step apply blast
+apply(erule disjE)
+ using follow_back_heir_normal_normal apply blast
+using follow_back_heir_normal_switching by blast
 
 lemma follow_back_heir_switching :
    "heir s (h, v) (h'a, v'a) \<Longrightarrow>
