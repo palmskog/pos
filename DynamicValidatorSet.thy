@@ -62,12 +62,6 @@ record situation =
   Messages :: "signed_message set"
   PrevHash :: "hash \<Rightarrow> hash option"
 
-definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"validators_match s h0 h1 =
-  (RearValidators s h0 = RearValidators s h1 \<and>
-   FwdValidators s h0 = FwdValidators s h1)"
-
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
 text "We will be talking about two conflicting commits.  To define `conflicting' one needs to look at the
@@ -167,6 +161,12 @@ definition committed_by_both :: "situation \<Rightarrow> hash \<Rightarrow> view
 where
 "committed_by_both s h v =
    (committed_by_rear s h v \<and> committed_by_fwd s h v)"
+
+definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_match s h0 h1 =
+  (RearValidators s h0 = RearValidators s h1 \<and>
+   FwdValidators s h0 = FwdValidators s h1)"
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
@@ -1477,9 +1477,11 @@ using heir_initial by blast
 
 section "Accountable Safety (don't skip)"
 
-text "The statement of accountable safety is simple.  If a situation has a finite number of validators (but not zero),
-if two hashes x and y are committed in the situation, but if the two hashes are not on the same chain,
-at least one-third of the validators are slashed in the situation."
+text "The statement of accountable safety is simple.  If a situation has a finite number of
+      validators on each hash, a fork means some validator set suffers 1/3 slashing.
+      A fork is defined using the @{term heir} relation.  The slashed validator set
+      is also a heir of the original validator set.
+     "
 
 lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
