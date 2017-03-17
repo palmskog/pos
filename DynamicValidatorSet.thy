@@ -64,10 +64,9 @@ record situation =
 
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
-text "We will be talking about two conflicting commits.  To define `conflicting' one needs to look at the
-hashes and their parent-children relation.
-A situation contains information which hash is the parent of which hash.  We can follow this link n-times.
-"
+text "A hash's previous hash's previous hash is a second-ancestor.  Later, we will see that an honest
+validator will send a prepare message only after seeing enough prepare messages for an ancestor of a
+particular degree."
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
 where
@@ -76,10 +75,6 @@ where
    (case PrevHash s h of
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
-
-definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
 
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
