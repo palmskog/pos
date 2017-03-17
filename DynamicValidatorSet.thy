@@ -209,7 +209,7 @@ where
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "validators_change s ancient next =
-   (FwdValidators s next = RearValidators s ancient)"
+   (FwdValidators s ancient = RearValidators s next)"
 
 fun sourcing_switching_validators ::
 "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
@@ -806,8 +806,13 @@ lemma one_validator_change_leaves_one_set :
     n \<le> Suc 0 \<Longrightarrow>
     n = 0 \<and> FwdValidators s (fst (h, v)) = FwdValidators s (fst (h', v')) \<or>
     n = 1 \<and> FwdValidators s (fst (h, v)) = RearValidators s (fst (h', v'))"
-
-sorry
+apply(induction rule: heir_after_n_switching.induct)
+  apply blast
+ apply (simp add: validators_match_def)
+apply(subgoal_tac "n = 0")
+ defer
+ apply linarith
+by (simp add: validators_change_def)
 
 lemma prepared_by_fwd_of_origin :
 "   n \<le> Suc 0 \<Longrightarrow>
@@ -821,25 +826,78 @@ apply(subgoal_tac " (FwdValidators s h) = (FwdValidators s h'') \<or>
  apply auto[1]
 by (metis fst_conv one_validator_change_leaves_one_set sourcing_normal.simps validators_match_def)
 
+lemma one_third_mp :
+  "finite X \<Longrightarrow>
+   \<forall> v. p v \<longrightarrow> q v \<Longrightarrow>
+   one_third X p \<Longrightarrow> one_third X q"
+apply(simp add: one_third_def)
+ apply(subgoal_tac "card {n \<in> X. p n} \<le> card {n \<in> X. q n}")
+ apply linarith
+apply(subgoal_tac "finite {n \<in> X. q n}")
+ apply(subgoal_tac "{n \<in> X. p n} \<subseteq> {n \<in> X. q n}")
+  using card_mono apply blast
+ apply blast
+by simp
+
+
+lemma slashed_four_means_slashed_on_a_group:
+   "finite X \<Longrightarrow> one_third X (slashed_four s) \<Longrightarrow> one_third X (slashed s)"
+using one_third_mp slashed_def by blast
+
+
+lemma smaller_induction_same_height_violation :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    finite (FwdValidators s h) \<Longrightarrow>
+    prepared_by_both s h'' v'' v' \<and>
+    (\<exists>v_ss. prepared_by_both s h' v' v_ss) \<and> - 1 \<le> v' \<and> v' < v'' \<and> nth_ancestor s (nat (v'' - v')) h'' = Some h' \<and> validators_match s h' h'' \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h'', v'') (h_two, v'') \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v'') \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_two v'' \<Longrightarrow> \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow> 
+    prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow>  False"
+apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v'' v_two_src")
+ apply(subgoal_tac "h'' \<noteq> h_two")
+  apply(subgoal_tac "one_third (FwdValidators s h) (slashed_four s)")
+   using slashed_four_means_slashed_on_a_group apply blast
+
+sorry
+
+lemma smaller_induction_skipping_violation :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    prepared_by_both s h'' v'' v' \<and> (\<exists>v_ss. prepared_by_both s h' v' v_ss) \<and> - 1 \<le> v' \<and> nth_ancestor s (nat (v'' - v')) h'' = Some h' \<and> validators_match s h' h'' \<Longrightarrow>
+    v_two \<le> v'' \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow> \<not> v_two \<le> v' \<Longrightarrow> prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow> v_two \<noteq> v'' \<Longrightarrow> False"
+sorry
+
 lemma smaller_induction_case_normal:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-   (v_two \<le> snd (h', v') \<Longrightarrow>
-   n \<le> Suc 0 \<Longrightarrow>
-   n_two \<le> Suc 0 \<Longrightarrow>
-   prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-   \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
-   heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-   committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow>
-   \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
+   (finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
+    v_two \<le> snd (h', v') \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+   finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
    v_two \<le> snd (h'', v'') \<Longrightarrow>
    n \<le> Suc 0 \<Longrightarrow>
    n_two \<le> Suc 0 \<Longrightarrow>
    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
    \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-   committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow>
-   \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
+   committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
 apply(case_tac "v_two \<le> snd (h', v')")
  apply(case_tac "on_same_heir_chain s (h', v') (h_two, v_two)")
 	using chain_and_inherit apply blast
@@ -848,35 +906,37 @@ apply(case_tac "v_two \<le> snd (h', v')")
 apply(subgoal_tac "prepared s (FwdValidators s h) h'' v'' v'")
  defer
  using prepared_by_fwd_of_origin apply blast
-
-(*
 apply(case_tac "v_two = v''")
-*)
-
-sorry
+ apply simp
+ using smaller_induction_same_height_violation apply blast
+apply simp
+using smaller_induction_skipping_violation by blast
 
 lemma smaller_induction_switching_case:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-       (v_two \<le> snd (h', v') \<Longrightarrow>
-        n \<le> Suc 0 \<Longrightarrow>
-        n_two \<le> Suc 0 \<Longrightarrow>
-        prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-        \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
-        heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-        committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
-       inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-       v_two \<le> snd (h'', v'') \<Longrightarrow>
-       Suc n \<le> Suc 0 \<Longrightarrow>
-       n_two \<le> Suc 0 \<Longrightarrow>
-       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
-       \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
-       heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-       committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
+   (finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
+    v_two \<le> snd (h', v') \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
+    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+    finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
+    v_two \<le> snd (h'', v'') \<Longrightarrow>
+    Suc n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
 (* case analysis on v' perhaps *)
 sorry
 
 lemma accountable_safety_smaller_induction:
    "heir_after_n_switching n_one s (h, v) (h_one, v_one) \<Longrightarrow>
+    finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
     v_two \<le> snd (h_one, v_one) \<Longrightarrow>
     n_one \<le> Suc 0 \<Longrightarrow>
     n_two \<le> Suc 0 \<Longrightarrow>
@@ -896,6 +956,7 @@ lemma accountable_safety_from_fork_with_high_root_base_one_longer :
  n_two \<le> 1 \<and>
  prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  v_one \<ge> v_two \<Longrightarrow>
+ finite (FwdValidators s h) \<Longrightarrow>
  fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
@@ -921,6 +982,7 @@ lemma accountable_safety_from_fork_with_high_root_base_two_longer :
  n_two \<le> 1 \<and>
  prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  v_one \<le> v_two \<Longrightarrow>
+ finite (FwdValidators s h) \<Longrightarrow>
  fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
@@ -946,6 +1008,7 @@ lemma accountable_safety_from_fork_with_high_root_base :
  prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
  fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
+ finite (FwdValidators s h) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
@@ -1193,10 +1256,12 @@ lemma switching_induction_case_one :
   "\<forall>n_one n_twoa h_one v_one h_two v_two.
     n_one + n_twoa \<le> n_one_pre + n_two \<longrightarrow>
     prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+    finite (FwdValidators s h) \<longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_twoa
      (h_two, v_two) \<longrightarrow>
      (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
     prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    finite (FwdValidators s h) \<Longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
     n_two (h_two, v_two) \<Longrightarrow>
     1 \<le> n_one_pre \<Longrightarrow>
@@ -1226,11 +1291,13 @@ lemma some_symmetry :
   "\<forall>n_onea n_two h_one v_one h_two v_two.
        n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
        prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+       finite (FwdValidators s h) \<longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
         (h_two, v_two) \<longrightarrow>
        (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
     \<forall>n_onea n_twoa h_one v_one h_two v_two.
        n_onea + n_twoa \<le> n_two_pre + n_one \<longrightarrow>
+       finite (FwdValidators s h) \<longrightarrow>
        prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_twoa
         (h_two, v_two) \<longrightarrow>
@@ -1256,10 +1323,12 @@ lemma switching_induction_case_two :
 "       \<forall>n_onea n_two h_one v_one h_two v_two.
           n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
           prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+          finite (FwdValidators s h) \<longrightarrow>
           fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
            (h_two, v_two) \<longrightarrow>
           (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
        prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       finite (FwdValidators s h) \<Longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
         (Suc n_two_pre) (h_two, v_two) \<Longrightarrow>
        1 \<le> n_two_pre \<Longrightarrow>
@@ -1268,10 +1337,11 @@ lemma switching_induction_case_two :
 apply(rule_tac k = k and n_two = n_one and n_one_pre = n_two_pre and h = h and v = v
       and h_one = h_two and v_one = v_two and h_two = h_one and v_two = v_one
  in switching_induction_case_one)
-defer
-apply simp
-using fork_with_center_with_high_root_with_n_switching_sym apply blast
-using add.commute apply blast
+ defer
+ apply simp
+ using fork_with_center_with_high_root_with_n_switching_sym apply blast
+ using fork_with_center_with_high_root_with_n_switching_sym apply blast
+ using add.commute apply blast
 apply simp
 by (simp add: add.commute)
 
@@ -1279,12 +1349,14 @@ lemma switching_induction :
   "\<forall>n_one n_two h_one v_one h_two v_two.
             n_one + n_two \<le> k \<longrightarrow>
             prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            finite (FwdValidators s h) \<longrightarrow>
             fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
             (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
          \<forall>n_one n_two h_one v_one h_two v_two.
             n_one + n_two \<le> Suc k \<longrightarrow>
             prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+            finite (FwdValidators s h) \<longrightarrow>
             fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
             (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h')"
@@ -1305,6 +1377,7 @@ lemma accountable_safety_from_fork_with_high_root_with_n_ind :
 "\<forall> n_one n_two h_one v_one h_two v_two.
  n_one + n_two \<le> k \<longrightarrow>
  prepare_commit_only_from_rear_or_fwd s \<longrightarrow>
+ finite (FwdValidators s h) \<longrightarrow>
  fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<longrightarrow>
  (\<exists> h' v'.
@@ -1316,6 +1389,7 @@ using switching_induction by blast
 
 lemma accountable_safety_from_fork_with_high_root_with_n :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ finite (FwdValidators s h) \<Longrightarrow>
  fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
@@ -1325,22 +1399,26 @@ using accountable_safety_from_fork_with_high_root_with_n_ind by blast
 
 lemma accountable_safety_from_fork_with_high_root :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ finite (FwdValidators s h) \<Longrightarrow>
  fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
 by (meson accountable_safety_from_fork_with_high_root_with_n fork_with_center_with_high_root_has_n_switching)
 
+definition validator_sets_finite :: "situation \<Rightarrow> bool"
+  where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h))"
 
 lemma accountable_safety_center :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ validator_sets_finite s \<Longrightarrow>
  fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
 apply(drule fork_with_center_choose_high_root)
 apply(clarify)
-using accountable_safety_from_fork_with_high_root by blast
+	using accountable_safety_from_fork_with_high_root validator_sets_finite_def by blast
 
 lemma heir_initial :
    "heir s (h, v) (h1, v1)  \<Longrightarrow>
@@ -1360,6 +1438,7 @@ using heir_initial by blast
 
 lemma accountable_safety :
 "prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+ validator_sets_finite s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
