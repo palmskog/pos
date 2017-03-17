@@ -781,6 +781,46 @@ apply(induction rule: heir_after_n_switching.induct)
  using heir_normal_step apply blast
 using heir_switching_step by blast
 
+
+lemma inherit_normal_means_heir :
+  "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+   heir s (h', v') (h'', v'')"
+by (meson heir_normal_step heir_self inherit_normal.simps sourcing_normal.simps)
+
+
+lemma chain_and_inherit :
+   "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+    v_two \<le> snd (h'', v'') \<Longrightarrow>
+    \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+    v_two \<le> snd (h', v') \<Longrightarrow>
+    on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow> False"
+apply(subgoal_tac "heir s (h', v') (h'', v'')")
+ apply(simp only: on_same_heir_chain_def)
+ apply(erule disjE)
+  using heir_increases_view heir_same_height apply fastforce
+ using heir_normal_step apply blast
+using inherit_normal_means_heir by blast
+
+lemma one_validator_change_leaves_one_set :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n = 0 \<and> FwdValidators s (fst (h, v)) = FwdValidators s (fst (h', v')) \<or>
+    n = 1 \<and> FwdValidators s (fst (h, v)) = RearValidators s (fst (h', v'))"
+
+sorry
+
+lemma prepared_by_fwd_of_origin :
+"   n \<le> Suc 0 \<Longrightarrow>
+    heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+    prepared s (FwdValidators s h) h'' v'' v'
+"
+apply(simp only: inherit_normal.simps prepared_by_both_def prepared_by_fwd_def prepared_by_rear_def)
+apply(subgoal_tac " (FwdValidators s h) = (FwdValidators s h'') \<or>
+                    (FwdValidators s h) = (RearValidators s h'')")
+ apply auto[1]
+by (metis fst_conv one_validator_change_leaves_one_set sourcing_normal.simps validators_match_def)
+
 lemma smaller_induction_case_normal:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
    (v_two \<le> snd (h', v') \<Longrightarrow>
@@ -800,7 +840,19 @@ lemma smaller_induction_case_normal:
    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
    committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow>
    \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
-(* case analysis on v' *)
+apply(case_tac "v_two \<le> snd (h', v')")
+ apply(case_tac "on_same_heir_chain s (h', v') (h_two, v_two)")
+	using chain_and_inherit apply blast
+ apply blast
+(* The group in question has prepared at v'' *)
+apply(subgoal_tac "prepared s (FwdValidators s h) h'' v'' v'")
+ defer
+ using prepared_by_fwd_of_origin apply blast
+
+(*
+apply(case_tac "v_two = v''")
+*)
+
 sorry
 
 lemma smaller_induction_switching_case:
