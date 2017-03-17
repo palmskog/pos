@@ -20,7 +20,7 @@ imports Main
 
 begin
 
-section "Definitions Necessary to Understand Accountable Safety (Not Skippable)"
+section "Definitions Necessary to Understand Accountable Safety (not skippable)"
 
 text "In this development we do not know much about hashes.  There are many hashes.
 Two hashes might be equal or not."
@@ -128,6 +128,15 @@ where
 "prepared s vs h v vsrc =
    (two_thirds_sent_message s vs (Prepare (h, v, vsrc)))"
 
+
+text "A hash is committed when two-thirds of the validators have sent a certain message."
+
+definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
+where
+"committed s vs h v = two_thirds_sent_message s vs (Commit (h, v))"
+
+subsection "Prepare Messages' Sources"
+
 definition prepared_by_rear :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
 "prepared_by_rear s h v vsrc =
@@ -143,12 +152,6 @@ definition prepared_by_both :: "situation \<Rightarrow> hash \<Rightarrow> view 
 where
 "prepared_by_both s h v vsrc =
   (prepared_by_rear s h v vsrc \<and> prepared_by_fwd s h v vsrc)"
-
-text "A hash is committed when two-thirds of the validators have sent a certain message."
-
-definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
-where
-"committed s vs h v = two_thirds_sent_message s vs (Commit (h, v))"
 
 definition committed_by_rear :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
@@ -196,49 +199,7 @@ definition sourcing :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times
 where
 "sourcing s h_new tri = (sourcing_normal s h_new tri \<or> sourcing_switching_validators s h_new tri)"
 
-fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"inherit_normal s (h_old, v_src) (h_new, v) =
-   (prepared_by_both s h_new v v_src \<and>  sourcing_normal s h_old (h_new, v, v_src))"
-
-lemma inherit_normal_view_increase :
-  "inherit_normal s (h_old, v_src) (h_new, v) \<Longrightarrow>
-   (v_src < v)"
-apply(simp)
-done
-
-fun inherit_switching_validators ::
-  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
-                (hash \<times> view) \<Rightarrow> bool"
-where
-"inherit_switching_validators s (h_old, v_old) (h_new, v_new) =
-   (prepared_by_both s h_new v_new v_old \<and>
-    sourcing_switching_validators s h_old (h_new, v_new, v_old))"
-
-inductive heir :: "situation \<Rightarrow>
-                   (hash \<times> view) \<Rightarrow> 
-                   (hash \<times> view) \<Rightarrow> bool"
-where
-  heir_self : "prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (h, v)"
-| heir_normal_step : "heir s (h, v) (h', v') \<Longrightarrow>
-                 inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-                 heir s (h, v) (h'', v'')"
-| heir_switching_step : "heir s (h, v) (h', v') \<Longrightarrow>
-                 inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-                 heir s (h, v) (h'', v'')"
-
-definition on_same_heir_chain :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
-
-
-fun fork :: "situation \<Rightarrow>
-                    (hash \<times> view) \<Rightarrow>
-                    (hash \<times> view) \<Rightarrow>
-                    (hash \<times> view) \<Rightarrow> bool"
-where
-"fork s (root, v) (h1, v1) (h2, v2) =
-  (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
+subsection "Slashing Conditions"
 
 text "[i] A validator is slashed when it has sent a commit message of a hash
       that is not prepared yet."
@@ -259,8 +220,7 @@ where
   (\<exists> h v v_src.
        ((n, Prepare (h, v, v_src)) \<in> Messages s \<and>
        v_src \<noteq> -1 \<and>
-       (\<not> (\<exists> h_anc.
-               sourcing s h_anc (h, v, v_src)))))"
+       (\<not> (\<exists> h_anc. sourcing s h_anc (h, v, v_src)))))"
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
@@ -319,6 +279,51 @@ where
 "one_third_of_rear_or_fwd_slashed s h =
    (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
 
+subsection "Validator History Tracking"
+
+fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"inherit_normal s (h_old, v_src) (h_new, v) =
+   (prepared_by_both s h_new v v_src \<and>  sourcing_normal s h_old (h_new, v, v_src))"
+
+lemma inherit_normal_view_increase :
+  "inherit_normal s (h_old, v_src) (h_new, v) \<Longrightarrow>
+   (v_src < v)"
+apply(simp)
+done
+
+fun inherit_switching_validators ::
+  "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
+                (hash \<times> view) \<Rightarrow> bool"
+where
+"inherit_switching_validators s (h_old, v_old) (h_new, v_new) =
+   (prepared_by_both s h_new v_new v_old \<and>
+    sourcing_switching_validators s h_old (h_new, v_new, v_old))"
+
+inductive heir :: "situation \<Rightarrow>
+                   (hash \<times> view) \<Rightarrow> 
+                   (hash \<times> view) \<Rightarrow> bool"
+where
+  heir_self : "prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (h, v)"
+| heir_normal_step : "heir s (h, v) (h', v') \<Longrightarrow>
+                 inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+                 heir s (h, v) (h'', v'')"
+| heir_switching_step : "heir s (h, v) (h', v') \<Longrightarrow>
+                 inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+                 heir s (h, v) (h'', v'')"
+
+definition on_same_heir_chain :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
+
+
+fun fork :: "situation \<Rightarrow>
+                    (hash \<times> view) \<Rightarrow>
+                    (hash \<times> view) \<Rightarrow>
+                    (hash \<times> view) \<Rightarrow> bool"
+where
+"fork s (root, v) (h1, v1) (h2, v2) =
+  (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
 
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
@@ -330,6 +335,10 @@ where
 
 
 section "Auxiliary Things (skippable)"
+
+subsection "Sets and Arithmetics"
+
+subsection "Validator History Tracking"
 
 lemma heir_increases_view :
   "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
@@ -388,11 +397,6 @@ lemma fork_has_n_switching :
 apply(simp)
 using every_heir_is_after_n_switching by blast
 
-
-definition validators_transition :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"validators_transition s h0 h1 =
-  (FwdValidators s h0 = RearValidators s h1)"
 
 lemma heir_decomposition :
   "heir s (h, v) (h'', v'') \<Longrightarrow>
