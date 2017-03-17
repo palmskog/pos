@@ -232,26 +232,6 @@ where
 "on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
 
 
-lemma heir_increases_view :
-  "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
-apply(induction rule: heir.induct; auto)
-done
-
-inductive heir_after_n_switching ::
-   "nat \<Rightarrow> situation \<Rightarrow>
-    (hash \<times> view) \<Rightarrow>
-    (hash \<times> view) \<Rightarrow> bool"
-where
-  heir_n_self : "prepared_by_both s h v v_src \<Longrightarrow> heir_after_n_switching 0 s (h, v) (h, v)"
-| heir_n_normal_step :
-   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-    heir_after_n_switching n s (h, v) (h'', v'')"
-| heir_n_switching_step :
-   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-    heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
-
 fun fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
@@ -326,8 +306,6 @@ text "However, since it does not make sense to divide the cardinality of an infi
 we should be talking
 about situations where the set of validators is finite."
 
-section "Useful Lemmas for Accountable Safety (can be skipped)"
-
 definition one_third_of_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "one_third_of_rear_slashed s h = one_third (RearValidators s h) (slashed s)"
@@ -350,7 +328,29 @@ where
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
+
 section "Auxiliary Things (skippable)"
+
+lemma heir_increases_view :
+  "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
+apply(induction rule: heir.induct; auto)
+done
+
+inductive heir_after_n_switching ::
+   "nat \<Rightarrow> situation \<Rightarrow>
+    (hash \<times> view) \<Rightarrow>
+    (hash \<times> view) \<Rightarrow> bool"
+where
+  heir_n_self : "prepared_by_both s h v v_src \<Longrightarrow> heir_after_n_switching 0 s (h, v) (h, v)"
+| heir_n_normal_step :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+    heir_after_n_switching n s (h, v) (h'', v'')"
+| heir_n_switching_step :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+    heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
+
 
 
 lemma inherit_switching_validators_increase_view :
