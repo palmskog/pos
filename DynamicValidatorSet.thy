@@ -839,11 +839,53 @@ apply(subgoal_tac "finite {n \<in> X. q n}")
  apply blast
 by simp
 
+lemma two_thirds_two_thirds_one_third :
+  "finite X \<Longrightarrow>
+    two_thirds X p \<Longrightarrow>
+    two_thirds X q \<Longrightarrow>
+    one_third X (\<lambda> x. p x \<and> q x)
+  "
+apply(simp add: two_thirds_def one_third_def)
+apply(rule_tac two_two_set)
+  apply simp
+ apply simp
+apply simp
+done
+
 
 lemma slashed_four_means_slashed_on_a_group:
    "finite X \<Longrightarrow> one_third X (slashed_four s) \<Longrightarrow> one_third X (slashed s)"
 using one_third_mp slashed_def by blast
 
+lemma slashed_four_on_a_group:
+  " finite (FwdValidators s h) \<Longrightarrow>
+    prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow>
+    \<exists>v_two_src. prepared s (FwdValidators s h) h_two v'' v_two_src \<Longrightarrow> h'' \<noteq> h_two \<Longrightarrow>
+    one_third (FwdValidators s h) (slashed_four s)"
+apply(simp only: prepared_def two_thirds_sent_message_def)
+apply(erule exE)
+apply(subgoal_tac
+       "one_third (FwdValidators s h)
+           (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and>
+                (n, Prepare (h_two, v'', v_two_src)) \<in> Messages s)
+       ")
+ apply(subgoal_tac "\<forall> n. 
+               ((n, Prepare (h'', v'', v')) \<in> Messages s \<and>
+                (n, Prepare (h_two, v'', v_two_src)) \<in> Messages s) \<longrightarrow>
+               slashed_four s n")
+  apply (simp add: one_third_mp)
+ using slashed_four_def apply blast
+by (simp add: two_thirds_two_thirds_one_third)
+
+lemma committed_so_prepared :
+  " finite (FwdValidators s h) \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v'') \<Longrightarrow>
+    committed_by_both s h_two v'' \<Longrightarrow>
+    \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow> prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow> \<exists>v_two_src. prepared s (FwdValidators s h) h_two v'' v_two_src"
+apply(subgoal_tac "committed s (FwdValidators s h) h_two v''")
+ apply (metis eq_fst_iff forget_number_of_switching heir_decomposition inherit_normal.simps inherit_switching_validators.simps one_validator_change_leaves_one_set prepared_by_both_def prepared_by_fwd_def prepared_by_rear_def)
+using committed_by_both_def committed_by_fwd_def committed_by_rear_def one_validator_change_leaves_one_set by fastforce
 
 lemma smaller_induction_same_height_violation :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
@@ -862,8 +904,9 @@ apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v''
  apply(subgoal_tac "h'' \<noteq> h_two")
   apply(subgoal_tac "one_third (FwdValidators s h) (slashed_four s)")
    using slashed_four_means_slashed_on_a_group apply blast
-
-sorry
+  using slashed_four_on_a_group apply blast
+ using heir_self on_same_heir_chain_def apply blast
+using committed_so_prepared by blast
 
 lemma smaller_induction_skipping_violation :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
