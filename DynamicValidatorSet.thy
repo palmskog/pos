@@ -287,6 +287,16 @@ where
 
 subsection "Validator History Tracking"
 
+text "In the statement of accountable safety, we need to be a bit specific about
+which validator set the slashed validators belong to.  A singleton is also a validator set
+and the 2/3 of a random singleton being slashed should not be significant.
+So, when we have a fork, we start from the root of the fork and identify the heirs of the initial
+validator sets.  Our statement says 2/3 of a heir validator set are slashed.
+"
+
+text "There are two ways of inheriting the title of relevant validator set.
+These correspond to the two ways of sourcing a prepare message."
+
 fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "inherit_normal s (h_old, v_src) (h_new, v) =
@@ -306,6 +316,8 @@ where
    (prepared_by_both s h_new v_new v_old \<and>
     sourcing_switching_validators s h_old (h_new, v_new, v_old))"
 
+text "The heir relation is just zero-or-more repetition of the inheritance."
+
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> view) \<Rightarrow> 
                    (hash \<times> view) \<Rightarrow> bool"
@@ -318,10 +330,16 @@ where
                  inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
                  heir s (h, v) (h'', v'')"
 
+text "When two hashes are not in the inheritance relation in either direction,
+the two hashes are not on the same heir chain.  In the statement of accountable safety,
+we use this concept to detect conflicts (which should not happen until 2/3 of a legitimate
+heir are slashed)."
+
 definition on_same_heir_chain :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
 
+text "When heirs are not on the same chain of legitimacy, they have forked."
 
 fun fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
@@ -330,6 +348,8 @@ fun fork :: "situation \<Rightarrow>
 where
 "fork s (root, v) (h1, v1) (h2, v2) =
   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
+
+text "A fork is particularly bad when the end points are committed, not only prepared."
 
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
