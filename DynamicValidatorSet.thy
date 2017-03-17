@@ -1082,7 +1082,11 @@ apply(subgoal_tac "v' < v_two")
               (n, Commit (h_two, v_two)) \<in> Messages s)")
      apply(subgoal_tac "one_third (FwdValidators s h) (slashed_three s)")
       apply (metis fst_conv one_third_mp slashed_def)
-     using slashed_three_on_group apply blast
+     apply(rule slashed_three_on_group)
+        apply simp
+       apply simp
+      apply simp
+     apply simp
     apply(simp only: prepared_def committed_def two_thirds_sent_message_def)
     apply(rule two_thirds_two_thirds_one_third; simp)
    apply simp
