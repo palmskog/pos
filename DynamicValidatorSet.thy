@@ -997,6 +997,46 @@ apply(case_tac "v_two = v''")
 apply simp
 using smaller_induction_skipping_violation by blast
 
+lemma slashed_three_on_group:
+  " finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
+    one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
+    v' < v_two \<Longrightarrow>
+    v_two < v'' \<Longrightarrow>
+    one_third (FwdValidators s h) (slashed_three s)"
+proof -
+  assume a1: "v' < v_two"
+  assume a2: "v_two < v''"
+  assume a3: "one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s)"
+  assume a4: "finite (FwdValidators s (fst (h, v)))"
+  have f5: "\<not> 0 \<le> v' + - 1 * v_two"
+    using a1 by force
+  have f6: "\<not> v'' + - 1 * v_two \<le> 0"
+    using a2 by auto
+  have f7: "\<forall>V p pa. (infinite V \<or> (\<exists>v. p v \<and> \<not> pa v) \<or> \<not> one_third V p) \<or> one_third V pa"
+    by (meson one_third_mp)
+  obtain vv :: "(validator \<Rightarrow> bool) \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> validator" where
+    "\<forall>x0 x1. (\<exists>v3. x1 v3 \<and> \<not> x0 v3) = (x1 (vv x0 x1) \<and> \<not> x0 (vv x0 x1))"
+    by moura
+  then have f8: "\<forall>V p pa. (infinite V \<or> p (vv pa p) \<and> \<not> pa (vv pa p) \<or> \<not> one_third V p) \<or> one_third V pa"
+    using f7 by presburger
+  have f9: "\<forall>x1 x2. ((x2::int) < x1) = (\<not> x1 + - 1 * x2 \<le> 0)"
+    by auto
+  have "\<forall>x0 x2. ((x0::int) < x2) = (\<not> 0 \<le> x0 + - 1 * x2)"
+    by linarith
+  then have "\<not> ((vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Prepare (h'', v'', v')) \<in> Messages s \<and> (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Commit (h_two, v_two)) \<in> Messages s) \<or> slashed_three s (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s))"
+    using f9 f6 f5 slashed_three_def by blast
+  then show ?thesis
+  using f8 a4 a3 by fastforce
+qed
+
+lemma some_h :
+    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+    heir s (h', v') (h'', v'')"
+apply(subgoal_tac "\<exists> x. prepared_by_both s h' v' x")
+ using heir_self heir_switching_step apply blast
+by simp
+
 lemma smaller_induction_switching_case:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
    (finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
@@ -1032,8 +1072,7 @@ apply(case_tac "v' = v_two")
     using on_same_heir_chain_def apply blast
    using committed_so_prepared apply blast
   using heir_same_height on_same_heir_chain_def apply blast
- (* TODO: smt method is not good! *)
- apply (smt Suc_leD heir_same_height heir_switching_step on_same_heir_chain_def snd_conv)
+ using some_h apply blast
 apply(subgoal_tac "v' < v_two")
  apply(subgoal_tac "prepared s (FwdValidators s h) h'' v'' v'")
   apply(subgoal_tac "committed s (FwdValidators s h) h_two v_two")
@@ -1043,8 +1082,7 @@ apply(subgoal_tac "v' < v_two")
               (n, Commit (h_two, v_two)) \<in> Messages s)")
      apply(subgoal_tac "one_third (FwdValidators s h) (slashed_three s)")
       apply (metis fst_conv one_third_mp slashed_def)
-     (* TODO: smt is not good *)
-     apply (smt fst_conv one_third_mp slashed_three_def)
+     using slashed_three_on_group apply blast
     apply(simp only: prepared_def committed_def two_thirds_sent_message_def)
     apply(rule two_thirds_two_thirds_one_third; simp)
    apply simp
