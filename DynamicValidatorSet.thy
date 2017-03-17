@@ -163,8 +163,7 @@ where
 definition committed_by_both :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
 "committed_by_both s h v =
-   (committed_by_rear s h v \<and>
-    committed_by_fwd s h v)"
+   (committed_by_rear s h v \<and> committed_by_fwd s h v)"
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
@@ -200,8 +199,7 @@ where
 fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "inherit_normal s (h_old, v_src) (h_new, v) =
-   (prepared_by_both s h_new v v_src \<and>
-    sourcing_normal s h_old (h_new, v, v_src))"
+   (prepared_by_both s h_new v v_src \<and>  sourcing_normal s h_old (h_new, v, v_src))"
 
 lemma inherit_normal_view_increase :
   "inherit_normal s (h_old, v_src) (h_new, v) \<Longrightarrow>
@@ -528,27 +526,6 @@ proof -
 qed
 
 
-definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"on_same_chain s x y = (is_descendant_or_self s x y \<or> is_descendant_or_self s y x)"
-
-lemma dependency_self [simp]:
-  "on_same_chain s y y"
-apply(simp add: on_same_chain_def)
-apply(simp add: is_descendant_or_self_def)
-apply(rule_tac x = 0 in exI)
-apply(simp)
-done
-
-lemma prepare_direct_conflict :
- "\<not> on_same_chain s x y \<Longrightarrow>
-  n \<in> Validators s \<Longrightarrow>
-  (n, Prepare (x, v2, vs1)) \<in> Messages s \<Longrightarrow>
-  (n, Prepare (y, v2, vs2)) \<in> Messages s \<Longrightarrow> slashed_four s n"
-apply(auto simp add: slashed_four_def)
-by fastforce
-
-
 lemma inclusion_card_le :
   "\<forall>n. n \<in> Validators s \<longrightarrow> f n \<longrightarrow> g n \<Longrightarrow>
    finite (Validators s) \<Longrightarrow>
@@ -567,39 +544,11 @@ proof -
     qed
 qed
 
-lemma not_on_same_chain_sym [simp] :
- "on_same_chain s x y = on_same_chain s y x"
-apply(auto simp add: on_same_chain_def)
-done
-
-lemma ancestors_ancestor : "
-  \<forall> m x y.
-   nth_ancestor s n x = Some y \<longrightarrow>
-   nth_ancestor s m y = nth_ancestor s (n + m) x
-"
-apply(induction n; auto)
-apply(case_tac "PrevHash s x"; auto)
-done
-
 lemma nat_min_min :
 "    vs1 < v \<Longrightarrow>
     \<not> vs1 < c_view \<Longrightarrow>
    (nat (v - vs1) + nat (vs1 - c_view)) = nat (v - c_view)"
 by (simp add: Nat_Transfer.transfer_nat_int_functions(1))
-
-lemma ancestor_ancestor : "
-       nth_ancestor s (nat (v - c_view)) x \<noteq> Some y \<Longrightarrow>
-       vs1 < v \<Longrightarrow>
-       \<not> vs1 < c_view \<Longrightarrow>
-       \<not> c_view \<le> - 1 \<Longrightarrow>
-       - 1 \<le> vs' \<Longrightarrow>
-       vs' < vs1 \<Longrightarrow>
-       Some h_anc = nth_ancestor s (nat (v - vs1)) x \<Longrightarrow>
-       nth_ancestor s (nat (vs1 - c_view)) h_anc \<noteq> Some y 
-"
-apply(simp add: ancestors_ancestor nat_min_min)
-done
-
 
 lemma view_total [simp]:
   "(v2 :: view) \<le> v1 \<or> v1 \<le> v2"
