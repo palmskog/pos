@@ -908,8 +908,16 @@ apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v''
  using heir_self on_same_heir_chain_def apply blast
 using committed_so_prepared by blast
 
-lemma smaller_induction_skipping_violation :
-   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+lemma slashed_three_on_a_group :
+ "finite X \<Longrightarrow>
+  one_third X (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
+  v' < v_two \<Longrightarrow> v_two < v'' \<Longrightarrow> one_third X (slashed_three s)"
+apply(rule one_third_mp; auto simp add: slashed_three_def)
+apply blast
+done
+
+(*
+    finite (FwdValidators s h) \<Longrightarrow>
     prepared_by_both s h'' v'' v' \<and> (\<exists>v_ss. prepared_by_both s h' v' v_ss) \<and> - 1 \<le> v' \<and> nth_ancestor s (nat (v'' - v')) h'' = Some h' \<and> validators_match s h' h'' \<Longrightarrow>
     v_two \<le> v'' \<Longrightarrow>
     n \<le> Suc 0 \<Longrightarrow>
@@ -919,8 +927,42 @@ lemma smaller_induction_skipping_violation :
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
     committed_by_both s h_two v_two \<Longrightarrow>
-    \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow> \<not> v_two \<le> v' \<Longrightarrow> prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow> v_two \<noteq> v'' \<Longrightarrow> False"
-sorry
+    \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow>
+    \<not> v_two \<le> v' \<Longrightarrow>
+    two_thirds (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s) \<Longrightarrow>
+    v_two \<noteq> v'' \<Longrightarrow>
+    two_thirds (FwdValidators s h) (\<lambda>n. (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
+    one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s)
+*)
+
+lemma smaller_induction_skipping_violation :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    finite (FwdValidators s h) \<Longrightarrow>
+    prepared_by_both s h'' v'' v' \<and> (\<exists>v_ss. prepared_by_both s h' v' v_ss) \<and> - 1 \<le> v' \<and> nth_ancestor s (nat (v'' - v')) h'' = Some h' \<and> validators_match s h' h'' \<Longrightarrow>
+    v_two \<le> v'' \<Longrightarrow>
+    n \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    \<not> one_third (FwdValidators s h) (slashed s) \<Longrightarrow> \<not> v_two \<le> v' \<Longrightarrow> prepared s (FwdValidators s h) h'' v'' v' \<Longrightarrow>
+    v_two \<noteq> v'' \<Longrightarrow> False"
+apply(subgoal_tac "one_third (FwdValidators s h) (slashed_three s)")
+ using one_third_mp slashed_def apply blast
+apply(subgoal_tac "committed s (FwdValidators s h) h_two v_two")
+ apply(simp add: prepared_def committed_def two_thirds_sent_message_def)
+ apply(subgoal_tac "one_third (FwdValidators s h)
+         (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and>
+               (n, Commit (h_two, v_two)) \<in> Messages s)")
+  apply(subgoal_tac "v_two > v'")
+   apply(subgoal_tac "v_two < v''")
+    using slashed_three_on_a_group apply blast
+   apply linarith
+  apply linarith
+ apply(rule two_thirds_two_thirds_one_third; simp)
+by (metis committed_by_both_def committed_by_fwd_def committed_by_rear_def fst_conv one_validator_change_leaves_one_set)
 
 lemma smaller_induction_case_normal:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
@@ -974,8 +1016,49 @@ lemma smaller_induction_switching_case:
     \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
-(* case analysis on v' perhaps *)
-sorry
+apply(case_tac "v_two < v'")
+ apply(case_tac "\<not> on_same_heir_chain s (h', v') (h_two, v_two)")
+  apply simp
+ apply(subgoal_tac "heir s (h', v') (h_two, v_two)")
+  using heir_increases_view apply force
+ using heir_switching_step on_same_heir_chain_def apply blast
+apply(case_tac "v' = v_two")
+ apply(subgoal_tac "heir s (h', v') (h'', v'')")
+  apply simp
+  apply(subgoal_tac "\<exists> v'_src. prepared s (FwdValidators s h) h' v_two v'_src")
+   apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v_two v_two_src")
+    apply(subgoal_tac "h' \<noteq> h_two")
+     apply (meson slashed_four_means_slashed_on_a_group slashed_four_on_a_group)
+    using on_same_heir_chain_def apply blast
+   using committed_so_prepared apply blast
+  using heir_same_height on_same_heir_chain_def apply blast
+ (* TODO: smt method is not good! *)
+ apply (smt Suc_leD heir_same_height heir_switching_step on_same_heir_chain_def snd_conv)
+apply(subgoal_tac "v' < v_two")
+ apply(subgoal_tac "prepared s (FwdValidators s h) h'' v'' v'")
+  apply(subgoal_tac "committed s (FwdValidators s h) h_two v_two")
+   apply(case_tac "v_two < v''")
+    apply(subgoal_tac "one_third (FwdValidators s h)
+         (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and>
+              (n, Commit (h_two, v_two)) \<in> Messages s)")
+     apply(subgoal_tac "one_third (FwdValidators s h) (slashed_three s)")
+      apply (metis fst_conv one_third_mp slashed_def)
+     (* TODO: smt is not good *)
+     apply (smt fst_conv one_third_mp slashed_three_def)
+    apply(simp only: prepared_def committed_def two_thirds_sent_message_def)
+    apply(rule two_thirds_two_thirds_one_third; simp)
+   apply simp
+   apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v'' v_two_src")
+    apply(subgoal_tac "h'' \<noteq> h_two")
+     apply (simp add: slashed_four_means_slashed_on_a_group slashed_four_on_a_group)
+    using heir_self on_same_heir_chain_def apply blast
+   using committed_so_prepared apply blast
+  apply (metis committed_by_both_def committed_by_fwd_def committed_by_rear_def fst_conv one_validator_change_leaves_one_set)
+ apply simp
+ apply (metis One_nat_def Suc_neq_Zero fst_conv le_numeral_extra(1) one_validator_change_leaves_one_set prepared_by_both_def prepared_by_rear_def validators_change_def)
+apply linarith
+done
+
 
 lemma accountable_safety_smaller_induction:
    "heir_after_n_switching n_one s (h, v) (h_one, v_one) \<Longrightarrow>
