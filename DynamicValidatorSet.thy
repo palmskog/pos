@@ -781,6 +781,63 @@ apply(induction rule: heir_after_n_switching.induct)
  using heir_normal_step apply blast
 using heir_switching_step by blast
 
+lemma smaller_induction_case_normal:
+  "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+   (v_two \<le> snd (h', v') \<Longrightarrow>
+   n \<le> Suc 0 \<Longrightarrow>
+   n_two \<le> Suc 0 \<Longrightarrow>
+   prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+   \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
+   heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+   committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow>
+   \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
+   inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+   v_two \<le> snd (h'', v'') \<Longrightarrow>
+   n \<le> Suc 0 \<Longrightarrow>
+   n_two \<le> Suc 0 \<Longrightarrow>
+   prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+   \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+   heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+   committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow>
+   \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
+(* case analysis on v' *)
+sorry
+
+lemma smaller_induction_switching_case:
+  "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+       (v_two \<le> snd (h', v') \<Longrightarrow>
+        n \<le> Suc 0 \<Longrightarrow>
+        n_two \<le> Suc 0 \<Longrightarrow>
+        prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+        \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
+        heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+        committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
+       inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+       v_two \<le> snd (h'', v'') \<Longrightarrow>
+       Suc n \<le> Suc 0 \<Longrightarrow>
+       n_two \<le> Suc 0 \<Longrightarrow>
+       prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+       \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
+       heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+       committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
+(* case analysis on v' perhaps *)
+sorry
+
+lemma accountable_safety_smaller_induction:
+   "heir_after_n_switching n_one s (h, v) (h_one, v_one) \<Longrightarrow>
+    v_two \<le> snd (h_one, v_one) \<Longrightarrow>
+    n_one \<le> Suc 0 \<Longrightarrow>
+    n_two \<le> Suc 0 \<Longrightarrow>
+    prepare_commit_only_from_rear_or_fwd s \<Longrightarrow>
+    \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s (fst (h, v)) (snd (h, v)) (* maybe not necessary *) \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False"
+apply(induction rule: heir_after_n_switching.induct)
+  apply (simp add: forget_number_of_switching on_same_heir_chain_def)
+ using smaller_induction_case_normal apply blast
+using smaller_induction_switching_case by blast
 
 lemma accountable_safety_from_fork_with_high_root_base_one_longer :
 "n_one \<le> 1 \<and>
@@ -792,7 +849,20 @@ lemma accountable_safety_from_fork_with_high_root_base_one_longer :
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_rear_or_fwd_slashed s h'"
-sorry
+apply(simp only: fork_with_center_with_high_root_with_n_switching.simps)
+apply(simp only: fork_with_center_with_n_switching.simps)
+apply(simp only: fork_with_n_switching.simps)
+apply clarify
+apply(rule_tac x = h in exI)
+apply(rule_tac x = v in exI)
+apply(rule conjI)
+ apply simp
+apply(simp only: one_third_of_rear_or_fwd_slashed_def)
+apply(rule disjI2)
+apply(case_tac "one_third_of_fwd_slashed s h")
+ apply simp
+apply(simp add: one_third_of_fwd_slashed_def)
+using accountable_safety_smaller_induction by fastforce
 
 lemma accountable_safety_from_fork_with_high_root_base_two_longer :
 "n_one \<le> 1 \<and>
