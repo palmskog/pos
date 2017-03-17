@@ -76,8 +76,6 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
-text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
-
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
 text "We can lift any predicate about a validator into a predicate about a situation:
@@ -95,15 +93,7 @@ where
 "one_third vs f =
    (card vs \<le> 3 * card ({n. n \<in> vs \<and> f n}))"
 
-definition more_than_two_thirds :: "validator set \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
-where
-"more_than_two_thirds vs f =
-   (2 * card vs < 3 * card ({n. n \<in> vs \<and> f n}))"
-
-definition more_than_one_third :: "validator set \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
-where
-"more_than_one_third vs f =
-   (card vs < 3 * card ({n. n \<in> vs \<and> f n}))"
+text "It matters when two-thirds of validators are saying something."
 
 definition two_thirds_sent_message :: "situation \<Rightarrow> validator set \<Rightarrow> message \<Rightarrow> bool"
 where
@@ -126,21 +116,33 @@ where
 
 subsection "Prepare Messages' Sources"
 
+text "As we will see, honest validators should send a prepare message only when
+it has enough prepare messages at a particular view.  Those prepare messages need
+to be signed by two-thirds of both the rear and the forward validators."
+
+text "A hash at a view and a view source is prepared by the rear validators when
+two-thirds of the rear validators have signed the prepare message."
+
 definition prepared_by_rear :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
 "prepared_by_rear s h v vsrc =
    (prepared s (RearValidators s h) h v vsrc)"
+
+text "Similarly for the forward validators."
 
 definition prepared_by_fwd :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
 "prepared_by_fwd s h v vsrc =
    (prepared s (FwdValidators s h) h v vsrc)"
 
-(* This thing is necessary; consider change-no-change conflict.  *)
+text "When both of these happens, a prepare is signed by both the rear and the forward validator sets."
+
 definition prepared_by_both :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
 "prepared_by_both s h v vsrc =
   (prepared_by_rear s h v vsrc \<and> prepared_by_fwd s h v vsrc)"
+
+text "Similar definitions for commit messages."
 
 definition committed_by_rear :: "situation \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
@@ -157,6 +159,9 @@ where
 "committed_by_both s h v =
    (committed_by_rear s h v \<and> committed_by_fwd s h v)"
 
+text "One type of prepare source is the normal one.  The normal source needs to have the same 
+rear validator set and the same forward validator set."
+
 definition validators_match :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "validators_match s h0 h1 =
@@ -172,6 +177,11 @@ where
    v_src < v' \<and>
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_match s h h' )"
+
+text "Another type of sourcing allows changing the validator sets.
+The forward validator set of the source needs to coincide with the
+rear validator set of the newly prepared hash.
+"
 
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -190,11 +200,17 @@ where
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_change s h h')"
 
+text "A prepare message's source needs to be one of these two types."
+
 definition sourcing :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
 "sourcing s h_new tri = (sourcing_normal s h_new tri \<or> sourcing_switching_validators s h_new tri)"
 
 subsection "Slashing Conditions"
+
+text "In a situation, a validator might be slashed or not.  A validator is slashed individually
+although later we will be often talking ``unless one-third of the validators are slashed.''
+"
 
 text "[i] A validator is slashed when it has sent a commit message of a hash
       that is not prepared yet."
@@ -247,11 +263,6 @@ where
                 slashed_two s n \<or>
                 slashed_three s n \<or>
                 slashed_four s n)"
-
-fun hash_of_message :: "message \<Rightarrow> hash"
-where
-"hash_of_message (Commit (h, v)) = h"
-|"hash_of_message (Prepare (h, v, vs)) = h"
 
 definition one_third_slashed :: "situation \<Rightarrow> validator set \<Rightarrow> bool"
 where
