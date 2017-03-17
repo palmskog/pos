@@ -338,81 +338,39 @@ section "Auxiliary Things (skippable)"
 
 subsection "Sets and Arithmetics"
 
-subsection "Validator History Tracking"
+lemma sum_suc_disj :
+ "n_one + n_two \<le> Suc k \<Longrightarrow>
+  n_one + n_two \<le> k \<or>
+  n_one + n_two = Suc k"
+using le_SucE by blast
 
-lemma heir_increases_view :
-  "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
-apply(induction rule: heir.induct; auto)
-done
+lemma sum_eq_disj :
+"((n_one :: nat) \<le> 1 \<and> (n_two :: nat) \<le> 1) \<or>
+  n_one > 1 \<or> n_two > 1
+"
+by auto
 
-inductive heir_after_n_switching ::
-   "nat \<Rightarrow> situation \<Rightarrow>
-    (hash \<times> view) \<Rightarrow>
-    (hash \<times> view) \<Rightarrow> bool"
-where
-  heir_n_self : "prepared_by_both s h v v_src \<Longrightarrow> heir_after_n_switching 0 s (h, v) (h, v)"
-| heir_n_normal_step :
-   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-    heir_after_n_switching n s (h, v) (h'', v'')"
-| heir_n_switching_step :
-   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-    heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
+lemma sum_eq_case1 :
+  "n_one + n_two = Suc k \<Longrightarrow>
+   n_one > 1 \<Longrightarrow>
+   \<exists> n_one_pre. n_one_pre \<ge> 1 \<and> n_one = Suc n_one_pre \<and> n_one_pre + n_two = k"
+using less_imp_Suc_add by fastforce
 
+lemma sum_eq_case2 :
+  "n_one + n_two = Suc k \<Longrightarrow>
+   n_two > 1 \<Longrightarrow>
+   \<exists> n_two_pre. n_two_pre \<ge> 1 \<and> n_two = Suc n_two_pre \<and> n_one + n_two_pre = k"
+by presburger
+ 
 
-
-lemma inherit_switching_validators_increase_view :
- "inherit_switching_validators s (h_old,v_old) (h_new, v_new) \<Longrightarrow>
-  v_old < v_new"
-apply(simp)
-done
-
-lemma every_heir_is_after_n_switching :
-"heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
-apply(induction rule: heir.induct)
-  apply(rule_tac x = 0 in exI)
-  apply (simp add: heir_n_self)
- apply clarify
- apply(rule_tac x = n in exI)
- apply(rule heir_n_normal_step; blast)
-apply clarify
-using heir_n_switching_step by blast
-
-
-fun fork_with_n_switching :: "situation \<Rightarrow>
-             (hash \<times> view) \<Rightarrow>
-             nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
-             nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_n_switching
-   s (root, v) n1 (h1, v1) n2 (h2, v2) =
-   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
-    heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
-    heir_after_n_switching n2 s (root, v) (h2, v2))"
-
-lemma fork_has_n_switching :
-  "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
-apply(simp)
-using every_heir_is_after_n_switching by blast
-
-
-lemma heir_decomposition :
-  "heir s (h, v) (h'', v'') \<Longrightarrow>
-    ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))
-    )"
-apply(erule_tac DynamicValidatorSet.heir.cases)
-  apply(rule disjI1)
-  apply blast
- apply(rule disjI2)
- apply(rule disjI1)
- apply blast
-apply(rule disjI2)
-apply(rule disjI2)
-by blast
+lemma sum_suc :
+ "n_one + n_two \<le> Suc k \<Longrightarrow>
+  n_one + n_two \<le> k \<or>
+  n_one \<le> 1 \<and> n_two \<le> 1 \<or>
+  (\<exists> n_one_pre. n_one_pre \<ge> 1 \<and> n_one = Suc n_one_pre \<and> n_one_pre + n_two = k) \<or>
+  (\<exists> n_two_pre. n_two_pre \<ge> 1 \<and> n_two = Suc n_two_pre \<and> n_one + n_two_pre = k)
+ "
+using sum_eq_case1 sum_eq_case2 by auto
 
 
 lemma card_not [simp] :
@@ -559,13 +517,6 @@ lemma view_total [simp]:
 apply auto
 done
 
-lemma heir_same_height :
- "heir s (h', v) (h, v) \<Longrightarrow>
-  h' = h"
-apply(drule heir_decomposition)
-using heir_increases_view apply force
-done
-
 
 lemma sum_is_suc_dest :
    "Suc n = n1 + n2 \<Longrightarrow>
@@ -574,31 +525,6 @@ lemma sum_is_suc_dest :
    "
 apply (case_tac n1; auto)
 done
-fun fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
-   (fork s (h, v) (h1, v1) (h2, v2) \<and>
-    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
-    committed_by_both s h v \<and>
-    committed_by_both s h1 v1 \<and>
-    committed_by_both s h2 v2)"
-
-fun fork_with_center_with_n_switching :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
-      (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
-   (fork_with_n_switching s (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
-    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
-    committed_by_both s h v \<and>
-    committed_by_both s h1 v1 \<and>
-    committed_by_both s h2 v2)"
-
-lemma fork_with_center_has_n_switching :
-  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> n1 n2.
-    fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
-apply simp
-using every_heir_is_after_n_switching by blast
 
 (* Finding a max element in a set of integers *)
 lemma find_max_ind_step :
@@ -629,6 +555,143 @@ lemma find_max :
    \<exists> m. m \<in> S \<and>
       (\<forall> y. y > m \<longrightarrow> y \<notin> S)"
 using find_max_ind by auto
+
+lemma one_third_mp :
+  "finite X \<Longrightarrow>
+   \<forall> v. p v \<longrightarrow> q v \<Longrightarrow>
+   one_third X p \<Longrightarrow> one_third X q"
+apply(simp add: one_third_def)
+ apply(subgoal_tac "card {n \<in> X. p n} \<le> card {n \<in> X. q n}")
+ apply linarith
+apply(subgoal_tac "finite {n \<in> X. q n}")
+ apply(subgoal_tac "{n \<in> X. p n} \<subseteq> {n \<in> X. q n}")
+  using card_mono apply blast
+ apply blast
+by simp
+
+lemma two_thirds_two_thirds_one_third :
+  "finite X \<Longrightarrow>
+    two_thirds X p \<Longrightarrow>
+    two_thirds X q \<Longrightarrow>
+    one_third X (\<lambda> x. p x \<and> q x)
+  "
+apply(simp add: two_thirds_def one_third_def)
+apply(rule_tac two_two_set)
+  apply simp
+ apply simp
+apply simp
+done
+
+subsection "Validator History Tracking"
+
+lemma heir_increases_view :
+  "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
+apply(induction rule: heir.induct; auto)
+done
+
+inductive heir_after_n_switching ::
+   "nat \<Rightarrow> situation \<Rightarrow>
+    (hash \<times> view) \<Rightarrow>
+    (hash \<times> view) \<Rightarrow> bool"
+where
+  heir_n_self : "prepared_by_both s h v v_src \<Longrightarrow> heir_after_n_switching 0 s (h, v) (h, v)"
+| heir_n_normal_step :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+    heir_after_n_switching n s (h, v) (h'', v'')"
+| heir_n_switching_step :
+   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+    inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+    heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
+
+
+
+lemma inherit_switching_validators_increase_view :
+ "inherit_switching_validators s (h_old,v_old) (h_new, v_new) \<Longrightarrow>
+  v_old < v_new"
+apply(simp)
+done
+
+lemma every_heir_is_after_n_switching :
+"heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
+apply(induction rule: heir.induct)
+  apply(rule_tac x = 0 in exI)
+  apply (simp add: heir_n_self)
+ apply clarify
+ apply(rule_tac x = n in exI)
+ apply(rule heir_n_normal_step; blast)
+apply clarify
+using heir_n_switching_step by blast
+
+
+fun fork_with_n_switching :: "situation \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_n_switching
+   s (root, v) n1 (h1, v1) n2 (h2, v2) =
+   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
+    heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
+    heir_after_n_switching n2 s (root, v) (h2, v2))"
+
+lemma fork_has_n_switching :
+  "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
+apply(simp)
+using every_heir_is_after_n_switching by blast
+
+
+lemma heir_decomposition :
+  "heir s (h, v) (h'', v'') \<Longrightarrow>
+    ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))
+    )"
+apply(erule_tac DynamicValidatorSet.heir.cases)
+  apply(rule disjI1)
+  apply blast
+ apply(rule disjI2)
+ apply(rule disjI1)
+ apply blast
+apply(rule disjI2)
+apply(rule disjI2)
+by blast
+
+
+lemma heir_same_height :
+ "heir s (h', v) (h, v) \<Longrightarrow>
+  h' = h"
+apply(drule heir_decomposition)
+using heir_increases_view apply force
+done
+
+
+fun fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+fun fork_with_center_with_n_switching :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
+      (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
+   (fork_with_n_switching s (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
+    heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+lemma fork_with_center_has_n_switching :
+  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2.
+    fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
+apply simp
+using every_heir_is_after_n_switching by blast
 
 fun fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
 where
@@ -731,32 +794,121 @@ apply(subgoal_tac " (FwdValidators s h) = (FwdValidators s h'') \<or>
  apply auto[1]
 by (metis fst_conv one_validator_change_leaves_one_set sourcing_normal.simps validators_match_def)
 
-lemma one_third_mp :
-  "finite X \<Longrightarrow>
-   \<forall> v. p v \<longrightarrow> q v \<Longrightarrow>
-   one_third X p \<Longrightarrow> one_third X q"
-apply(simp add: one_third_def)
- apply(subgoal_tac "card {n \<in> X. p n} \<le> card {n \<in> X. q n}")
- apply linarith
-apply(subgoal_tac "finite {n \<in> X. q n}")
- apply(subgoal_tac "{n \<in> X. p n} \<subseteq> {n \<in> X. q n}")
-  using card_mono apply blast
- apply blast
-by simp
-
-lemma two_thirds_two_thirds_one_third :
-  "finite X \<Longrightarrow>
-    two_thirds X p \<Longrightarrow>
-    two_thirds X q \<Longrightarrow>
-    one_third X (\<lambda> x. p x \<and> q x)
-  "
-apply(simp add: two_thirds_def one_third_def)
-apply(rule_tac two_two_set)
-  apply simp
- apply simp
+lemma heir_found_switching :
+  "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
+   inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
+   0 < Suc n \<Longrightarrow>
+   \<exists>h_one v_one h_two v_two.
+      heir_after_n_switching (Suc n - 1) s (h, v) (h_one, v_one) \<and>
+      inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+      heir_after_n_switching 0 s (h_two, v_two) (h'', v'')"
+apply(rule_tac x = h' in exI)
+apply(rule_tac x = v' in exI)
+apply(rule_tac x = h'' in exI)
+apply(rule_tac x = v'' in exI)
 apply simp
+using heir_n_self by blast
+
+lemma heir_trans :
+  "heir s (h_r, v_r) (h', v') \<Longrightarrow>
+   heir s (h, v) (h_r, v_r) \<Longrightarrow>
+   heir s (h, v) (h', v')"
+apply(induction rule: heir.induct; auto)
+ apply(rule_tac h' = h' and v' = v' in heir_normal_step; auto)
+apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
 done
 
+lemma heir_normal_extend :
+      "(\<exists>h_one v_one h_two v_two.
+           heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
+           inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+           heir_after_n_switching 0 s (h_two, v_two) (h', v')) \<Longrightarrow>
+       inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+       (\<exists>h_one v_one h_two v_two.
+           heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
+           inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+           heir_after_n_switching 0 s (h_two, v_two) (h'', v''))"
+apply clarify
+apply(rule_tac x = h_one in exI)
+apply(rule_tac x = v_one in exI)
+apply(rule_tac x = h_two in exI)
+apply(rule_tac x = v_two in exI)
+apply simp
+using heir_n_normal_step inherit_normal.simps sourcing_normal.simps by blast
+
+lemma heir_after_one_or_more_switching_dest :
+  "heir_after_n_switching na s (h, v) (h_three, v_three) \<Longrightarrow>
+   na > 0 \<Longrightarrow>
+   (\<exists> h_one v_one h_two v_two.
+    heir_after_n_switching (na - 1) s (h, v) (h_one, v_one) \<and>
+    inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
+    heir_after_n_switching 0 s (h_two, v_two) (h_three, v_three))"
+apply(induction rule: heir_after_n_switching.induct)
+  apply simp
+ using heir_normal_extend apply blast
+using heir_found_switching by blast
+
+lemma high_point_still_high :
+(* remove unnecessary assumptions *)
+      "1 \<le> n_one_pre \<Longrightarrow>
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+       \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+       heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+       heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       committed_by_both s h_one v_one \<Longrightarrow>
+       committed_by_both s h_two v_two \<Longrightarrow>
+       heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+       inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+       heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
+apply(rule allI)
+apply(rule allI)
+apply(drule_tac x = h' in spec)
+apply(drule_tac x = v' in spec)
+apply(rule impI)
+by (metis forget_number_of_switching fork.simps fork_with_center.simps heir_switching_step heir_trans)
+
+lemma at_least_one_switching_means_higher :
+  "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
+   Suc 0 \<le> n_one_pre \<Longrightarrow>
+   snd (h, v) < snd (h_onea, v_onea)"
+apply(induction rule: heir_after_n_switching.induct; auto)
+using forget_number_of_switching heir_increases_view by fastforce
+
+lemma shallower_fork :
+   "heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
+    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    committed_by_both s h_one v_one \<Longrightarrow>
+    committed_by_both s h_two v_two \<Longrightarrow>
+    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
+    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
+    \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow>
+    v < v_onea \<Longrightarrow> fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
+apply(simp only: fork_with_center.simps)
+apply(rule conjI)
+ apply(simp only:fork.simps)
+  apply (meson forget_number_of_switching heir_self heir_switching_step heir_trans inherit_switching_validators.simps on_same_heir_chain_def sourcing_switching_validators.simps)
+by (meson forget_number_of_switching heir_trans inherit_switching_validators.simps sourcing_switching_validators.simps)
+
+lemma on_same_heir_chain_sym :
+ "on_same_heir_chain s (h_one, v_one) (h_two, v_two) =
+  on_same_heir_chain s (h_two, v_two) (h_one, v_one)"
+	using on_same_heir_chain_def by auto
+
+lemma fork_with_center_with_high_root_with_n_switching_sym :
+   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
+     n_two (h_two, v_two) \<Longrightarrow>
+    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
+     n_one (h_one, v_one)"
+apply auto
+using on_same_heir_chain_sym by blast
+
+subsection "Slashing Related"
 
 lemma slashed_four_means_slashed_on_a_group:
    "finite X \<Longrightarrow> one_third X (slashed_four s) \<Longrightarrow> one_third X (slashed s)"
@@ -792,6 +944,48 @@ apply(subgoal_tac "committed s (FwdValidators s h) h_two v''")
  apply (metis eq_fst_iff forget_number_of_switching heir_decomposition inherit_normal.simps inherit_switching_validators.simps one_validator_change_leaves_one_set prepared_by_both_def prepared_by_fwd_def prepared_by_rear_def)
 using committed_by_both_def committed_by_fwd_def committed_by_rear_def one_validator_change_leaves_one_set by fastforce
 
+
+
+lemma slashed_three_on_a_group :
+ "finite X \<Longrightarrow>
+  one_third X (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
+  v' < v_two \<Longrightarrow> v_two < v'' \<Longrightarrow> one_third X (slashed_three s)"
+apply(rule one_third_mp; auto simp add: slashed_three_def)
+apply blast
+done
+
+lemma slashed_three_on_group:
+  " finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
+    one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
+    v' < v_two \<Longrightarrow>
+    v_two < v'' \<Longrightarrow>
+    one_third (FwdValidators s h) (slashed_three s)"
+proof -
+  assume a1: "v' < v_two"
+  assume a2: "v_two < v''"
+  assume a3: "one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s)"
+  assume a4: "finite (FwdValidators s (fst (h, v)))"
+  have f5: "\<not> 0 \<le> v' + - 1 * v_two"
+    using a1 by force
+  have f6: "\<not> v'' + - 1 * v_two \<le> 0"
+    using a2 by auto
+  have f7: "\<forall>V p pa. (infinite V \<or> (\<exists>v. p v \<and> \<not> pa v) \<or> \<not> one_third V p) \<or> one_third V pa"
+    by (meson one_third_mp)
+  obtain vv :: "(validator \<Rightarrow> bool) \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> validator" where
+    "\<forall>x0 x1. (\<exists>v3. x1 v3 \<and> \<not> x0 v3) = (x1 (vv x0 x1) \<and> \<not> x0 (vv x0 x1))"
+    by moura
+  then have f8: "\<forall>V p pa. (infinite V \<or> p (vv pa p) \<and> \<not> pa (vv pa p) \<or> \<not> one_third V p) \<or> one_third V pa"
+    using f7 by presburger
+  have f9: "\<forall>x1 x2. ((x2::int) < x1) = (\<not> x1 + - 1 * x2 \<le> 0)"
+    by auto
+  have "\<forall>x0 x2. ((x0::int) < x2) = (\<not> 0 \<le> x0 + - 1 * x2)"
+    by linarith
+  then have "\<not> ((vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Prepare (h'', v'', v')) \<in> Messages s \<and> (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Commit (h_two, v_two)) \<in> Messages s) \<or> slashed_three s (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s))"
+    using f9 f6 f5 slashed_three_def by blast
+  then show ?thesis
+  using f8 a4 a3 by fastforce
+qed
+
 lemma smaller_induction_same_height_violation :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
     finite (FwdValidators s h) \<Longrightarrow>
@@ -811,14 +1005,6 @@ apply(subgoal_tac "\<exists> v_two_src. prepared s (FwdValidators s h) h_two v''
   using slashed_four_on_a_group apply blast
  using heir_self on_same_heir_chain_def apply blast
 using committed_so_prepared by blast
-
-lemma slashed_three_on_a_group :
- "finite X \<Longrightarrow>
-  one_third X (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
-  v' < v_two \<Longrightarrow> v_two < v'' \<Longrightarrow> one_third X (slashed_three s)"
-apply(rule one_third_mp; auto simp add: slashed_three_def)
-apply blast
-done
 
 lemma smaller_induction_skipping_violation :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
@@ -878,38 +1064,6 @@ apply(case_tac "v_two = v''")
  using smaller_induction_same_height_violation apply blast
 apply simp
 using smaller_induction_skipping_violation by blast
-
-lemma slashed_three_on_group:
-  " finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
-    one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s) \<Longrightarrow>
-    v' < v_two \<Longrightarrow>
-    v_two < v'' \<Longrightarrow>
-    one_third (FwdValidators s h) (slashed_three s)"
-proof -
-  assume a1: "v' < v_two"
-  assume a2: "v_two < v''"
-  assume a3: "one_third (FwdValidators s h) (\<lambda>n. (n, Prepare (h'', v'', v')) \<in> Messages s \<and> (n, Commit (h_two, v_two)) \<in> Messages s)"
-  assume a4: "finite (FwdValidators s (fst (h, v)))"
-  have f5: "\<not> 0 \<le> v' + - 1 * v_two"
-    using a1 by force
-  have f6: "\<not> v'' + - 1 * v_two \<le> 0"
-    using a2 by auto
-  have f7: "\<forall>V p pa. (infinite V \<or> (\<exists>v. p v \<and> \<not> pa v) \<or> \<not> one_third V p) \<or> one_third V pa"
-    by (meson one_third_mp)
-  obtain vv :: "(validator \<Rightarrow> bool) \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> validator" where
-    "\<forall>x0 x1. (\<exists>v3. x1 v3 \<and> \<not> x0 v3) = (x1 (vv x0 x1) \<and> \<not> x0 (vv x0 x1))"
-    by moura
-  then have f8: "\<forall>V p pa. (infinite V \<or> p (vv pa p) \<and> \<not> pa (vv pa p) \<or> \<not> one_third V p) \<or> one_third V pa"
-    using f7 by presburger
-  have f9: "\<forall>x1 x2. ((x2::int) < x1) = (\<not> x1 + - 1 * x2 \<le> 0)"
-    by auto
-  have "\<forall>x0 x2. ((x0::int) < x2) = (\<not> 0 \<le> x0 + - 1 * x2)"
-    by linarith
-  then have "\<not> ((vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Prepare (h'', v'', v')) \<in> Messages s \<and> (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s), Commit (h_two, v_two)) \<in> Messages s) \<or> slashed_three s (vv (slashed_three s) (\<lambda>v. (v, Prepare (h'', v'', v')) \<in> Messages s \<and> (v, Commit (h_two, v_two)) \<in> Messages s))"
-    using f9 f6 f5 slashed_three_def by blast
-  then show ?thesis
-  using f8 a4 a3 by fastforce
-qed
 
 lemma some_h :
     "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
@@ -1065,142 +1219,8 @@ apply(subgoal_tac "v_one \<le> v_two \<or> v_two \<le> v_one")
  apply (meson accountable_safety_from_fork_with_high_root_base_one_longer accountable_safety_from_fork_with_high_root_base_two_longer)
 by linarith
 
-lemma sum_suc_disj :
- "n_one + n_two \<le> Suc k \<Longrightarrow>
-  n_one + n_two \<le> k \<or>
-  n_one + n_two = Suc k"
-using le_SucE by blast
 
-lemma sum_eq_disj :
-"((n_one :: nat) \<le> 1 \<and> (n_two :: nat) \<le> 1) \<or>
-  n_one > 1 \<or> n_two > 1
-"
-by auto
-
-lemma sum_eq_case1 :
-  "n_one + n_two = Suc k \<Longrightarrow>
-   n_one > 1 \<Longrightarrow>
-   \<exists> n_one_pre. n_one_pre \<ge> 1 \<and> n_one = Suc n_one_pre \<and> n_one_pre + n_two = k"
-using less_imp_Suc_add by fastforce
-
-lemma sum_eq_case2 :
-  "n_one + n_two = Suc k \<Longrightarrow>
-   n_two > 1 \<Longrightarrow>
-   \<exists> n_two_pre. n_two_pre \<ge> 1 \<and> n_two = Suc n_two_pre \<and> n_one + n_two_pre = k"
-by presburger
- 
-
-lemma sum_suc :
- "n_one + n_two \<le> Suc k \<Longrightarrow>
-  n_one + n_two \<le> k \<or>
-  n_one \<le> 1 \<and> n_two \<le> 1 \<or>
-  (\<exists> n_one_pre. n_one_pre \<ge> 1 \<and> n_one = Suc n_one_pre \<and> n_one_pre + n_two = k) \<or>
-  (\<exists> n_two_pre. n_two_pre \<ge> 1 \<and> n_two = Suc n_two_pre \<and> n_one + n_two_pre = k)
- "
-using sum_eq_case1 sum_eq_case2 by auto
-
-lemma heir_normal_extend :
-      "(\<exists>h_one v_one h_two v_two.
-           heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
-           inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
-           heir_after_n_switching 0 s (h_two, v_two) (h', v')) \<Longrightarrow>
-       inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-       (\<exists>h_one v_one h_two v_two.
-           heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
-           inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
-           heir_after_n_switching 0 s (h_two, v_two) (h'', v''))"
-apply clarify
-apply(rule_tac x = h_one in exI)
-apply(rule_tac x = v_one in exI)
-apply(rule_tac x = h_two in exI)
-apply(rule_tac x = v_two in exI)
-apply simp
-using heir_n_normal_step inherit_normal.simps sourcing_normal.simps by blast
-
-lemma heir_found_switching :
-  "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-   inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-   0 < Suc n \<Longrightarrow>
-   \<exists>h_one v_one h_two v_two.
-      heir_after_n_switching (Suc n - 1) s (h, v) (h_one, v_one) \<and>
-      inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
-      heir_after_n_switching 0 s (h_two, v_two) (h'', v'')"
-apply(rule_tac x = h' in exI)
-apply(rule_tac x = v' in exI)
-apply(rule_tac x = h'' in exI)
-apply(rule_tac x = v'' in exI)
-apply simp
-using heir_n_self by blast
-
-lemma heir_trans :
-  "heir s (h_r, v_r) (h', v') \<Longrightarrow>
-   heir s (h, v) (h_r, v_r) \<Longrightarrow>
-   heir s (h, v) (h', v')"
-apply(induction rule: heir.induct; auto)
- apply(rule_tac h' = h' and v' = v' in heir_normal_step; auto)
-apply(rule_tac h' = h' and v' = v' in heir_switching_step; auto)
-done
-
-
-lemma heir_after_one_or_more_switching_dest :
-  "heir_after_n_switching na s (h, v) (h_three, v_three) \<Longrightarrow>
-   na > 0 \<Longrightarrow>
-   (\<exists> h_one v_one h_two v_two.
-    heir_after_n_switching (na - 1) s (h, v) (h_one, v_one) \<and>
-    inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
-    heir_after_n_switching 0 s (h_two, v_two) (h_three, v_three))
-  "
-apply(induction rule: heir_after_n_switching.induct)
-  apply simp
- using heir_normal_extend apply blast
-using heir_found_switching by blast
-
-lemma high_point_still_high :
-(* remove unnecessary assumptions *)
-      "1 \<le> n_one_pre \<Longrightarrow>
-       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-       \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-       heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
-       heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-       committed_by_both s h v \<Longrightarrow>
-       committed_by_both s h_one v_one \<Longrightarrow>
-       committed_by_both s h_two v_two \<Longrightarrow>
-       heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
-       inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
-       heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
-       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
-apply(rule allI)
-apply(rule allI)
-apply(drule_tac x = h' in spec)
-apply(drule_tac x = v' in spec)
-apply(rule impI)
-by (metis forget_number_of_switching fork.simps fork_with_center.simps heir_switching_step heir_trans)
-
-lemma at_least_one_switching_means_higher :
-  "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
-   Suc 0 \<le> n_one_pre \<Longrightarrow>
-   snd (h, v) < snd (h_onea, v_onea)"
-apply(induction rule: heir_after_n_switching.induct; auto)
-using forget_number_of_switching heir_increases_view by fastforce
-
-lemma shallower_fork :
-   "heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
-    heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
-    committed_by_both s h v \<Longrightarrow>
-    committed_by_both s h_one v_one \<Longrightarrow>
-    committed_by_both s h_two v_two \<Longrightarrow>
-    heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
-    inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
-    heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
-    \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
-    \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-    heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow>
-    v < v_onea \<Longrightarrow> fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
-apply(simp only: fork_with_center.simps)
-apply(rule conjI)
- apply(simp only:fork.simps)
-  apply (meson forget_number_of_switching heir_self heir_switching_step heir_trans inherit_switching_validators.simps on_same_heir_chain_def sourcing_switching_validators.simps)
-by (meson forget_number_of_switching heir_trans inherit_switching_validators.simps sourcing_switching_validators.simps)
+subsection "Mainline Arguments for Accountable Safety"
 
 lemma use_highness :
  "1 \<le> n_one_pre \<Longrightarrow>
@@ -1315,19 +1335,6 @@ apply (subgoal_tac
   n_two (h_two, v_two)")
  apply blast
 using reduce_fork by blast
-
-lemma on_same_heir_chain_sym :
- "on_same_heir_chain s (h_one, v_one) (h_two, v_two) =
-  on_same_heir_chain s (h_two, v_two) (h_one, v_one)"
-	using on_same_heir_chain_def by auto
-
-lemma fork_with_center_with_high_root_with_n_switching_sym :
-   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
-     n_two (h_two, v_two) \<Longrightarrow>
-    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
-     n_one (h_one, v_one)"
-apply auto
-using on_same_heir_chain_sym by blast
 
 lemma some_symmetry :
   "\<forall>n_onea n_two h_one v_one h_two v_two.
