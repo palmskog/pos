@@ -20,7 +20,7 @@ imports Main
 
 begin
 
-section "Definition of the Protocol (Not Skippable)"
+section "Definitions Necessary to Understand Accountable Safety (Not Skippable)"
 
 text "In this development we do not know much about hashes.  There are many hashes.
 Two hashes might be equal or not."
@@ -83,37 +83,9 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
-(* TODO: consider allow changing the FWD set during this. *)
-definition prev_hash_under_same_validators :: "situation \<Rightarrow> hash \<Rightarrow> hash option"
-where
-  "prev_hash_under_same_validators s h =
-    (case PrevHash s h of
-       None \<Rightarrow> None
-     | Some h' \<Rightarrow>
-        (if RearValidators s h = RearValidators s h' \<and> FwdValidators s h = FwdValidators s h' then
-            Some h'
-         else
-            None))"
-
-fun nth_ancestor_under_same_validators  :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
-where
-  "nth_ancestor_under_same_validators _ 0 h = Some h"
-| "nth_ancestor_under_same_validators s (Suc n) h =
-    (case prev_hash_under_same_validators s h of
-       None \<Rightarrow> None
-     | Some h' \<Rightarrow> nth_ancestor_under_same_validators s n h')"
-
-text "And also we are allowed to talk if two hashes are in ancestor-descendant relation.
-It does not matter if there is an algorithm to decide this."
-
 definition is_descendant_or_self :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "is_descendant_or_self s x y = (\<exists> n. nth_ancestor s n x = Some y)"
-
-definition is_descendant_under_same_validators :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"is_descendant_under_same_validators s x y =
-   (\<exists> n. nth_ancestor_under_same_validators s n x = Some y)"
 
 text "We can also talk if two hashes are not in ancestor-descendant relation in whichever ways."
 
@@ -194,8 +166,6 @@ where
    (committed_by_rear s h v \<and>
     committed_by_fwd s h v)"
 
-section "Electing the New Validators (not skippable)"
-
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
 "sourcing_normal s h (h', v', v_src) =
@@ -227,12 +197,6 @@ definition sourcing :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times
 where
 "sourcing s h_new tri = (sourcing_normal s h_new tri \<or> sourcing_switching_validators s h_new tri)"
 
-(* TODO: I'm wondering if I should keep v and v_src in an existential quantifier here, or
-   expose it as an argument. *)
-
-(* The two very similar definitions are not combined
- * just for easily counting the number of switching.
- *)
 fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "inherit_normal s (h_old, v_src) (h_new, v) =
@@ -253,13 +217,6 @@ where
    (prepared_by_both s h_new v_new v_old \<and>
     sourcing_switching_validators s h_old (h_new, v_new, v_old))"
 
-lemma inherit_switching_validators_increase_view :
- "inherit_switching_validators s (h_old,v_old) (h_new, v_new) \<Longrightarrow>
-  v_old < v_new"
-apply(simp)
-done
-
-
 inductive heir :: "situation \<Rightarrow>
                    (hash \<times> view) \<Rightarrow> 
                    (hash \<times> view) \<Rightarrow> bool"
@@ -275,23 +232,6 @@ where
 definition on_same_heir_chain :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "on_same_heir_chain s x y = (heir s x y \<or> heir s y x)"
-
-
-lemma heir_decomposition :
-  "heir s (h, v) (h'', v'') \<Longrightarrow>
-    ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
-     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))
-    )"
-apply(erule_tac DynamicValidatorSet.heir.cases)
-  apply(rule disjI1)
-  apply blast
- apply(rule disjI2)
- apply(rule disjI1)
- apply blast
-apply(rule disjI2)
-apply(rule disjI2)
-by blast
 
 
 lemma heir_increases_view :
@@ -314,17 +254,6 @@ where
     inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
     heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
 
-lemma every_heir_is_after_n_switching :
-"heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
-apply(induction rule: heir.induct)
-  apply(rule_tac x = 0 in exI)
-  apply (simp add: heir_n_self)
- apply clarify
- apply(rule_tac x = n in exI)
- apply(rule heir_n_normal_step; blast)
-apply clarify
-using heir_n_switching_step by blast
-
 fun fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
@@ -332,25 +261,6 @@ fun fork :: "situation \<Rightarrow>
 where
 "fork s (root, v) (h1, v1) (h2, v2) =
   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
-
-fun fork_with_n_switching :: "situation \<Rightarrow>
-             (hash \<times> view) \<Rightarrow>
-             nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
-             nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_n_switching
-   s (root, v) n1 (h1, v1) n2 (h2, v2) =
-   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
-    heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
-    heir_after_n_switching n2 s (root, v) (h2, v2))"
-
-lemma fork_has_n_switching :
-  "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
-apply(simp)
-using every_heir_is_after_n_switching by blast
-
-section "The Slashing Conditions (not skippable)"
 
 text "[i] A validator is slashed when it has sent a commit message of a hash
       that is not prepared yet."
@@ -364,11 +274,6 @@ where
 
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
-
-definition validators_transition :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"validators_transition s h0 h1 =
-  (FwdValidators s h0 = RearValidators s h1)"
 
 definition slashed_two :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
@@ -425,6 +330,89 @@ about situations where the set of validators is finite."
 
 section "Useful Lemmas for Accountable Safety (can be skipped)"
 
+definition one_third_of_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
+where
+"one_third_of_rear_slashed s h = one_third (RearValidators s h) (slashed s)"
+
+definition one_third_of_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
+where
+"one_third_of_fwd_slashed s h = one_third (FwdValidators s h) (slashed s)"
+
+definition one_third_of_rear_or_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
+where
+"one_third_of_rear_or_fwd_slashed s h =
+   (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
+
+
+fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+section "Auxiliary Things (skippable)"
+
+
+lemma inherit_switching_validators_increase_view :
+ "inherit_switching_validators s (h_old,v_old) (h_new, v_new) \<Longrightarrow>
+  v_old < v_new"
+apply(simp)
+done
+
+lemma every_heir_is_after_n_switching :
+"heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
+apply(induction rule: heir.induct)
+  apply(rule_tac x = 0 in exI)
+  apply (simp add: heir_n_self)
+ apply clarify
+ apply(rule_tac x = n in exI)
+ apply(rule heir_n_normal_step; blast)
+apply clarify
+using heir_n_switching_step by blast
+
+
+fun fork_with_n_switching :: "situation \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
+             nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_n_switching
+   s (root, v) n1 (h1, v1) n2 (h2, v2) =
+   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
+    heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
+    heir_after_n_switching n2 s (root, v) (h2, v2))"
+
+lemma fork_has_n_switching :
+  "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
+apply(simp)
+using every_heir_is_after_n_switching by blast
+
+
+definition validators_transition :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"validators_transition s h0 h1 =
+  (FwdValidators s h0 = RearValidators s h1)"
+
+lemma heir_decomposition :
+  "heir s (h, v) (h'', v'') \<Longrightarrow>
+    ((\<exists> v_src. h = h'' \<and> v = v'' \<and> prepared_by_both s h v v_src) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_normal s (h', v') (h'', v'')) \<or>
+     (\<exists> h' v'. heir s (h, v) (h', v') \<and> inherit_switching_validators s (h', v') (h'', v''))
+    )"
+apply(erule_tac DynamicValidatorSet.heir.cases)
+  apply(rule disjI1)
+  apply blast
+ apply(rule disjI2)
+ apply(rule disjI1)
+ apply blast
+apply(rule disjI2)
+apply(rule disjI2)
+by blast
+
+
 lemma card_not [simp] :
   "finite s \<Longrightarrow>
    card {n \<in> s. \<not> f n} = card s - card {n \<in> s. f n}"
@@ -441,6 +429,7 @@ qed
 lemma set_conj [simp] :
   "{n \<in> s. f n \<and> g n} = {n \<in> s. f n} \<inter> {n \<in> s. g n}"
 by blast
+
 
 lemma two_more_two_set :
   "finite s \<Longrightarrow>
@@ -543,7 +532,6 @@ definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<R
 where
 "on_same_chain s x y = (is_descendant_or_self s x y \<or> is_descendant_or_self s y x)"
 
-
 lemma dependency_self [simp]:
   "on_same_chain s y y"
 apply(simp add: on_same_chain_def)
@@ -633,20 +621,6 @@ lemma sum_is_suc_dest :
    "
 apply (case_tac n1; auto)
 done
-
-definition one_third_of_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
-where
-"one_third_of_rear_slashed s h = one_third (RearValidators s h) (slashed s)"
-
-definition one_third_of_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
-where
-"one_third_of_fwd_slashed s h = one_third (FwdValidators s h) (slashed s)"
-
-definition one_third_of_rear_or_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
-where
-"one_third_of_rear_or_fwd_slashed s h =
-   (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
-
 fun fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
@@ -672,14 +646,6 @@ lemma fork_with_center_has_n_switching :
     fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
 apply simp
 using every_heir_is_after_n_switching by blast
-
-fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
-   (fork s (h, v) (h1, v1) (h2, v2) \<and>
-    committed_by_both s h v \<and>
-    committed_by_both s h1 v1 \<and>
-    committed_by_both s h2 v2)"
 
 (* Finding a max element in a set of integers *)
 lemma find_max_ind_step :
