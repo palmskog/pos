@@ -280,11 +280,6 @@ definition one_third_of_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarro
 where
 "one_third_of_fwd_slashed s h = one_third (FwdValidators s h) (slashed s)"
 
-definition one_third_of_rear_or_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
-where
-"one_third_of_rear_or_fwd_slashed s h =
-   (one_third_of_rear_slashed s h \<or> one_third_of_fwd_slashed s h)"
-
 subsection "Validator History Tracking"
 
 text "In the statement of accountable safety, we need to be a bit specific about
@@ -1187,7 +1182,7 @@ lemma accountable_safety_from_fork_with_high_root_base_one_longer :
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 apply(simp only: fork_with_center_with_high_root_with_n_switching.simps)
 apply(simp only: fork_with_center_with_n_switching.simps)
 apply(simp only: fork_with_n_switching.simps)
@@ -1196,8 +1191,6 @@ apply(rule_tac x = h in exI)
 apply(rule_tac x = v in exI)
 apply(rule conjI)
  apply simp
-apply(simp only: one_third_of_rear_or_fwd_slashed_def)
-apply(rule disjI2)
 apply(case_tac "one_third_of_fwd_slashed s h")
  apply simp
 apply(simp add: one_third_of_fwd_slashed_def)
@@ -1212,7 +1205,7 @@ lemma accountable_safety_from_fork_with_high_root_base_two_longer :
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 apply(rule_tac
       n_one = n_two
       and n_two = n_one
@@ -1235,7 +1228,7 @@ lemma accountable_safety_from_fork_with_high_root_base :
  finite (FwdValidators s h) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 (* the forward set of h should have one-third slashed here. *)
 (* Take the longer chain and do an induction
    and so, (prepared_view, prepared) and (committed, committed_view) is not in the relation
@@ -1348,13 +1341,13 @@ lemma switching_induction_case_one :
     finite (FwdValidators s h) \<longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_twoa
      (h_two, v_two) \<longrightarrow>
-     (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+     (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
     finite (FwdValidators s h) \<Longrightarrow>
     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
     n_two (h_two, v_two) \<Longrightarrow>
     1 \<le> n_one_pre \<Longrightarrow>
     k = n_one_pre + n_two \<Longrightarrow>
-    \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
+    \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h'"
 apply (subgoal_tac
 "\<exists> h_one' v_one'.
  fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
@@ -1368,13 +1361,13 @@ lemma some_symmetry :
        finite (FwdValidators s h) \<longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
         (h_two, v_two) \<longrightarrow>
-       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
     \<forall>n_onea n_twoa h_one v_one h_two v_two.
        n_onea + n_twoa \<le> n_two_pre + n_one \<longrightarrow>
        finite (FwdValidators s h) \<longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_twoa
         (h_two, v_two) \<longrightarrow>
-       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h')"
+       (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h')"
 apply clarify
 apply (drule_tac x = n_onea in spec)
 apply (drule_tac x = n_twoa in spec)
@@ -1398,13 +1391,13 @@ lemma switching_induction_case_two :
           finite (FwdValidators s h) \<longrightarrow>
           fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
            (h_two, v_two) \<longrightarrow>
-          (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+          (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
        finite (FwdValidators s h) \<Longrightarrow>
        fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
         (Suc n_two_pre) (h_two, v_two) \<Longrightarrow>
        1 \<le> n_two_pre \<Longrightarrow>
        k = n_one + n_two_pre \<Longrightarrow>
-       \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h'"
+       \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h'"
 apply(rule_tac k = k and n_two = n_one and n_one_pre = n_two_pre and h = h and v = v
       and h_one = h_two and v_one = v_two and h_two = h_one and v_two = v_one
  in switching_induction_case_one)
@@ -1422,13 +1415,13 @@ lemma switching_induction :
             finite (FwdValidators s h) \<longrightarrow>
             fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
-            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h') \<Longrightarrow>
+            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
          \<forall>n_one n_two h_one v_one h_two v_two.
             n_one + n_two \<le> Suc k \<longrightarrow>
             finite (FwdValidators s h) \<longrightarrow>
             fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
-            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_rear_or_fwd_slashed s h')"
+            (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h')"
 apply clarify
 apply (drule sum_suc)
 apply (erule disjE)
@@ -1450,7 +1443,7 @@ lemma accountable_safety_from_fork_with_high_root_with_n_ind :
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<longrightarrow>
  (\<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h')"
+   one_third_of_fwd_slashed s h')"
 apply(induction k)
  using accountable_safety_from_fork_with_high_root_base apply blast
 using switching_induction by blast
@@ -1461,7 +1454,7 @@ lemma accountable_safety_from_fork_with_high_root_with_n :
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 using accountable_safety_from_fork_with_high_root_with_n_ind by blast
 
 lemma accountable_safety_from_fork_with_high_root :
@@ -1469,7 +1462,7 @@ lemma accountable_safety_from_fork_with_high_root :
  fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 by (meson accountable_safety_from_fork_with_high_root_with_n fork_with_center_with_high_root_has_n_switching)
 
 definition validator_sets_finite :: "situation \<Rightarrow> bool"
@@ -1480,7 +1473,7 @@ lemma accountable_safety_center :
  fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 apply(drule fork_with_center_choose_high_root)
 apply(clarify)
 	using accountable_safety_from_fork_with_high_root validator_sets_finite_def by blast
@@ -1514,7 +1507,7 @@ lemma accountable_safety :
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
-   one_third_of_rear_or_fwd_slashed s h'"
+   one_third_of_fwd_slashed s h'"
 using accountable_safety_center fork_with_center_and_root by blast
 
 
