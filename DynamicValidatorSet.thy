@@ -1689,10 +1689,12 @@ using not_one_third validator_sets_finite_def by auto
 lemma cutting_prev :
       "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
        v < v1 \<Longrightarrow>
-       nth_ancestor s (nat (v1 - 1 - v1_src)) a = Some h_anc \<Longrightarrow>
        PrevHash s h1 = Some a \<Longrightarrow>
        ancestor_descendant_with_no_coup s (h, v) (a, v1 - 1)"
-sorry
+apply(erule ancestor_descendant_with_no_coup.cases)
+ apply simp
+apply simp
+done
 
 lemma ancestor_descendant_with_no_coup_go_back:
    "\<forall> v1 v1_src h v h_anc h1.
