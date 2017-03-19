@@ -1609,6 +1609,17 @@ lemma heir_chain_means_same_chain :
 apply(simp add: on_same_heir_chain_def on_same_chain_def)
 using heir_is_descendant by auto
 
+lemma follow_back_history :
+  "validator_sets_finite s \<Longrightarrow>
+   committed_by_both s h v \<Longrightarrow>
+   committed_by_both s h1 v1 \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+   heir s (h, v) (h1, v1) \<or>
+   (\<exists> h' v'.
+     heir s (h, v) (h', v') \<and>
+     one_third_of_fwd_or_rear_slashed s h')"
+sorry
+
 
 lemma fork_contains_legitimacy_fork :
 "validator_sets_finite s \<Longrightarrow>
@@ -1618,7 +1629,7 @@ lemma fork_contains_legitimacy_fork :
    heir s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h')"
 apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps fork.simps)
-sorry
+using follow_back_history heir_chain_means_same_chain by blast
 
 section "Accountable Safety for Any Fork"
 
@@ -1626,7 +1637,7 @@ lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
-   (heir s (h, v) (h', v') \<or> heir_or_self s (h', v') (h1, v1) \<or> heir_or_self s (h', v') (h2, v2)) \<and>
+   heir s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h'"
 using accountable_safety_for_legitimacy_fork fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
 
