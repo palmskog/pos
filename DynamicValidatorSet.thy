@@ -198,8 +198,8 @@ where
 "sourcing_normal s h (h', v', v_src) =
   (\<exists> v_ss.
    prepared_by_both s h v_src v_ss \<and>
-   -1 \<le> v_src \<and>
-   v_src < v' \<and>
+   -1 \<le> v_ss \<and>
+   v_ss < v_src \<and>
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_match s h h' )"
 
@@ -210,8 +210,8 @@ where
   (\<exists> v_ss.
    prepared_by_both s h v_src v_ss \<and>
    committed_by_both s h v_src \<and>
-   -1 \<le> v_src \<and>
-   v_src < v' \<and>
+   -1 \<le> v_ss \<and>
+   v_ss < v_src \<and>
    nth_ancestor s (nat (v' - v_src)) h' = Some h \<and>
    validators_change s h h')"
 
@@ -219,7 +219,7 @@ text "A prepare message's source needs to be one of these two types."
 
 definition sourcing :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
-"sourcing s h_new tri = (sourcing_normal s h_new tri \<or> sourcing_switching_validators s h_new tri)"
+"sourcing s h_old tri = (sourcing_normal s h_old tri \<or> sourcing_switching_validators s h_old tri)"
 
 subsection "Slashing Conditions"
 
@@ -314,20 +314,14 @@ These correspond to the two ways of sourcing a prepare message."
 fun inherit_normal :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "inherit_normal s (h_old, v_src) (h_new, v) =
-   (prepared_by_both s h_new v v_src \<and>  sourcing_normal s h_old (h_new, v, v_src))"
-
-lemma inherit_normal_view_increase :
-  "inherit_normal s (h_old, v_src) (h_new, v) \<Longrightarrow>
-   (v_src < v)"
-apply(simp)
-done
+   (prepared_by_both s h_new v v_src \<and> -1 \<le> v_src \<and> v_src < v \<and>  sourcing_normal s h_old (h_new, v, v_src))"
 
 fun inherit_switching_validators ::
   "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
                 (hash \<times> view) \<Rightarrow> bool"
 where
 "inherit_switching_validators s (h_old, v_old) (h_new, v_new) =
-   (prepared_by_both s h_new v_new v_old \<and>
+   (prepared_by_both s h_new v_new v_old \<and> -1 \<le> v_old \<and> v_old < v_new \<and>
     sourcing_switching_validators s h_old (h_new, v_new, v_old))"
 
 text "The heir relation is just zero-or-more repetition of the inheritance."
@@ -626,6 +620,15 @@ done
 
 subsection "Validator History Tracking"
 
+lemma ancestor_with_same_view :
+ "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+  snd (h, v) \<le> snd (h1, v1) \<and>
+  (snd (h, v) = snd (h1, v1) \<longrightarrow> fst (h, v) = fst (h1, v1))"
+apply(induction rule: ancestor_descendant_with_no_coup.induct)
+ apply simp
+apply auto
+done
+
 lemma heir_increases_view :
   "heir s t t' \<Longrightarrow> snd t \<le> snd t'"
 apply(induction rule: heir.induct; auto)
@@ -649,12 +652,6 @@ where
     heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
 
 
-
-lemma inherit_switching_validators_increase_view :
- "inherit_switching_validators s (h_old,v_old) (h_new, v_new) \<Longrightarrow>
-  v_old < v_new"
-apply(simp)
-done
 
 lemma every_heir_is_after_n_switching :
 "heir s p0 p1 \<Longrightarrow> \<exists> n. heir_after_n_switching n s p0 p1"
@@ -707,8 +704,7 @@ lemma heir_same_height :
  "heir s (h', v) (h, v) \<Longrightarrow>
   h' = h"
 apply(drule heir_decomposition)
-using heir_increases_view apply force
-done
+using heir_increases_view by fastforce
 
 
 fun legitimacy_fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
@@ -823,10 +819,12 @@ lemma one_validator_change_leaves_one_set :
 apply(induction rule: heir_after_n_switching.induct)
   apply blast
  apply (simp add: validators_match_def)
+ apply blast
 apply(subgoal_tac "n = 0")
  defer
  apply linarith
-by (simp add: validators_change_def)
+by (metis (no_types, lifting) One_nat_def fstI inherit_switching_validators.elims(2) sourcing_switching_validators.simps validators_change_def zero_le_one zero_neq_one)
+
 
 lemma prepared_by_fwd_of_origin :
 "   n \<le> Suc 0 \<Longrightarrow>
@@ -1123,7 +1121,8 @@ lemma some_h :
     heir s (h', v') (h'', v'')"
 apply(subgoal_tac "\<exists> x. prepared_by_both s h' v' x")
  using heir_self heir_switching_step apply blast
-by simp
+by auto
+
 
 lemma smaller_induction_switching_case:
   "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
@@ -1628,15 +1627,6 @@ lemma heir_chain_means_same_chain :
 apply(simp add: on_same_heir_chain_def on_same_chain_def)
 using heir_is_descendant by auto
 
-lemma ancestor_with_same_view :
- "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-  snd (h, v) \<le> snd (h1, v1) \<and>
-  (snd (h, v) = snd (h1, v1) \<longrightarrow> fst (h, v) = fst (h1, v1))"
-apply(induction rule: ancestor_descendant_with_no_coup.induct)
- apply simp
-apply auto
-done
-
 lemma prepared_self_is_heir :
  "prepared_by_both s h1 v v1_src \<Longrightarrow>
   ancestor_descendant_with_no_coup s (h, v) (h1, v) \<Longrightarrow>
@@ -1660,12 +1650,73 @@ lemma younger_ancestor :
   heir s (h, v) (h1, v1)"
 using ancestor_with_same_view prepared_self_is_heir by fastforce
 
-lemma induction_step_following_back_history :
-   "\<forall>v v1 h h1 v1_src.
+lemma two_thirds_not_one_third:
+   "validator_sets_finite s \<Longrightarrow>
+    \<not> one_third (RearValidators s h1) (slashed_two s) \<Longrightarrow>
+    two_thirds (RearValidators s h1) (\<lambda>n. (n, Prepare (h1, v1, v1_src)) \<in> Messages s) \<Longrightarrow>
+    \<exists>n. n \<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s"
+sorry
+
+lemma use_slashed_two :
+   "nat (v1 - v) \<le> Suc k \<Longrightarrow>
+    validator_sets_finite s \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+    v1_src < v1 \<Longrightarrow>
+    0 \<le> v \<Longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+    - 1 < v1_src \<Longrightarrow>
+    \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
+    \<not> one_third (RearValidators s h1) (slashed_two s) \<Longrightarrow>
+    prepared_by_rear s h1 v1 v1_src \<Longrightarrow>
+    \<exists>h_src srcsrc.
+       prepared_by_both s h_src v1_src srcsrc \<and>
+       - 1 \<le> srcsrc \<and>
+       srcsrc < v1_src \<and> ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and> heir s (h_src, v1_src) (h1, v1)"
+apply(subgoal_tac "\<exists> n. n\<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and>
+        (n, Prepare (h1, v1, v1_src)) \<in> Messages s
+     ")
+ apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
+  defer
+  using slashed_two_def apply blast
+ apply(simp add: prepared_by_rear_def prepared_def two_thirds_sent_message_def)
+ using two_thirds_not_one_third apply blast
+apply clarify
+apply(rule_tac x = h_anc in exI)
+apply(simp add: sourcing_def)
+apply(erule disjE)
+ apply clarify
+ apply(rule_tac x = v_ss in exI)
+ apply auto
+
+
+
+
+sorry
+
+lemma commit_skipping :
+   "nat (v1 - v) \<le> Suc k \<Longrightarrow>
+    validator_sets_finite s \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+    - 1 \<le> v1_src \<Longrightarrow>
+    v1_src < v1 \<Longrightarrow>
+    0 \<le> v \<Longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+    \<not> - 1 < v1_src \<Longrightarrow> heir s (h, v) (h1, v1)"
+sorry
+
+lemma induction_step_following_back_history:
+      "\<forall>v v1 h h1 v1_src.
           nat (v1 - v) \<le> k \<longrightarrow>
           validator_sets_finite s \<longrightarrow>
           committed_by_both s h v \<longrightarrow>
           prepared_by_both s h1 v1 v1_src \<longrightarrow>
+          - 1 \<le> v1_src \<longrightarrow>
+          v1_src < v1 \<longrightarrow>
+          0 \<le> v \<longrightarrow>
           ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
           heir s (h, v) (h1, v1) \<or>
           (\<exists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h') \<Longrightarrow>
@@ -1673,11 +1724,41 @@ lemma induction_step_following_back_history :
        validator_sets_finite s \<Longrightarrow>
        committed_by_both s h v \<Longrightarrow>
        prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+       - 1 \<le> v1_src \<Longrightarrow>
+       v1_src < v1 \<Longrightarrow>
+       0 \<le> v \<Longrightarrow>
        ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
        \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
        heir s (h, v) (h1, v1)"
-sorry
-
+apply(case_tac "-1 < v1_src")
+ apply(subgoal_tac
+   "\<exists> h_src srcsrc.
+     prepared_by_both s h_src v1_src srcsrc \<and>
+     -1 \<le> srcsrc \<and>
+     srcsrc < v1_src \<and>
+     0 \<le> v \<and>
+     ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and>
+     heir s (h_src, v1_src) (h1, v1)
+   ")
+  apply clarify
+  apply(drule_tac x = v in spec)
+  apply(drule_tac x = v1_src in spec)
+  apply(drule_tac x = h in spec)
+  apply(drule_tac x = h_src in spec)
+  apply(drule_tac x = srcsrc in spec)
+  apply clarsimp
+  apply(subgoal_tac " nat (v1_src - v) \<le> k ")
+   using heir_trans apply blast
+  apply linarith
+ apply(case_tac "one_third_of_rear_slashed s h1")
+  using one_third_of_fwd_or_rear_slashed_def apply blast
+ apply(simp add: one_third_of_rear_slashed_def)
+ apply(case_tac "one_third (RearValidators s h1) (slashed_two s)")
+  apply (meson one_third_mp slashed_def validator_sets_finite_def)
+ apply(subgoal_tac "prepared_by_rear s h1 v1 v1_src")
+  using use_slashed_two apply blast
+ using prepared_by_both_def apply blast
+using commit_skipping by blast
 
 lemma follow_back_history_with_prepares_ind :
   "\<forall> v v1 h h1 v1_src.
@@ -1685,6 +1766,8 @@ lemma follow_back_history_with_prepares_ind :
    validator_sets_finite s \<longrightarrow>
    committed_by_both s h v \<longrightarrow>
    prepared_by_both s h1 v1 v1_src \<longrightarrow>
+   -1 \<le> v1_src \<longrightarrow>
+   v1_src < v1 \<longrightarrow>
    v \<ge> 0 \<longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
    heir s (h, v) (h1, v1) \<or>
@@ -1694,8 +1777,7 @@ lemma follow_back_history_with_prepares_ind :
 apply(induction k)
  apply (simp add: younger_ancestor)
 apply clarify
-
-sorry
+using induction_step_following_back_history by blast
 
 lemma follow_back_history_with_prepares :
   "validator_sets_finite s \<Longrightarrow>
