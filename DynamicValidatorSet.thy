@@ -220,7 +220,7 @@ where
 "slashed_one s n =
     (\<exists> h v.
       ((n, Commit (h, v)) \<in> Messages s \<and>
-    (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s (RearValidators s h) h v vs) )))"
+    (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared_by_both s h v vs) )))"
 
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
@@ -279,6 +279,10 @@ where
 definition one_third_of_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "one_third_of_fwd_slashed s h = one_third (FwdValidators s h) (slashed s)"
+
+definition one_third_of_fwd_or_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
+where
+"one_third_of_fwd_or_rear_slashed s h = (one_third_of_fwd_slashed s h \<or> one_third_of_rear_slashed s h)"
 
 subsection "Validator History Tracking"
 
@@ -1530,21 +1534,41 @@ where
 definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where "on_same_chain s x y = (ancestor_descendant s x y \<or> ancestor_descendant s y x)"
 
-fun fork :: "situation \<Rightarrow>
-                    hash \<Rightarrow>
-                    hash \<Rightarrow>
-                    hash \<Rightarrow> bool"
+fun prev_next_with_no_coup :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"fork s root h1 h2 =
-  (\<not> on_same_chain s h1 h2 \<and> ancestor_descendant s root h1 \<and> ancestor_descendant s root h2)"
+"prev_next_with_no_coup s (h0, v0) (h1, v1) =
+  (PrevHash s h1 = Some h0 \<and> v1 = v0 + 1 \<and>
+   (validators_match s h0 h1 \<or> validators_change s h0 h1 \<and> committed_by_both s h0 v0))
+  "
+
+inductive ancestor_descendant_with_no_coup :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+  no_coup_self: "ancestor_descendant_with_no_coup s (h, v) (h, v)"
+| no_coups_step: "ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
+                  prev_next_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
+                  ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
+
+fun fork :: "situation \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             (hash \<times> view) \<Rightarrow> bool"
+where
+"fork s (root, v) (h1, v1) (h2, v2) =
+  (\<not> on_same_chain s h1 h2 \<and>
+   ancestor_descendant_with_no_coup s (root, v) (h1, v1) \<and>
+   ancestor_descendant_with_no_coup s (root, v) (h2, v2))"
 
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "fork_with_commits s (h, v) (h1, v1) (h2, v2) =
-   (fork s h h1 h2 \<and>
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
     committed_by_both s h v \<and>
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
+
+definition heir_or_self :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"heir_or_self s p0 p1 = (p0 = p1 \<or> heir s p0 p1)"
 
 section "Turning Any Fork into Legitimacy-Fork"
 
@@ -1586,6 +1610,8 @@ apply(simp add: on_same_heir_chain_def on_same_chain_def)
 using heir_is_descendant by auto
 
 
+
+(* is this true?  one can skip v and they might not have any validator sets in common *)
 lemma descendant_committed_is_heir :
   "validator_sets_finite s \<Longrightarrow>
    ancestor_descendant s h h1 \<Longrightarrow>
@@ -1594,7 +1620,8 @@ lemma descendant_committed_is_heir :
    heir s (root, v) (h1, v1) \<or>
    (\<exists> h' v'.
      heir s (h, v) (h', v') \<and>
-     one_third_of_fwd_slashed s h')"
+     one_third_of_fwd_or_rear_slashed s h')"
+
 sorry
 
 lemma fork_contains_legitimacy_fork :
@@ -1603,7 +1630,7 @@ lemma fork_contains_legitimacy_fork :
  legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<or>
  (\<exists> h' v'.
    heir s (h, v) (h', v') \<and>
-   one_third_of_fwd_slashed s h')"
+   one_third_of_fwd_or_rear_slashed s h')"
 apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps)
 by (meson descendant_committed_is_heir fork.elims(2) heir_chain_means_same_chain)
 
@@ -1613,9 +1640,9 @@ lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
-   heir s (h, v) (h', v') \<and>
-   one_third_of_fwd_slashed s h'"
-using accountable_safety_for_legitimacy_fork fork_contains_legitimacy_fork by blast
+   (heir s (h, v) (h', v') \<or> heir_or_self s (h', v') (h1, v1) \<or> heir_or_self s (h', v') (h2, v2)) \<and>
+   one_third_of_fwd_or_rear_slashed s h'"
+using accountable_safety_for_legitimacy_fork fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
 
 
 end
