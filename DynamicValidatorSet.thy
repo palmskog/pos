@@ -224,6 +224,7 @@ where
     (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s (RearValidators s h) h v vs) )))"
 *)
 
+(*
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
 
@@ -234,6 +235,7 @@ where
        ((n, Prepare (h, v, v_src)) \<in> Messages s \<and>
        v_src \<noteq> -1 \<and>
        (\<not> (\<exists> h_anc. sourcing s h_anc (h, v, v_src)))))"
+*)
 
 text "[iii] A validator is slashed when it has sent a commit message and a prepare message
      containing view numbers in a specific constellation."
@@ -261,8 +263,7 @@ text "A validator is slashed when at least one of the above conditions [i]--[iv]
 
 definition slashed :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
-"slashed s n = (slashed_two s n \<or>
-                slashed_three s n \<or>
+"slashed s n = (slashed_three s n \<or>
                 slashed_four s n)"
 
 definition one_third_slashed :: "situation \<Rightarrow> validator set \<Rightarrow> bool"
