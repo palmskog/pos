@@ -1639,6 +1639,40 @@ lemma follow_back_history_with_prepares :
      one_third_of_fwd_or_rear_slashed s h')"
 sorry
 
+lemma slashed_one_on_rear': "
+ validator_sets_finite s \<Longrightarrow>
+    committed_by_rear s h1 v1 \<Longrightarrow> (\<exists>v1_src. prepared_by_both s h1 v1 v1_src) \<or> 
+    one_third (RearValidators s h1) (slashed_one s)"
+apply(simp add: committed_by_rear_def committed_def two_thirds_sent_message_def)
+by (metis (no_types, lifting) one_third_mp slashed_one_def two_thirds_two_thirds_one_third validator_sets_finite_def)
+
+
+lemma slashed_one_on_rear :
+  "validator_sets_finite s \<Longrightarrow>
+   committed_by_rear s h1 v1 \<Longrightarrow>
+   (\<exists>v1_src. prepared_by_both s h1 v1 v1_src) \<or> one_third_of_rear_slashed s h1"
+apply(simp add: one_third_of_rear_slashed_def)
+by (meson one_third_mp slashed_def slashed_one_on_rear' validator_sets_finite_def)
+
+
+lemma slashed_one_on_descendant_with_no_coup' :
+  "validator_sets_finite s \<Longrightarrow>
+   committed_by_both s h1 v1 \<Longrightarrow>
+   (\<exists> v1_src. prepared_by_both s h1 v1 v1_src) \<or>
+   one_third_of_fwd_or_rear_slashed s h1"
+apply(simp add: committed_by_both_def one_third_of_fwd_or_rear_slashed_def)
+using slashed_one_on_rear by auto
+
+lemma slashed_one_on_descendant_with_no_coup :
+  "validator_sets_finite s \<Longrightarrow>
+   committed_by_both s h v \<Longrightarrow>
+   committed_by_both s h1 v1 \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+   (\<exists> v1_src. prepared_by_both s h1 v1 v1_src) \<or>
+   (\<exists> h' v'.
+     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     one_third_of_fwd_or_rear_slashed s h')"
+using slashed_one_on_descendant_with_no_coup' by blast
 
 lemma follow_back_history :
   "validator_sets_finite s \<Longrightarrow>
@@ -1649,7 +1683,7 @@ lemma follow_back_history :
    (\<exists> h' v'.
      ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
-sorry
+by (meson follow_back_history_with_prepares slashed_one_on_descendant_with_no_coup)
 
 
 lemma fork_contains_legitimacy_fork :
