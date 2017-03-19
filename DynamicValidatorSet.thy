@@ -338,20 +338,20 @@ where
 
 text "When heirs are not on the same chain of legitimacy, they have forked."
 
-fun fork :: "situation \<Rightarrow>
+fun legitimacy_fork :: "situation \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
                     (hash \<times> view) \<Rightarrow>
                     (hash \<times> view) \<Rightarrow> bool"
 where
-"fork s (root, v) (h1, v1) (h2, v2) =
+"legitimacy_fork s (root, v) (h1, v1) (h2, v2) =
   (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and> heir s (root, v) (h1, v1) \<and> heir s (root, v) (h2, v2))"
 
 text "A fork is particularly bad when the end points are committed, not only prepared."
 
-fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+fun legitimacy_fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
-   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+"legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) =
+   (legitimacy_fork s (h, v) (h1, v1) (h2, v2) \<and>
     committed_by_both s h v \<and>
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
@@ -647,20 +647,20 @@ apply clarify
 using heir_n_switching_step by blast
 
 
-fun fork_with_n_switching :: "situation \<Rightarrow>
+fun legitimacy_fork_with_n_switching :: "situation \<Rightarrow>
              (hash \<times> view) \<Rightarrow>
              nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
              nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"fork_with_n_switching
+"legitimacy_fork_with_n_switching
    s (root, v) n1 (h1, v1) n2 (h2, v2) =
    (\<not> on_same_heir_chain s (h1, v1) (h2, v2) \<and>
     heir_after_n_switching n1 s (root, v) (h1, v1) \<and>
     heir_after_n_switching n2 s (root, v) (h2, v2))"
 
-lemma fork_has_n_switching :
-  "fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> n1 n2. fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
+lemma legitimacy_fork_has_n_switching :
+  "legitimacy_fork s (r, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> n1 n2. legitimacy_fork_with_n_switching s (r, v) n1 (h1, v1) n2 (h2, v2)"
 apply(simp)
 using every_heir_is_after_n_switching by blast
 
@@ -690,75 +690,75 @@ using heir_increases_view apply force
 done
 
 
-fun fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+fun legitimacy_fork_with_center :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
-   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+"legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
+   (legitimacy_fork s (h, v) (h1, v1) (h2, v2) \<and>
     heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
     committed_by_both s h v \<and>
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
-fun fork_with_center_with_n_switching :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
+fun legitimacy_fork_with_center_with_n_switching :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow>
       (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
-   (fork_with_n_switching s (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
+"legitimacy_fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
+   (legitimacy_fork_with_n_switching s (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
     heir s (h_orig, v_orig) (h, v) \<and> (* This is used to connect the whole setup with the original statement *)
     committed_by_both s h v \<and>
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
-lemma fork_with_center_has_n_switching :
-  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+lemma legitimacy_fork_with_center_has_n_switching :
+  "legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
    \<exists> n1 n2.
-    fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
+    legitimacy_fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
 apply simp
 using every_heir_is_after_n_switching by blast
 
-fun fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
+fun legitimacy_fork_root_views :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> view set"
 where
-"fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) =
-  { v. (\<exists> h. fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)) }"
+"legitimacy_fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) =
+  { v. (\<exists> h. legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)) }"
 
 (* It's convenient to have a fork's root as the latest commit immediately before the fork.
  * Otherwise the induction has hairier case analysis.
  *)
-fun fork_with_center_with_high_root ::
+fun legitimacy_fork_with_center_with_high_root ::
   "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-  "fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
-     (fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<and>
+  "legitimacy_fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) =
+     (legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<and>
       (\<forall> h' v'. v' > v \<longrightarrow>
-        \<not> fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
+        \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
 
-fun fork_with_center_with_high_root_with_n_switching ::
+fun legitimacy_fork_with_center_with_high_root_with_n_switching ::
   "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> nat \<Rightarrow> (hash \<times> view) \<Rightarrow>
                 nat \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-  "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
-     (fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
+  "legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) =
+     (legitimacy_fork_with_center_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2) \<and>
       (\<forall> h' v'. v' > v \<longrightarrow>
-        \<not> fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
+        \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)))"
 
-lemma fork_with_center_with_high_root_has_n_switching :
-  "fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+lemma legitimacy_fork_with_center_with_high_root_has_n_switching :
+  "legitimacy_fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
    \<exists> n1 n2.
-     fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
+     legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n1 (h1, v1) n2 (h2, v2)"
 apply simp
 using every_heir_is_after_n_switching by blast
 
-lemma fork_with_center_choose_high_root :
-  "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-   \<exists> h' v'. fork_with_center_with_high_root s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)"
+lemma legitimacy_fork_with_center_choose_high_root :
+  "legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+   \<exists> h' v'. legitimacy_fork_with_center_with_high_root s (h_orig, v_orig) (h', v') (h1, v1) (h2, v2)"
 proof -
- assume "fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)"
- then have "v \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2)"
+ assume "legitimacy_fork_with_center s (h_orig, v_orig) (h, v) (h1, v1) (h2, v2)"
+ then have "v \<in> legitimacy_fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2)"
    by auto
- moreover have "\<forall> x. x \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<longrightarrow> x \<le> v1"
+ moreover have "\<forall> x. x \<in> legitimacy_fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<longrightarrow> x \<le> v1"
    using heir_increases_view by auto
- ultimately have "\<exists> m. m \<in> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<and>
-                   (\<forall> y. y > m \<longrightarrow> y \<notin> fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2))"
+ ultimately have "\<exists> m. m \<in> legitimacy_fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2) \<and>
+                   (\<forall> y. y > m \<longrightarrow> y \<notin> legitimacy_fork_root_views s (h_orig, v_orig) (h1, v1) (h2, v2))"
    by(rule_tac find_max; auto)
  then show ?thesis
    by (clarsimp; blast)
@@ -874,7 +874,7 @@ using heir_found_switching by blast
 lemma high_point_still_high :
 (* remove unnecessary assumptions *)
       "1 \<le> n_one_pre \<Longrightarrow>
-       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
        \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
        heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
        heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
@@ -884,13 +884,13 @@ lemma high_point_still_high :
        heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
        inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
        heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
-       \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
+       \<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
 apply(rule allI)
 apply(rule allI)
 apply(drule_tac x = h' in spec)
 apply(drule_tac x = v' in spec)
 apply(rule impI)
-by (metis forget_number_of_switching fork.simps fork_with_center.simps heir_switching_step heir_trans)
+by (metis forget_number_of_switching legitimacy_fork.simps legitimacy_fork_with_center.simps heir_switching_step heir_trans)
 
 lemma at_least_one_switching_means_higher :
   "heir_after_n_switching n_one_pre s (h, v) (h_onea, v_onea) \<Longrightarrow>
@@ -899,7 +899,7 @@ lemma at_least_one_switching_means_higher :
 apply(induction rule: heir_after_n_switching.induct; auto)
 using forget_number_of_switching heir_increases_view by fastforce
 
-lemma shallower_fork :
+lemma shallower_legitimacy_fork :
    "heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
@@ -911,10 +911,10 @@ lemma shallower_fork :
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
     heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow>
-    v < v_onea \<Longrightarrow> fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
-apply(simp only: fork_with_center.simps)
+    v < v_onea \<Longrightarrow> legitimacy_fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
+apply(simp only: legitimacy_fork_with_center.simps)
 apply(rule conjI)
- apply(simp only:fork.simps)
+ apply(simp only:legitimacy_fork.simps)
   apply (meson forget_number_of_switching heir_self heir_switching_step heir_trans inherit_switching_validators.simps on_same_heir_chain_def sourcing_switching_validators.simps)
 by (meson forget_number_of_switching heir_trans inherit_switching_validators.simps sourcing_switching_validators.simps)
 
@@ -923,10 +923,10 @@ lemma on_same_heir_chain_sym :
   on_same_heir_chain s (h_two, v_two) (h_one, v_one)"
 	using on_same_heir_chain_def by auto
 
-lemma fork_with_center_with_high_root_with_n_switching_sym :
-   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
+lemma legitimacy_fork_with_center_with_high_root_with_n_switching_sym :
+   "legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
      n_two (h_two, v_two) \<Longrightarrow>
-    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
+    legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_two (h_two, v_two)
      n_one (h_one, v_one)"
 apply auto
 using on_same_heir_chain_sym by blast
@@ -1175,19 +1175,19 @@ apply(induction rule: heir_after_n_switching.induct)
  using smaller_induction_case_normal apply blast
 using smaller_induction_switching_case by blast
 
-lemma accountable_safety_from_fork_with_high_root_base_one_longer :
+lemma accountable_safety_from_legitimacy_fork_with_high_root_base_one_longer :
 "n_one \<le> 1 \<and>
  n_two \<le> 1 \<and>
  v_one \<ge> v_two \<Longrightarrow>
  finite (FwdValidators s h) \<Longrightarrow>
- fork_with_center_with_high_root_with_n_switching
+ legitimacy_fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-apply(simp only: fork_with_center_with_high_root_with_n_switching.simps)
-apply(simp only: fork_with_center_with_n_switching.simps)
-apply(simp only: fork_with_n_switching.simps)
+apply(simp only: legitimacy_fork_with_center_with_high_root_with_n_switching.simps)
+apply(simp only: legitimacy_fork_with_center_with_n_switching.simps)
+apply(simp only: legitimacy_fork_with_n_switching.simps)
 apply clarify
 apply(rule_tac x = h in exI)
 apply(rule_tac x = v in exI)
@@ -1198,12 +1198,12 @@ apply(case_tac "one_third_of_fwd_slashed s h")
 apply(simp add: one_third_of_fwd_slashed_def)
 using accountable_safety_smaller_induction by fastforce
 
-lemma accountable_safety_from_fork_with_high_root_base_two_longer :
+lemma accountable_safety_from_legitimacy_fork_with_high_root_base_two_longer :
 "n_one \<le> 1 \<and>
  n_two \<le> 1 \<and>
  v_one \<le> v_two \<Longrightarrow>
  finite (FwdValidators s h) \<Longrightarrow>
- fork_with_center_with_high_root_with_n_switching
+ legitimacy_fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
@@ -1217,15 +1217,15 @@ apply(rule_tac
       and h_one = h_two
       and h = h and v = v
       in
-      accountable_safety_from_fork_with_high_root_base_one_longer)
+      accountable_safety_from_legitimacy_fork_with_high_root_base_one_longer)
   apply blast
  apply simp
 using on_same_heir_chain_def by auto
 
-lemma accountable_safety_from_fork_with_high_root_base :
+lemma accountable_safety_from_legitimacy_fork_with_high_root_base :
 "n_one \<le> 1 \<and>
  n_two \<le> 1 \<and>
- fork_with_center_with_high_root_with_n_switching
+ legitimacy_fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  finite (FwdValidators s h) \<Longrightarrow>
  \<exists> h' v'.
@@ -1237,7 +1237,7 @@ lemma accountable_safety_from_fork_with_high_root_base :
    make prepared shorter and shorter...!
  *)
 apply(subgoal_tac "v_one \<le> v_two \<or> v_two \<le> v_one")
- apply (meson accountable_safety_from_fork_with_high_root_base_one_longer accountable_safety_from_fork_with_high_root_base_two_longer)
+ apply (meson accountable_safety_from_legitimacy_fork_with_high_root_base_one_longer accountable_safety_from_legitimacy_fork_with_high_root_base_two_longer)
 by linarith
 
 
@@ -1245,7 +1245,7 @@ subsection "Mainline Arguments for Accountable Safety"
 
 lemma use_highness :
  "1 \<le> n_one_pre \<Longrightarrow>
-    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    \<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
     heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
@@ -1261,13 +1261,13 @@ apply(drule_tac x = v_onea in spec)
 apply(subgoal_tac "v < v_onea")
  defer
  apply (metis One_nat_def at_least_one_switching_means_higher diff_Suc_1 snd_conv)
-apply(subgoal_tac "fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)")
+apply(subgoal_tac "legitimacy_fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)")
  apply blast
-using shallower_fork by blast
+using shallower_legitimacy_fork by blast
 
 lemma confluence_should_not:
   "1 \<le> n_one_pre \<Longrightarrow>
-    \<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+    \<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
     heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
@@ -1297,7 +1297,7 @@ qed
 
 lemma prev_switch_not_on_same_heir_chain :
 "1 \<le> n_one_pre \<Longrightarrow>
-\<forall>h' v'. v < v' \<longrightarrow> \<not> fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+\<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<not> on_same_heir_chain s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  heir s (h_orig, v_orig) (h, v) \<Longrightarrow>
  heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
@@ -1312,16 +1312,16 @@ apply(auto simp only: on_same_heir_chain_def)
   using use_highness apply blast
 using confluence_should_not by blast
 
-lemma reduce_fork :
-   "fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
+lemma reduce_legitimacy_fork :
+   "legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
      n_two (h_two, v_two) \<Longrightarrow>
     1 \<le> n_one_pre \<Longrightarrow>
     \<exists>h_one' v_one'.
-       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
+       legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
         n_two (h_two, v_two)"
-apply (simp only: fork_with_center_with_high_root_with_n_switching.simps)
-apply (simp only: fork_with_center_with_n_switching.simps)
-apply (simp only: fork_with_n_switching.simps)
+apply (simp only: legitimacy_fork_with_center_with_high_root_with_n_switching.simps)
+apply (simp only: legitimacy_fork_with_center_with_n_switching.simps)
+apply (simp only: legitimacy_fork_with_n_switching.simps)
 apply clarify
 apply(drule
  heir_after_one_or_more_switching_dest)
@@ -1341,33 +1341,33 @@ lemma switching_induction_case_one :
   "\<forall>n_one n_twoa h_one v_one h_two v_two.
     n_one + n_twoa \<le> n_one_pre + n_two \<longrightarrow>
     finite (FwdValidators s h) \<longrightarrow>
-    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_twoa
+    legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_twoa
      (h_two, v_two) \<longrightarrow>
      (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
     finite (FwdValidators s h) \<Longrightarrow>
-    fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
+    legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) (Suc n_one_pre) (h_one, v_one)
     n_two (h_two, v_two) \<Longrightarrow>
     1 \<le> n_one_pre \<Longrightarrow>
     k = n_one_pre + n_two \<Longrightarrow>
     \<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h'"
 apply (subgoal_tac
 "\<exists> h_one' v_one'.
- fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
+ legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one_pre (h_one', v_one')
   n_two (h_two, v_two)")
  apply blast
-using reduce_fork by blast
+using reduce_legitimacy_fork by blast
 
 lemma some_symmetry :
   "\<forall>n_onea n_two h_one v_one h_two v_two.
        n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
        finite (FwdValidators s h) \<longrightarrow>
-       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
+       legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
         (h_two, v_two) \<longrightarrow>
        (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
     \<forall>n_onea n_twoa h_one v_one h_two v_two.
        n_onea + n_twoa \<le> n_two_pre + n_one \<longrightarrow>
        finite (FwdValidators s h) \<longrightarrow>
-       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_twoa
+       legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_twoa
         (h_two, v_two) \<longrightarrow>
        (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h')"
 apply clarify
@@ -1391,11 +1391,11 @@ lemma switching_induction_case_two :
 "       \<forall>n_onea n_two h_one v_one h_two v_two.
           n_onea + n_two \<le> n_one + n_two_pre \<longrightarrow>
           finite (FwdValidators s h) \<longrightarrow>
-          fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
+          legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_onea (h_one, v_one) n_two
            (h_two, v_two) \<longrightarrow>
           (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
        finite (FwdValidators s h) \<Longrightarrow>
-       fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
+       legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one)
         (Suc n_two_pre) (h_two, v_two) \<Longrightarrow>
        1 \<le> n_two_pre \<Longrightarrow>
        k = n_one + n_two_pre \<Longrightarrow>
@@ -1405,8 +1405,8 @@ apply(rule_tac k = k and n_two = n_one and n_one_pre = n_two_pre and h = h and v
  in switching_induction_case_one)
  defer
  apply simp
- using fork_with_center_with_high_root_with_n_switching_sym apply blast
- using fork_with_center_with_high_root_with_n_switching_sym apply blast
+ using legitimacy_fork_with_center_with_high_root_with_n_switching_sym apply blast
+ using legitimacy_fork_with_center_with_high_root_with_n_switching_sym apply blast
  using add.commute apply blast
 apply simp
 by (simp add: add.commute)
@@ -1415,13 +1415,13 @@ lemma switching_induction :
   "\<forall>n_one n_two h_one v_one h_two v_two.
             n_one + n_two \<le> k \<longrightarrow>
             finite (FwdValidators s h) \<longrightarrow>
-            fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
+            legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
             (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h') \<Longrightarrow>
          \<forall>n_one n_two h_one v_one h_two v_two.
             n_one + n_two \<le> Suc k \<longrightarrow>
             finite (FwdValidators s h) \<longrightarrow>
-            fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
+            legitimacy_fork_with_center_with_high_root_with_n_switching s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two
              (h_two, v_two) \<longrightarrow>
             (\<exists>h' v'. heir s (h_orig, v_orig) (h', v') \<and> one_third_of_fwd_slashed s h')"
 apply clarify
@@ -1429,7 +1429,7 @@ apply (drule sum_suc)
 apply (erule disjE)
  apply blast
 apply (erule disjE)
-  using accountable_safety_from_fork_with_high_root_base apply blast
+  using accountable_safety_from_legitimacy_fork_with_high_root_base apply blast
 apply (erule disjE)
  apply clarify
  using switching_induction_case_one apply blast
@@ -1437,48 +1437,48 @@ apply clarify
 using switching_induction_case_two apply blast
 done
 
-lemma accountable_safety_from_fork_with_high_root_with_n_ind :
+lemma accountable_safety_from_legitimacy_fork_with_high_root_with_n_ind :
 "\<forall> n_one n_two h_one v_one h_two v_two.
  n_one + n_two \<le> k \<longrightarrow>
  finite (FwdValidators s h) \<longrightarrow>
- fork_with_center_with_high_root_with_n_switching
+ legitimacy_fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<longrightarrow>
  (\<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_fwd_slashed s h')"
 apply(induction k)
- using accountable_safety_from_fork_with_high_root_base apply blast
+ using accountable_safety_from_legitimacy_fork_with_high_root_base apply blast
 using switching_induction by blast
 
-lemma accountable_safety_from_fork_with_high_root_with_n :
+lemma accountable_safety_from_legitimacy_fork_with_high_root_with_n :
 "finite (FwdValidators s h) \<Longrightarrow>
- fork_with_center_with_high_root_with_n_switching
+ legitimacy_fork_with_center_with_high_root_with_n_switching
     s (h_orig, v_orig) (h, v) n_one (h_one, v_one) n_two (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-using accountable_safety_from_fork_with_high_root_with_n_ind by blast
+using accountable_safety_from_legitimacy_fork_with_high_root_with_n_ind by blast
 
-lemma accountable_safety_from_fork_with_high_root :
+lemma accountable_safety_from_legitimacy_fork_with_high_root :
 "finite (FwdValidators s h) \<Longrightarrow>
- fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
+ legitimacy_fork_with_center_with_high_root s (h_orig, v_orig) (h, v) (h_one, v_one) (h_two, v_two) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h_orig, v_orig) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-by (meson accountable_safety_from_fork_with_high_root_with_n fork_with_center_with_high_root_has_n_switching)
+by (meson accountable_safety_from_legitimacy_fork_with_high_root_with_n legitimacy_fork_with_center_with_high_root_has_n_switching)
 
 definition validator_sets_finite :: "situation \<Rightarrow> bool"
   where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h))"
 
 lemma accountable_safety_center :
 "validator_sets_finite s \<Longrightarrow>
- fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+ legitimacy_fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-apply(drule fork_with_center_choose_high_root)
+apply(drule legitimacy_fork_with_center_choose_high_root)
 apply(clarify)
-	using accountable_safety_from_fork_with_high_root validator_sets_finite_def by blast
+	using accountable_safety_from_legitimacy_fork_with_high_root validator_sets_finite_def by blast
 
 lemma heir_initial :
    "heir s (h, v) (h1, v1)  \<Longrightarrow>
@@ -1489,28 +1489,33 @@ apply(induction rule: heir.induct)
 apply simp
 done
 
-lemma fork_with_center_and_root :
-  " fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
-    fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2)
+lemma legitimacy_fork_with_center_and_root :
+  " legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+    legitimacy_fork_with_center s (h, v) (h, v) (h1, v1) (h2, v2)
   "
 apply simp
 using heir_initial by blast
 
-section "Accountable Safety (don't skip)"
+section "Accountable Safety for Legitimacy Fork (don't skip)"
 
 text "The statement of accountable safety is simple.  If a situation has a finite number of
-      validators on each hash, a fork means some validator set suffers 1/3 slashing.
-      A fork is defined using the @{term heir} relation.  The slashed validator set
+      validators on each hash, a legitimacy_fork means some validator set suffers 1/3 slashing.
+      A legitimacy_fork is defined using the @{term heir} relation.  The slashed validator set
       is also a heir of the original validator set.
      "
 
-lemma accountable_safety :
+text "This variant of accountable safety only requires slashing conditions 3 and 4."
+
+lemma accountable_safety_for_legitimacy_fork :
 "validator_sets_finite s \<Longrightarrow>
- fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
+ legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-using accountable_safety_center fork_with_center_and_root by blast
+using accountable_safety_center legitimacy_fork_with_center_and_root by blast
+
+section "Accountable Safety for Any Fork"
+
 
 
 end
