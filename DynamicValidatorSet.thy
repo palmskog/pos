@@ -1548,10 +1548,43 @@ where
 
 section "Turning Any Fork into Legitimacy-Fork"
 
+lemma inherit_normal_means_ancestor_descendant :
+  "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
+   ancestor_descendant s h' h''"
+using ancestor_descendant_def by auto
+
+lemma nth_ancestor_trans:
+  "\<forall> n h' h h''.
+   nth_ancestor s n h' = Some h \<longrightarrow> nth_ancestor s na h'' = Some h' \<longrightarrow>
+   nth_ancestor s (na + n) h'' = Some h"
+apply(induction na)
+ apply simp
+apply auto
+apply(case_tac "PrevHash s h''"; simp)
+done
+
+lemma ancestor_descendant_trans:
+  "ancestor_descendant s h h' \<Longrightarrow>
+   ancestor_descendant s h' h'' \<Longrightarrow>
+   ancestor_descendant s h h''"
+apply(auto simp add: ancestor_descendant_def)
+apply(rule_tac x = "na + n" in exI)
+by (simp add: nth_ancestor_trans)
+
+lemma heir_is_descendant :
+  "heir s (h1, v1) (h2, v2) \<Longrightarrow> ancestor_descendant s (fst (h1, v1)) (fst (h2, v2)) "
+apply(induction rule: heir.induct)
+  apply simp
+  using ancestor_descendant_def nth_ancestor.simps(1) apply blast
+ apply (metis ancestor_descendant_trans fst_conv inherit_normal_means_ancestor_descendant)
+using ancestor_descendant_def nth_ancestor_trans by fastforce
+
 lemma heir_chain_means_same_chain :
   "on_same_heir_chain s (h1, v1) (h2, v2) \<Longrightarrow>
    on_same_chain s h1 h2"
-sorry
+apply(simp add: on_same_heir_chain_def on_same_chain_def)
+using heir_is_descendant by auto
+
 
 lemma descendant_committed_is_heir :
   "validator_sets_finite s \<Longrightarrow>
