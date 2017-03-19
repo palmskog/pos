@@ -212,6 +212,7 @@ text "In a situation, a validator might be slashed or not.  A validator is slash
 although later we will be often talking ``unless one-third of the validators are slashed.''
 "
 
+(*
 text "[i] A validator is slashed when it has sent a commit message of a hash
       that is not prepared yet."
 
@@ -221,6 +222,7 @@ where
     (\<exists> h v.
       ((n, Commit (h, v)) \<in> Messages s \<and>
     (\<not> (\<exists> vs. -1 \<le> vs \<and> vs < v \<and> prepared s (RearValidators s h) h v vs) )))"
+*)
 
 text "[ii] A validator is slashed when it has sent a prepare message whose
       view src is not -1 but has no supporting preparation in the view src."
@@ -259,8 +261,7 @@ text "A validator is slashed when at least one of the above conditions [i]--[iv]
 
 definition slashed :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
-"slashed s n = (slashed_one s n \<or>
-                slashed_two s n \<or>
+"slashed s n = (slashed_two s n \<or>
                 slashed_three s n \<or>
                 slashed_four s n)"
 
