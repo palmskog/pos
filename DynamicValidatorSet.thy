@@ -682,6 +682,14 @@ lemma legitimacy_fork_has_n_switching :
 apply(simp)
 using every_heir_is_after_n_switching by blast
 
+lemma ancestor_descendant_with_no_coup_trans:
+  "ancestor_descendant_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
+apply(induction rule: ancestor_descendant_with_no_coup.induct)
+ apply blast
+using no_coups_step by blast
+
 
 lemma heir_decomposition :
   "heir s (h, v) (h'', v'') \<Longrightarrow>
@@ -1835,13 +1843,21 @@ lemma skip_max :
        prepared_by_both s h1 v1 v1_src \<Longrightarrow>
        n \<in> RearValidators s h1 \<Longrightarrow>
        (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<Longrightarrow>
-       \<not> v \<le> v1_src \<Longrightarrow>
+       v \<le> v_max \<Longrightarrow>
+        \<not> v \<le> v1_src \<Longrightarrow>
        committed_by_both s h_max v_max \<Longrightarrow>
        ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<Longrightarrow>
        \<forall>h_more v_more.
           v_max < v_more \<longrightarrow>
           \<not> committed_by_both s h_more v_more \<or> \<not> ancestor_descendant_with_no_coup s (h_more, v_more) (h1, v1) \<Longrightarrow>
        slashed s n"
+apply(subgoal_tac "(n, Commit (h_max, v_max)) \<in> Messages s")
+ apply(subgoal_tac "slashed_three s n")
+  using slashed_def apply blast
+ apply(subgoal_tac "v1_src < v_max")
+  
+
+
 sorry
 
 lemma not_same_then_previous :
@@ -1925,14 +1941,7 @@ apply(drule_tac x = h_more in spec)
 apply(drule_tac x = v_more in spec)
 apply simp
 using not_same_then_previous by blast
-  
  
-
-
-
-
-sorry
-
 
 lemma commit_skipped_on_branch :
       "validator_sets_finite s \<Longrightarrow>
@@ -2189,13 +2198,6 @@ using follow_back_history heir_chain_means_same_chain by blast
 
 section "Accountable Safety for Any Fork"
 
-lemma ancestor_descendant_with_no_coup_trans:
-  "ancestor_descendant_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
-apply(induction rule: ancestor_descendant_with_no_coup.induct)
- apply blast
-using no_coups_step by blast
 
 lemma heir_means_ad_no_coup :
   "heir s (h, v) (h', v') \<Longrightarrow>
