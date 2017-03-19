@@ -1660,12 +1660,32 @@ lemma younger_ancestor :
   heir s (h, v) (h1, v1)"
 using ancestor_with_same_view prepared_self_is_heir by fastforce
 
+lemma induction_step_following_back_history :
+   "\<forall>v v1 h h1 v1_src.
+          nat (v1 - v) \<le> k \<longrightarrow>
+          validator_sets_finite s \<longrightarrow>
+          committed_by_both s h v \<longrightarrow>
+          prepared_by_both s h1 v1 v1_src \<longrightarrow>
+          ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+          heir s (h, v) (h1, v1) \<or>
+          (\<exists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h') \<Longrightarrow>
+       nat (v1 - v) \<le> Suc k \<Longrightarrow>
+       validator_sets_finite s \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+       \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+       heir s (h, v) (h1, v1)"
+sorry
+
+
 lemma follow_back_history_with_prepares_ind :
   "\<forall> v v1 h h1 v1_src.
    nat (v1 - v) \<le> k \<longrightarrow>
    validator_sets_finite s \<longrightarrow>
    committed_by_both s h v \<longrightarrow>
    prepared_by_both s h1 v1 v1_src \<longrightarrow>
+   v \<ge> 0 \<longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
@@ -1673,6 +1693,7 @@ lemma follow_back_history_with_prepares_ind :
      one_third_of_fwd_or_rear_slashed s h')"
 apply(induction k)
  apply (simp add: younger_ancestor)
+apply clarify
 
 sorry
 
@@ -1682,6 +1703,7 @@ lemma follow_back_history_with_prepares :
    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
    -1 \<le> v1_src \<Longrightarrow>
    v1_src < v1 \<Longrightarrow>
+   0 \<le> v \<Longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
@@ -1731,6 +1753,7 @@ lemma follow_back_history :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h v \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
+   0 \<le> v \<Longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
@@ -1742,6 +1765,7 @@ using follow_back_history_with_prepares slashed_one_on_descendant_with_no_coup' 
 
 lemma fork_contains_legitimacy_fork :
 "validator_sets_finite s \<Longrightarrow>
+ 0 \<le> v \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<or>
  (\<exists> h' v'.
@@ -1771,6 +1795,7 @@ using ancestor_descendant_with_no_coup_trans by blast
 
 lemma accountable_safety_for_legitimacy_fork_weak :
 "validator_sets_finite s \<Longrightarrow>
+ v \<ge> 0 \<Longrightarrow>
  legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
@@ -1780,6 +1805,7 @@ using accountable_safety_for_legitimacy_fork heir_means_ad_no_coup by blast
 
 lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
+ v \<ge> 0 \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
    ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
