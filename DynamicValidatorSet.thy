@@ -1610,20 +1610,6 @@ apply(simp add: on_same_heir_chain_def on_same_chain_def)
 using heir_is_descendant by auto
 
 
-
-(* is this true?  one can skip v and they might not have any validator sets in common *)
-lemma descendant_committed_is_heir :
-  "validator_sets_finite s \<Longrightarrow>
-   ancestor_descendant s h h1 \<Longrightarrow>
-   committed_by_both s h v \<Longrightarrow>
-   committed_by_both s h1 v1 \<Longrightarrow>
-   heir s (root, v) (h1, v1) \<or>
-   (\<exists> h' v'.
-     heir s (h, v) (h', v') \<and>
-     one_third_of_fwd_or_rear_slashed s h')"
-
-sorry
-
 lemma fork_contains_legitimacy_fork :
 "validator_sets_finite s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
@@ -1631,8 +1617,8 @@ lemma fork_contains_legitimacy_fork :
  (\<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h')"
-apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps)
-by (meson descendant_committed_is_heir fork.elims(2) heir_chain_means_same_chain)
+apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps fork.simps)
+sorry
 
 section "Accountable Safety for Any Fork"
 
