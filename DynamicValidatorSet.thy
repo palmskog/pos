@@ -1650,12 +1650,37 @@ lemma younger_ancestor :
   heir s (h, v) (h1, v1)"
 using ancestor_with_same_view prepared_self_is_heir by fastforce
 
+lemma one_third_of_non_empty :
+  "X \<noteq> {} \<Longrightarrow>
+   one_third X f \<Longrightarrow>
+   \<exists> x. x \<in> X \<and> f x"
+sorry
+
+definition more_than_two_thirds :: "validator set \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
+where
+"more_than_two_thirds X f =
+   (2 * card X < 3 * card ({n. n \<in> X \<and> f n}))"
+
+lemma not_one_third :
+  "finite s \<Longrightarrow> s \<noteq> {} \<Longrightarrow>
+   (\<not> one_third s f) = (more_than_two_thirds s (\<lambda> n. \<not> f n))"
+apply(auto simp add: one_third_def more_than_two_thirds_def)
+done
+
 lemma two_thirds_not_one_third:
    "validator_sets_finite s \<Longrightarrow>
     \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
     two_thirds (RearValidators s h1) (\<lambda>n. (n, Prepare (h1, v1, v1_src)) \<in> Messages s) \<Longrightarrow>
     \<exists>n. n \<in> RearValidators s h1 \<and> \<not> slashed s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s"
-sorry
+apply(subgoal_tac "two_thirds (RearValidators s h1) (\<lambda> n. \<not> slashed s n)")
+ apply(subgoal_tac "one_third (RearValidators s h1) (\<lambda> n. \<not> slashed s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s)")
+  apply(subgoal_tac "RearValidators s h1 \<noteq> {}")
+   using one_third_of_non_empty apply blast
+  using validator_sets_finite_def apply blast
+ apply (simp add: two_thirds_two_thirds_one_third validator_sets_finite_def)
+apply(subgoal_tac "more_than_two_thirds (RearValidators s h1) (\<lambda>n. \<not> slashed s n)")
+ apply (simp add: more_than_two_thirds_def two_thirds_def)
+using not_one_third validator_sets_finite_def by auto
 
 lemma ancestor_descendant_with_no_coup_go_back:
    "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
