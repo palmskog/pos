@@ -1686,12 +1686,54 @@ apply(subgoal_tac "more_than_two_thirds (RearValidators s h1) (\<lambda>n. \<not
  apply (simp add: more_than_two_thirds_def two_thirds_def)
 using not_one_third validator_sets_finite_def by auto
 
-lemma ancestor_descendant_with_no_coup_go_back:
-   "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
-    v \<le> v1_src \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h_anc, v1_src)"
+lemma cutting_prev :
+      "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+       v < v1 \<Longrightarrow>
+       nth_ancestor s (nat (v1 - 1 - v1_src)) a = Some h_anc \<Longrightarrow>
+       PrevHash s h1 = Some a \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h, v) (a, v1 - 1)"
 sorry
+
+lemma ancestor_descendant_with_no_coup_go_back:
+   "\<forall> v1 v1_src h v h_anc h1.
+    k = nat (v1 - v1_src) \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<longrightarrow>
+    v \<le> v1_src \<longrightarrow>
+    v1_src < v1 \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h_anc, v1_src)"
+apply(induction k)
+ apply clarify
+ apply simp
+apply clarsimp
+apply(subgoal_tac
+ "(case PrevHash s h1 of
+      None \<Rightarrow> None
+    | Some h' \<Rightarrow> nth_ancestor s k h') = Some h_anc")
+ apply(case_tac "PrevHash s h1")
+  apply simp
+ apply simp
+ apply(drule_tac x = "v1 - 1" in spec)
+ apply(drule_tac x = "v1_src" in spec)
+ apply(subgoal_tac "k = nat (v1 - 1 - v1_src)")
+  apply simp
+  apply(drule_tac x = h in spec)
+  apply(drule_tac x = v in spec)
+  apply(drule_tac x = h_anc in spec)
+  apply(drule_tac x = a in spec)
+  apply simp
+  apply(case_tac "v1_src < v1 - 1")
+   apply(subgoal_tac "ancestor_descendant_with_no_coup s (h, v) (a, v1 - 1)")
+    apply blast
+   apply (simp add: cutting_prev)
+  apply(subgoal_tac "v1_src = v1 - 1")
+   apply simp
+   apply(erule ancestor_descendant_with_no_coup.cases)
+    apply simp
+   apply simp
+  apply simp
+ apply linarith
+by (metis nth_ancestor.simps(2))
 
 lemma ancestor_descendant_shorter :
    "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
