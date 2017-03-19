@@ -1652,9 +1652,44 @@ using ancestor_with_same_view prepared_self_is_heir by fastforce
 
 lemma two_thirds_not_one_third:
    "validator_sets_finite s \<Longrightarrow>
-    \<not> one_third (RearValidators s h1) (slashed_two s) \<Longrightarrow>
+    \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
     two_thirds (RearValidators s h1) (\<lambda>n. (n, Prepare (h1, v1, v1_src)) \<in> Messages s) \<Longrightarrow>
-    \<exists>n. n \<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s"
+    \<exists>n. n \<in> RearValidators s h1 \<and> \<not> slashed s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s"
+sorry
+
+lemma ancestor_descendant_with_no_coup_go_back:
+   "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
+    v \<le> v1_src \<Longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h_anc, v1_src)"
+sorry
+
+lemma ancestor_descendant_shorter :
+   "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
+    v \<le> v1_src \<Longrightarrow> ancestor_descendant_with_no_coup s (h_anc, v1_src) (h1, v1)"
+sorry
+
+lemma commit_skipped_on_branch :
+      "nat (v1 - v) \<le> Suc k \<Longrightarrow>
+       validator_sets_finite s \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+       v1_src < v1 \<Longrightarrow>
+       0 \<le> v \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+       \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+       - 1 < v1_src \<Longrightarrow>
+       \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
+       prepared_by_rear s h1 v1 v1_src \<Longrightarrow>
+       n \<in> RearValidators s h1 \<Longrightarrow>
+       (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<Longrightarrow>
+       prepared_by_both s h_anc v1_src v_ss \<Longrightarrow>
+       - 1 \<le> v_ss \<Longrightarrow>
+       v_ss < v1_src \<Longrightarrow>
+       nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
+       \<not> v \<le> v1_src \<Longrightarrow>
+       slashed s n"
 sorry
 
 lemma use_slashed_two :
@@ -1668,18 +1703,17 @@ lemma use_slashed_two :
     \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
     - 1 < v1_src \<Longrightarrow>
     \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
-    \<not> one_third (RearValidators s h1) (slashed_two s) \<Longrightarrow>
     prepared_by_rear s h1 v1 v1_src \<Longrightarrow>
     \<exists>h_src srcsrc.
        prepared_by_both s h_src v1_src srcsrc \<and>
        - 1 \<le> srcsrc \<and>
        srcsrc < v1_src \<and> ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and> heir s (h_src, v1_src) (h1, v1)"
-apply(subgoal_tac "\<exists> n. n\<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and>
+apply(subgoal_tac "\<exists> n. n\<in> RearValidators s h1 \<and> \<not> slashed s n \<and>
         (n, Prepare (h1, v1, v1_src)) \<in> Messages s
      ")
  apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
   defer
-  using slashed_two_def apply blast
+  using slashed_def slashed_two_def apply blast
  apply(simp add: prepared_by_rear_def prepared_def two_thirds_sent_message_def)
  using two_thirds_not_one_third apply blast
 apply clarify
@@ -1688,12 +1722,40 @@ apply(simp add: sourcing_def)
 apply(erule disjE)
  apply clarify
  apply(rule_tac x = v_ss in exI)
- apply auto
-
-
-
-
-sorry
+ apply(case_tac "v \<le> v1_src")
+  apply(rule conjI)
+   apply blast
+  apply(rule conjI)
+   apply simp
+  apply(rule conjI)
+   apply simp
+  apply(rule conjI)
+   using ancestor_descendant_with_no_coup_go_back apply blast
+  apply(rule_tac h' = h_anc and v' = v1_src in heir_normal_step)
+    using heir_self apply blast
+   apply auto[1]
+  using ancestor_descendant_shorter apply blast
+ (* The closest commit would witness the slashing condition three *)
+ using commit_skipped_on_branch apply blast
+(* switching sourcing *)
+apply clarify
+apply(rule_tac x = v_ss in exI)
+apply(case_tac "v \<le> v1_src")
+ apply(rule conjI)
+  apply blast
+ apply(rule conjI)
+  apply simp
+ apply(rule conjI)
+  apply simp
+ apply(rule conjI)
+   using ancestor_descendant_with_no_coup_go_back apply blast
+  apply(rule_tac h' = h_anc and v' = v1_src in heir_switching_step)
+   using heir_self apply blast
+  apply auto[1]
+ using ancestor_descendant_shorter apply blast
+(* The closest commit would witness the slashing condition three *)
+using commit_skipped_on_branch apply blast
+done
 
 lemma commit_skipping :
    "nat (v1 - v) \<le> Suc k \<Longrightarrow>
