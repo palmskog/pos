@@ -1652,9 +1652,13 @@ using ancestor_with_same_view prepared_self_is_heir by fastforce
 
 lemma one_third_of_non_empty :
   "X \<noteq> {} \<Longrightarrow>
+   finite X \<Longrightarrow>
    one_third X f \<Longrightarrow>
    \<exists> x. x \<in> X \<and> f x"
-sorry
+apply(simp add: one_third_def)
+apply(case_tac " card {n \<in> X. f n} > 0")
+ apply (metis (no_types, lifting) Collect_empty_eq card.infinite card_0_eq gr_implies_not_zero)
+by force
 
 definition more_than_two_thirds :: "validator set \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -1674,7 +1678,7 @@ lemma two_thirds_not_one_third:
     \<exists>n. n \<in> RearValidators s h1 \<and> \<not> slashed s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s"
 apply(subgoal_tac "two_thirds (RearValidators s h1) (\<lambda> n. \<not> slashed s n)")
  apply(subgoal_tac "one_third (RearValidators s h1) (\<lambda> n. \<not> slashed s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s)")
-  apply(subgoal_tac "RearValidators s h1 \<noteq> {}")
+  apply(subgoal_tac "RearValidators s h1 \<noteq> {} \<and> finite (RearValidators s h1)")
    using one_third_of_non_empty apply blast
   using validator_sets_finite_def apply blast
  apply (simp add: two_thirds_two_thirds_one_third validator_sets_finite_def)
