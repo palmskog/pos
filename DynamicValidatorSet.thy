@@ -1628,20 +1628,73 @@ lemma heir_chain_means_same_chain :
 apply(simp add: on_same_heir_chain_def on_same_chain_def)
 using heir_is_descendant by auto
 
+lemma ancestor_with_same_view :
+ "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+  snd (h, v) \<le> snd (h1, v1) \<and>
+  (snd (h, v) = snd (h1, v1) \<longrightarrow> fst (h, v) = fst (h1, v1))"
+apply(induction rule: ancestor_descendant_with_no_coup.induct)
+ apply simp
+apply auto
+done
+
+lemma prepared_self_is_heir :
+ "prepared_by_both s h1 v v1_src \<Longrightarrow>
+  ancestor_descendant_with_no_coup s (h, v) (h1, v) \<Longrightarrow>
+  heir s (h, v) (h1, v)"
+proof -
+  assume "ancestor_descendant_with_no_coup s (h,v) (h1, v)"
+  then have "h = h1"
+    using ancestor_with_same_view by auto
+  assume "prepared_by_both s h1 v v1_src"
+  then have "heir s (h1, v) (h1, v)"
+    using heir_self by auto
+  show "heir s (h, v) (h1, v)"
+  	using \<open>h = h1\<close> \<open>heir s (h1, v) (h1, v)\<close> by blast
+qed
+
+lemma younger_ancestor :
+ "nat (v1 - v) \<le> 0 \<longrightarrow>
+  validator_sets_finite s \<longrightarrow>
+  prepared_by_both s h1 v1 v1_src \<longrightarrow>
+  ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+  heir s (h, v) (h1, v1)"
+using ancestor_with_same_view prepared_self_is_heir by fastforce
+
+lemma follow_back_history_with_prepares_ind :
+  "\<forall> v v1 h h1 v1_src.
+   nat (v1 - v) \<le> k \<longrightarrow>
+   validator_sets_finite s \<longrightarrow>
+   committed_by_both s h v \<longrightarrow>
+   prepared_by_both s h1 v1 v1_src \<longrightarrow>
+   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+   heir s (h, v) (h1, v1) \<or>
+   (\<exists> h' v'.
+     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     one_third_of_fwd_or_rear_slashed s h')"
+apply(induction k)
+ apply (simp add: younger_ancestor)
+
+sorry
+
 lemma follow_back_history_with_prepares :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h v \<Longrightarrow>
    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+   -1 \<le> v1_src \<Longrightarrow>
+   v1_src < v1 \<Longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
      ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
-sorry
+using follow_back_history_with_prepares_ind apply blast
+done
+
 
 lemma slashed_one_on_rear': "
  validator_sets_finite s \<Longrightarrow>
-    committed_by_rear s h1 v1 \<Longrightarrow> (\<exists>v1_src. prepared_by_both s h1 v1 v1_src) \<or> 
+    committed_by_rear s h1 v1 \<Longrightarrow>
+   (\<exists>v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or> 
     one_third (RearValidators s h1) (slashed_one s)"
 apply(simp add: committed_by_rear_def committed_def two_thirds_sent_message_def)
 by (metis (no_types, lifting) one_third_mp slashed_one_def two_thirds_two_thirds_one_third validator_sets_finite_def)
@@ -1650,15 +1703,15 @@ by (metis (no_types, lifting) one_third_mp slashed_one_def two_thirds_two_thirds
 lemma slashed_one_on_rear :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_rear s h1 v1 \<Longrightarrow>
-   (\<exists>v1_src. prepared_by_both s h1 v1 v1_src) \<or> one_third_of_rear_slashed s h1"
+   (\<exists>v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or> one_third_of_rear_slashed s h1"
 apply(simp add: one_third_of_rear_slashed_def)
-by (meson one_third_mp slashed_def slashed_one_on_rear' validator_sets_finite_def)
+by (metis one_third_mp slashed_def slashed_one_on_rear' validator_sets_finite_def)
 
 
 lemma slashed_one_on_descendant_with_no_coup' :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
-   (\<exists> v1_src. prepared_by_both s h1 v1 v1_src) \<or>
+   (\<exists> v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or>
    one_third_of_fwd_or_rear_slashed s h1"
 apply(simp add: committed_by_both_def one_third_of_fwd_or_rear_slashed_def)
 using slashed_one_on_rear by auto
@@ -1668,7 +1721,7 @@ lemma slashed_one_on_descendant_with_no_coup :
    committed_by_both s h v \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-   (\<exists> v1_src. prepared_by_both s h1 v1 v1_src) \<or>
+   (\<exists> v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or>
    (\<exists> h' v'.
      ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
@@ -1683,7 +1736,8 @@ lemma follow_back_history :
    (\<exists> h' v'.
      ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
-by (meson follow_back_history_with_prepares slashed_one_on_descendant_with_no_coup)
+using follow_back_history_with_prepares slashed_one_on_descendant_with_no_coup' by blast
+
 
 
 lemma fork_contains_legitimacy_fork :
