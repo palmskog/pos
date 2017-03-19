@@ -1737,33 +1737,227 @@ apply(subgoal_tac
  apply linarith
 by (metis nth_ancestor.simps(2))
 
-lemma ancestor_descendant_shorter :
-   "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
-    v \<le> v1_src \<Longrightarrow> ancestor_descendant_with_no_coup s (h_anc, v1_src) (h1, v1)"
-sorry
+lemma tmp:
+  "committed_by_both s h1a v1a \<Longrightarrow>
+   committed_by_both s h1a (v1a + 1 - 1)"
+apply simp
+done
 
-lemma commit_skipped_on_branch :
-      "nat (v1 - v) \<le> Suc k \<Longrightarrow>
-       validator_sets_finite s \<Longrightarrow>
-       committed_by_both s h v \<Longrightarrow>
+lemma ancestor_of_parent :
+      "nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
+       PrevHash s h1 = Some h_prev \<Longrightarrow>
+       v1 > v1_src \<Longrightarrow>
+       nth_ancestor s (nat (v1 - 1 - v1_src)) h_prev = Some h_anc"
+apply(case_tac "nat (v1 - v1_src)")
+ apply simp
+apply simp
+proof -
+  fix nata :: nat
+  assume "v1_src < v1"
+  assume a1: "nat (v1 - v1_src) = Suc nata"
+  assume a2: "nth_ancestor s nata h_prev = Some h_anc"
+  have "nat (- 1 + v1 + - 1 * v1_src) = nata"
+    using a1 by linarith
+  then show ?thesis
+    using a2 by simp
+qed
+
+
+lemma ancestor_descendant_shorter :
+   "\<forall> v1 h1 v1_src h_anc.
+    nat (v1 - v) = k \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<longrightarrow>
+    v1_src < v1 \<longrightarrow>
+    v \<le> v1_src \<longrightarrow> ancestor_descendant_with_no_coup s (h_anc, v1_src) (h1, v1)"
+apply(induction k)
+ apply simp
+apply clarify
+apply(case_tac "v1_src = v1 - 1")
+ apply simp
+ apply(case_tac "PrevHash s h1")
+  apply simp
+ apply simp
+ apply(erule ancestor_descendant_with_no_coup.cases)
+  apply simp
+ apply(subgoal_tac "prev_next_with_no_coup s (h_anc, v1 - 1) (h1, v1)")
+  using no_coup_self no_coups_step apply blast
+ apply clarify
+ apply(simp only: prev_next_with_no_coup.simps)
+ apply(rule conjI)
+  apply blast
+ apply(rule conjI)
+  apply linarith
+ apply(erule conjE)
+ apply(erule conjE)
+ apply(erule disjE)
+  apply(rule disjI1)
+  apply blast
+ apply(rule disjI2)
+ apply(subgoal_tac "h_anc = h1a")
+  apply(rule conjI)
+   apply blast
+  apply(subgoal_tac "committed_by_both s h1a (v1a + 1 - 1)")
+   apply blast
+  apply(rule tmp)
+  apply blast
+ apply blast
+apply(drule_tac x = "v1 - 1" in spec)
+apply(subgoal_tac "\<exists> h_prev. PrevHash s h1 = Some h_prev")
+ apply clarify
+ apply(drule_tac x = h_prev in spec)
+ apply(drule_tac x = v1_src in spec)
+ apply(drule_tac x = h_anc in spec)
+ apply(subgoal_tac "nat (v1 - 1 - v) = k")
+  apply(subgoal_tac "ancestor_descendant_with_no_coup s (h, v) (h_prev, v1 - 1)")
+   apply(subgoal_tac " nth_ancestor s (nat (v1 - 1 - v1_src)) h_prev = Some h_anc")
+    apply(subgoal_tac "v1_src < v1 - 1")
+     apply(subgoal_tac " ancestor_descendant_with_no_coup s (h_anc, v1_src) (h_prev, v1 - 1)")
+      apply(rule_tac  no_coups_step)
+       apply blast
+      apply(simp)
+      apply(erule ancestor_descendant_with_no_coup.cases)
+       apply simp
+      apply simp
+     apply blast
+    apply linarith
+   using ancestor_of_parent apply blast
+  apply (simp add: cutting_prev)
+ apply linarith
+apply(case_tac "nat (v1 - v1_src)")
+ apply simp
+apply simp
+apply(case_tac "PrevHash s h1"; auto)
+done
+
+lemma skip_max :
+      "validator_sets_finite s \<Longrightarrow>
        prepared_by_both s h1 v1 v1_src \<Longrightarrow>
-       v1_src < v1 \<Longrightarrow>
-       0 \<le> v \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-       \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
-       - 1 < v1_src \<Longrightarrow>
-       \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
-       prepared_by_rear s h1 v1 v1_src \<Longrightarrow>
        n \<in> RearValidators s h1 \<Longrightarrow>
        (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<Longrightarrow>
-       prepared_by_both s h_anc v1_src v_ss \<Longrightarrow>
-       - 1 \<le> v_ss \<Longrightarrow>
-       v_ss < v1_src \<Longrightarrow>
-       nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<Longrightarrow>
        \<not> v \<le> v1_src \<Longrightarrow>
+       committed_by_both s h_max v_max \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<Longrightarrow>
+       \<forall>h_more v_more.
+          v_max < v_more \<longrightarrow>
+          \<not> committed_by_both s h_more v_more \<or> \<not> ancestor_descendant_with_no_coup s (h_more, v_more) (h1, v1) \<Longrightarrow>
        slashed s n"
 sorry
+
+lemma not_same_then_previous :
+"\<not> committed_by_both s h1 v1 \<Longrightarrow>
+ PrevHash s h1 = Some h1_prev \<Longrightarrow>
+ committed_by_both s h_more v_more \<Longrightarrow>
+ ancestor_descendant_with_no_coup s (h_more, v_more) (h1, v1) \<Longrightarrow>
+ ancestor_descendant_with_no_coup s (h_more, v_more) (h1_prev, v1 - 1)"
+apply(subgoal_tac "h_more \<noteq> h1 \<or> v_more \<noteq> v1")
+ using ancestor_with_same_view cutting_prev apply fastforce
+by blast
+
+
+lemma max_existence :
+   "\<forall> v1 v1_src h v h1.
+    nat (v1 - v1_src) = k \<longrightarrow>
+    validator_sets_finite s \<longrightarrow>
+    committed_by_both s h v \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    \<not> v \<le> v1_src \<longrightarrow>
+   (\<exists>h_max v_max.
+       v \<le> v_max \<and>
+       committed_by_both s h_max v_max \<and>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       (\<forall>h_more v_more.
+           v_max < v_more \<longrightarrow>
+           \<not> v \<le> v_max \<or>
+           \<not> committed_by_both s h_more v_more \<or> \<not> ancestor_descendant_with_no_coup s (h_more, v_more) (h1, v1)))"
+apply(induction k)
+ apply clarify
+ apply(subgoal_tac "v \<le> v1")
+  apply linarith
+ using ancestor_with_same_view apply auto[1]
+apply clarify
+apply(case_tac "committed_by_both s h1 v1")
+ apply(rule_tac x = h1 in exI)
+ apply(rule_tac x = v1 in exI)
+ apply(rule conjI)
+  using ancestor_with_same_view apply auto[1]
+ apply(rule conjI)
+  apply blast
+ apply(rule conjI)
+  using no_coup_self apply blast
+ apply clarify
+ using ancestor_with_same_view apply fastforce
+apply(drule_tac x = "v1 - 1" in spec)
+apply(drule_tac x = v1_src in spec)
+apply(drule_tac x = h in spec)
+apply(drule_tac x = v in spec)
+apply(subgoal_tac "\<exists> h1_prev. PrevHash s h1 = Some h1_prev")
+ apply clarify
+ apply(drule_tac x = h1_prev in spec)
+ apply(subgoal_tac "nat (v1 - 1 - v1_src) = k")
+  defer
+  apply linarith
+ apply(erule ancestor_descendant_with_no_coup.cases)
+   apply simp
+  apply simp
+ apply simp
+apply(subgoal_tac "ancestor_descendant_with_no_coup s (h, v) (h1_prev, v1 - 1)")
+ defer
+ apply(subgoal_tac "v < v1")
+  using cutting_prev apply blast
+ apply(subgoal_tac "v \<le> v1")
+  apply(subgoal_tac "v \<noteq> v1")
+   apply auto[1]
+  using ancestor_with_same_view apply fastforce
+ using ancestor_with_same_view apply auto[1]
+apply simp
+apply clarify
+apply(rule_tac x = h_max in exI)
+apply(rule_tac x = v_max in exI)
+apply simp
+apply(rule conjI)
+ apply(erule ancestor_descendant_with_no_coup.cases)
+  apply simp
+ apply clarsimp
+ using no_coups_step prev_next_with_no_coup.simps apply blast
+apply clarify
+apply(drule_tac x = h_more in spec)
+apply(drule_tac x = v_more in spec)
+apply simp
+using not_same_then_previous by blast
+  
+ 
+
+
+
+
+sorry
+
+
+lemma commit_skipped_on_branch :
+      "validator_sets_finite s \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+       \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+       n \<in> RearValidators s h1 \<Longrightarrow>
+       (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<Longrightarrow>
+       \<not> v \<le> v1_src \<Longrightarrow>
+       slashed s n"
+apply(subgoal_tac "\<exists> h_max v_max.
+          v \<le> v_max \<and>
+          committed_by_both s h_max v_max \<and>
+          ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+          (\<forall> h_more v_more.
+              v_max < v_more \<longrightarrow>
+              (\<not> v \<le> v_max \<or>
+              \<not> committed_by_both s h_more v_more \<or>
+              \<not> ancestor_descendant_with_no_coup s (h_more, v_more) (h1, v1))
+          )")
+ apply clarify
+ using skip_max apply blast
+using max_existence apply blast
+done
 
 lemma use_slashed_two :
    "nat (v1 - v) \<le> Suc k \<Longrightarrow>
@@ -1841,6 +2035,8 @@ lemma commit_skipping :
     ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
     \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
     \<not> - 1 < v1_src \<Longrightarrow> heir s (h, v) (h1, v1)"
+
+
 sorry
 
 lemma induction_step_following_back_history:
