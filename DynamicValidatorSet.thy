@@ -259,7 +259,9 @@ text "A validator is slashed when at least one of the above conditions [i]--[iv]
 
 definition slashed :: "situation \<Rightarrow> validator \<Rightarrow> bool"
 where
-"slashed s n = (slashed_three s n \<or>
+"slashed s n = (slashed_one s n \<or>
+                slashed_two s n \<or>
+                slashed_three s n \<or>
                 slashed_four s n)"
 
 definition one_third_slashed :: "situation \<Rightarrow> validator set \<Rightarrow> bool"
@@ -1464,7 +1466,11 @@ lemma accountable_safety_from_legitimacy_fork_with_high_root :
 by (meson accountable_safety_from_legitimacy_fork_with_high_root_with_n legitimacy_fork_with_center_with_high_root_has_n_switching)
 
 definition validator_sets_finite :: "situation \<Rightarrow> bool"
-  where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h))"
+  where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h) \<and>
+                                         finite (RearValidators s h) \<and>
+                                         (\<not> (FwdValidators s h = {})) \<and>
+                                         (\<not> (RearValidators s h = {}))
+                                         )"
 
 lemma accountable_safety_center :
 "validator_sets_finite s \<Longrightarrow>
@@ -1542,6 +1548,22 @@ where
 
 section "Turning Any Fork into Legitimacy-Fork"
 
+lemma heir_chain_means_same_chain :
+  "on_same_heir_chain s (h1, v1) (h2, v2) \<Longrightarrow>
+   on_same_chain s h1 h2"
+sorry
+
+lemma descendant_committed_is_heir :
+  "validator_sets_finite s \<Longrightarrow>
+   ancestor_descendant s h h1 \<Longrightarrow>
+   committed_by_both s h v \<Longrightarrow>
+   committed_by_both s h1 v1 \<Longrightarrow>
+   heir s (root, v) (h1, v1) \<or>
+   (\<exists> h' v'.
+     heir s (h, v) (h', v') \<and>
+     one_third_of_fwd_slashed s h')"
+sorry
+
 lemma fork_contains_legitimacy_fork :
 "validator_sets_finite s \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
@@ -1549,7 +1571,8 @@ lemma fork_contains_legitimacy_fork :
  (\<exists> h' v'.
    heir s (h, v) (h', v') \<and>
    one_third_of_fwd_slashed s h')"
-sorry
+apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps)
+by (meson descendant_committed_is_heir fork.elims(2) heir_chain_means_same_chain)
 
 section "Accountable Safety for Any Fork"
 
