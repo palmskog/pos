@@ -1664,11 +1664,22 @@ using follow_back_history heir_chain_means_same_chain by blast
 
 section "Accountable Safety for Any Fork"
 
+lemma ancestor_descendant_with_no_coup_trans:
+  "ancestor_descendant_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
+apply(induction rule: ancestor_descendant_with_no_coup.induct)
+ apply blast
+using no_coups_step by blast
+
 lemma heir_means_ad_no_coup :
   "heir s (h, v) (h', v') \<Longrightarrow>
    ancestor_descendant_with_no_coup s (h, v) (h', v')
   "
-sorry
+apply(induction rule: heir.induct)
+  apply (simp add: no_coup_self)
+ using ancestor_descendant_with_no_coup_trans apply blast
+using ancestor_descendant_with_no_coup_trans by blast
 
 lemma accountable_safety_for_legitimacy_fork_weak :
 "validator_sets_finite s \<Longrightarrow>
