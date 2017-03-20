@@ -2012,7 +2012,31 @@ lemma using_max :
        v1_src < v_max \<Longrightarrow>
        v_max < v1 \<Longrightarrow> validators_match s h_max h1 \<or> validators_change s h_max h1 \<Longrightarrow> 
        one_third_of_fwd_or_rear_slashed s h1"
-sorry
+apply(subgoal_tac "one_third (RearValidators s h1) (slashed_three s)")
+ apply (meson one_third_mp one_third_of_fwd_or_rear_slashed_def one_third_of_rear_slashed_def slashed_def validator_sets_finite_def)
+apply(subgoal_tac
+   "one_third (RearValidators s h1)
+    (\<lambda> n. (\<exists> x y v w u.
+      (n, Commit (x, v)) \<in> Messages s \<and>
+      (n, Prepare (y, w, u)) \<in> Messages s \<and>
+      u < v \<and> v < w))")
+ using slashed_three_def apply presburger
+apply(subgoal_tac "    one_third (RearValidators s h1)
+     (\<lambda>n. (n, Commit (h_max, v_max)) \<in> Messages s \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<and>
+           v1_src < v_max \<and> v_max < v1)")
+ (* smt is not good *)
+ apply (smt one_third_mp validator_sets_finite_def)
+apply(rule two_thirds_two_thirds_one_third)
+  using validator_sets_finite_def apply blast
+ apply(erule disjE)
+  apply(subgoal_tac "two_thirds (RearValidators s h_max) (\<lambda>x. (x, Commit (h_max, v_max)) \<in> Messages s)")
+   apply (simp add: validators_match_def)
+  apply(simp add: committed_by_both_def committed_by_rear_def committed_def two_thirds_sent_message_def)
+ apply(subgoal_tac "two_thirds (FwdValidators s h_max) (\<lambda>x. (x, Commit (h_max, v_max)) \<in> Messages s)")
+  apply (simp add: validators_change_def)
+ apply(simp add: committed_by_both_def committed_by_fwd_def committed_def two_thirds_sent_message_def)
+apply(simp add: prepared_by_both_def prepared_by_rear_def prepared_def two_thirds_sent_message_def)
+done
 
 lemma commit_skipping :
    "validator_sets_finite s \<Longrightarrow>
