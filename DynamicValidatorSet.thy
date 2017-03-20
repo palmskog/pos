@@ -1838,6 +1838,182 @@ apply simp
 apply(case_tac "PrevHash s h1"; auto)
 done
 
+
+lemma no_commits_in_between_induction :
+   "\<forall> v1 h1.
+    nat (v1 - v) \<le> Suc k \<longrightarrow>
+    validator_sets_finite s \<longrightarrow>
+    committed_by_both s h v \<longrightarrow>
+    v \<noteq> v1 \<longrightarrow>
+    v1_src < v \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    (\<forall>v>v1_src.
+       nat (v1 - v) \<le> k \<longrightarrow>
+       (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1 \<or> \<not> ancestor_descendant_with_no_coup s (h, v) (h1, v1))) \<longrightarrow>
+    v < v1 \<and> (validators_match s h h1 \<or> validators_change s h h1)"
+apply(induction k)
+ apply clarify
+ apply (rule conjI)
+  apply auto[1]
+ apply(erule ancestor_descendant_with_no_coup.cases)
+  apply simp
+ using ancestor_with_same_view apply fastforce
+apply clarsimp
+apply(rule conjI)
+ apply auto[1]
+apply(erule ancestor_descendant_with_no_coup.cases)
+ apply simp
+apply clarsimp
+apply(case_tac " committed_by_both s h1a v1a ")
+ apply simp
+ apply(rotate_tac 5)
+ apply(drule_tac x = v1a in spec)
+ apply(subgoal_tac "v1_src < v1a")
+  apply(subgoal_tac " nat (v1a + 1 - v1a) \<le> Suc k")
+   apply simp
+   apply(drule_tac x = h1a in spec)
+   apply simp
+   apply(subgoal_tac "ancestor_descendant_with_no_coup s (h1a, v1a) (h2, v1a + 1)")
+    apply blast
+   using no_coup_self no_coups_step prev_next_with_no_coup.simps apply blast
+  apply linarith
+ apply(subgoal_tac "v \<le> v1a")
+  apply linarith
+ using ancestor_with_same_view apply auto[1]
+apply(subgoal_tac "validators_match s h h1a \<or> validators_change s h h1a")
+ using validators_change_def validators_match_def apply auto[1]
+apply(drule_tac x = v1a in spec)
+apply(subgoal_tac "nat (v1a - v) \<le> Suc k")
+ apply(subgoal_tac "v \<noteq> v1a")
+  apply simp
+  apply(drule_tac x = h1a in spec)
+  apply(subgoal_tac "\<forall>v>v1_src.
+           nat (v1a - v) \<le> k \<longrightarrow>
+           (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1a \<or> \<not> ancestor_descendant_with_no_coup s (h, v) (h1a, v1a))")
+   apply simp
+  apply(rule allI)
+  apply(case_tac " v1_src < va")
+   apply simp
+   apply(case_tac "nat (v1a - va) \<le> k")
+    apply simp
+    apply(rule allI)
+    apply(rule impI)
+    apply(drule_tac x = va in spec)
+    apply simp
+    apply(case_tac "nat (v1a + 1 - va) \<le> Suc k")
+     apply simp
+     apply(drule_tac x = ha in spec)
+     apply simp
+     (* smt is not good *)
+     apply (smt ancestor_with_same_view no_coups_step prev_next_with_no_coup.simps prod.sel(2))
+    apply linarith
+   apply blast
+  apply blast
+ using ancestor_with_same_view apply fastforce
+by linarith
+
+
+lemma no_commits_in_between :
+  "nat (v1 - v) \<le> Suc k \<longrightarrow>
+   validator_sets_finite s \<longrightarrow>
+   committed_by_both s h v \<longrightarrow>
+   prepared_by_both s h1 v1 v1_src \<longrightarrow>
+   - 1 \<le> v1_src \<longrightarrow>
+   v \<noteq> v1 \<longrightarrow>
+   v1_src < v1 \<longrightarrow>
+   v1_src < v \<longrightarrow>
+   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+   (\<nexists>v h. nat (v1 - v) \<le> k \<and>
+         validator_sets_finite s \<and>
+         committed_by_both s h v \<and>
+         prepared_by_both s h1 v1 v1_src \<and>
+         - 1 \<le> v1_src \<and>
+         v \<noteq> v1 \<and> v1_src < v1 \<and> v1_src < v \<and> ancestor_descendant_with_no_coup s (h, v) (h1, v1)) \<longrightarrow>
+   committed_by_both s h v \<and>
+   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<and>
+   v1_src < v \<and> v < v1 \<and> (validators_match s h h1 \<or> validators_change s h h1)"
+apply clarsimp
+using no_commits_in_between_induction by blast
+
+
+lemma pick_max_induction' :
+   "\<forall> v h.
+    nat (v1 - v) \<le> k \<longrightarrow>
+    validator_sets_finite s \<longrightarrow>
+    committed_by_both s h v \<longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<longrightarrow>
+    - 1 \<le> v1_src \<longrightarrow>
+    v \<noteq> v1 \<longrightarrow>
+    v1_src < v1 \<longrightarrow>
+    v1_src < v \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    (\<exists>h_max v_max.
+       committed_by_both s h_max v_max \<and>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
+apply(induction k)
+ using ancestor_with_same_view apply fastforce
+apply clarify
+apply(case_tac
+  "\<exists> v h. nat (v1 - v) \<le> k \<and>
+          validator_sets_finite s \<and>
+          committed_by_both s h v \<and>
+          prepared_by_both s h1 v1 v1_src \<and>
+          - 1 \<le> v1_src \<and> 
+          v \<noteq> v1 \<and>
+          v1_src < v1 \<and>
+          v1_src < v \<and>
+          ancestor_descendant_with_no_coup s (h, v) (h1, v1)")
+ apply blast
+apply(rule_tac x = h in exI)
+apply(rule_tac x = v in exI)
+using no_commits_in_between by blast
+
+lemma pick_max_induction :
+   "nat (v1 - v) = k \<longrightarrow>
+    validator_sets_finite s \<longrightarrow>
+    committed_by_both s h v \<longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<longrightarrow>
+    - 1 \<le> v1_src \<longrightarrow>
+    v \<noteq> v1 \<longrightarrow>
+    v1_src < v1 \<longrightarrow>
+    v1_src < v \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    (\<exists>h_max v_max.
+       committed_by_both s h_max v_max \<and>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
+using pick_max_induction' apply blast
+done
+
+lemma pick_max :
+   "validator_sets_finite s \<longrightarrow>
+    committed_by_both s h v \<longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<longrightarrow>
+    - 1 \<le> v1_src \<longrightarrow>
+    v \<noteq> v1 \<longrightarrow>
+    v1_src < v1 \<longrightarrow>
+    v1_src < v \<longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    (\<exists>h_max v_max.
+       committed_by_both s h_max v_max \<and>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
+	by (simp add: pick_max_induction)
+
+lemma using_max :
+      "validator_sets_finite s \<Longrightarrow>
+       committed_by_both s h v \<Longrightarrow>
+       prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+       - 1 \<le> v1_src \<Longrightarrow>
+       v1_src < v1 \<Longrightarrow>
+       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<Longrightarrow>
+       committed_by_both s h_max v_max \<Longrightarrow>
+       v1_src < v_max \<Longrightarrow>
+       v_max < v1 \<Longrightarrow> validators_match s h_max h1 \<or> validators_change s h_max h1 \<Longrightarrow> 
+       one_third_of_fwd_or_rear_slashed s h1"
+sorry
+
 lemma commit_skipping :
    "validator_sets_finite s \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
@@ -1851,10 +2027,14 @@ lemma commit_skipping :
 "
 apply(subgoal_tac
     "\<exists> h_max v_max. committed_by_both s h_max v_max \<and>
+                    ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
                        v1_src < v_max \<and>
-                       v_max < v1")
-
-sorry
+                       v_max < v1 \<and>
+                       (validators_match s h_max h1 \<or> validators_change s h_max h1)
+    ")
+ apply clarify
+ using using_max apply blast
+by (simp add: pick_max)
 
 lemma slashed_two_essense :
   "validator_sets_finite s \<Longrightarrow>
@@ -2128,6 +2308,7 @@ lemma accountable_safety :
    ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h'"
 using accountable_safety_for_legitimacy_fork_weak fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
+
 
 
 
