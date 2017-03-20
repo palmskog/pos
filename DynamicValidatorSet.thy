@@ -1544,8 +1544,8 @@ using heir_initial by blast
 section "Accountable Safety for Legitimacy Fork (don't skip)"
 
 text "The statement of accountable safety is simple.  If a situation has a finite number of
-      validators on each hash, a legitimacy_fork means some validator set suffers 1/3 slashing.
-      A legitimacy_fork is defined using the @{term heir} relation.  The slashed validator set
+      validators on each hash, a legitimacy fork means some validator set suffers 1/3 slashing.
+      A legitimacy fork is defined using the @{term heir} relation.  The slashed validator set
       is also a heir of the original validator set.
      "
 
