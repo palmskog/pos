@@ -178,19 +178,19 @@ where
 "validators_change s ancient next =
    (FwdValidators s ancient = RearValidators s next)"
 
-fun prev_next_with_no_coup :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+fun prev_next_with_chosen_validators :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-"prev_next_with_no_coup s (h0, v0) (h1, v1) =
+"prev_next_with_chosen_validators s (h0, v0) (h1, v1) =
   (PrevHash s h1 = Some h0 \<and> v1 = v0 + 1 \<and>
    (validators_match s h0 h1 \<or> validators_change s h0 h1 \<and> committed_by_both s h0 v0))
   "
 
-inductive ancestor_descendant_with_no_coup :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+inductive ancestor_descendant_with_chosen_validators :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-  no_coup_self: "ancestor_descendant_with_no_coup s (h, v) (h, v)"
-| no_coups_step: "ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
-                  prev_next_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
-                  ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
+  no_coup_self: "ancestor_descendant_with_chosen_validators s (h, v) (h, v)"
+| no_coups_step: "ancestor_descendant_with_chosen_validators s (h0, v0) (h1, v1) \<Longrightarrow>
+                  prev_next_with_chosen_validators s (h1, v1) (h2, v2) \<Longrightarrow>
+                  ancestor_descendant_with_chosen_validators s (h0, v0) (h2, v2)"
 
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
@@ -333,11 +333,11 @@ where
   heir_self : "prepared_by_both s h v v_src \<Longrightarrow> heir s (h, v) (h, v)"
 | heir_normal_step : "heir s (h, v) (h', v') \<Longrightarrow>
                  inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-                 ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+                 ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
                  heir s (h, v) (h'', v'')"
 | heir_switching_step : "heir s (h, v) (h', v') \<Longrightarrow>
                  inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
-                 ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+                 ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
                  heir s (h, v) (h'', v'')"
 
 text "When two hashes are not in the inheritance relation in either direction,
@@ -621,10 +621,10 @@ done
 subsection "Validator History Tracking"
 
 lemma ancestor_with_same_view :
- "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+ "ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
   snd (h, v) \<le> snd (h1, v1) \<and>
   (snd (h, v) = snd (h1, v1) \<longrightarrow> fst (h, v) = fst (h1, v1))"
-apply(induction rule: ancestor_descendant_with_no_coup.induct)
+apply(induction rule: ancestor_descendant_with_chosen_validators.induct)
  apply simp
 apply auto
 done
@@ -642,12 +642,12 @@ where
   heir_n_self : "prepared_by_both s h v v_src \<Longrightarrow> heir_after_n_switching 0 s (h, v) (h, v)"
 | heir_n_normal_step :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
     inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
     heir_after_n_switching n s (h, v) (h'', v'')"
 | heir_n_switching_step :
    "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
     inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
     heir_after_n_switching (Suc n) s (h, v) (h'', v'')"
 
@@ -682,11 +682,11 @@ lemma legitimacy_fork_has_n_switching :
 apply(simp)
 using every_heir_is_after_n_switching by blast
 
-lemma ancestor_descendant_with_no_coup_trans:
-  "ancestor_descendant_with_no_coup s (h1, v1) (h2, v2) \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h0, v0) (h1, v1) \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h0, v0) (h2, v2)"
-apply(induction rule: ancestor_descendant_with_no_coup.induct)
+lemma ancestor_descendant_with_chosen_validators_trans:
+  "ancestor_descendant_with_chosen_validators s (h1, v1) (h2, v2) \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h0, v0) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h0, v0) (h2, v2)"
+apply(induction rule: ancestor_descendant_with_chosen_validators.induct)
  apply blast
 using no_coups_step by blast
 
@@ -800,14 +800,14 @@ using heir_switching_step by blast
 
 lemma inherit_normal_means_heir :
   "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
    heir s (h', v') (h'', v'')"
 by (meson heir_normal_step heir_self inherit_normal.simps sourcing_normal.simps)
 
 
 lemma chain_and_inherit :
    "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
     v_two \<le> snd (h'', v'') \<Longrightarrow>
     \<not> on_same_heir_chain s (h'', v'') (h_two, v_two) \<Longrightarrow>
     v_two \<le> snd (h', v') \<Longrightarrow>
@@ -875,7 +875,7 @@ lemma heir_normal_extend :
            heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
            inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
            heir_after_n_switching 0 s (h_two, v_two) (h', v')) \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+       ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
        inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
        (\<exists>h_one v_one h_two v_two.
            heir_after_n_switching n s (h, v) (h_one, v_one) \<and>
@@ -894,7 +894,7 @@ lemma heir_after_one_or_more_switching_dest :
    na > 0 \<Longrightarrow>
    (\<exists> h_one v_one h_two v_two.
     heir_after_n_switching (na - 1) s (h, v) (h_one, v_one) \<and>
-    ancestor_descendant_with_no_coup s (h_one, v_one) (h_two, v_two) \<and>
+    ancestor_descendant_with_chosen_validators s (h_one, v_one) (h_two, v_two) \<and>
     inherit_switching_validators s (h_one, v_one) (h_two, v_two) \<and>
     heir_after_n_switching 0 s (h_two, v_two) (h_three, v_three))"
 apply(induction rule: heir_after_n_switching.induct)
@@ -914,7 +914,7 @@ lemma high_point_still_high :
        committed_by_both s h_two v_two \<Longrightarrow>
        heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
        inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+       ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
        heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
        \<forall>h' v'. v < v' \<longrightarrow> \<not> legitimacy_fork_with_center s (h_orig, v_orig) (h', v') (h_onea, v_onea) (h_two, v_two)"
 apply(rule allI)
@@ -938,7 +938,7 @@ lemma shallower_legitimacy_fork :
     committed_by_both s h_one v_one \<Longrightarrow>
     committed_by_both s h_two v_two \<Longrightarrow>
     heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
     inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
@@ -1100,7 +1100,7 @@ lemma smaller_induction_case_normal:
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
    inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
    finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
    v_two \<le> snd (h'', v'') \<Longrightarrow>
    n \<le> Suc 0 \<Longrightarrow>
@@ -1124,7 +1124,7 @@ using smaller_induction_skipping_violation by blast
 
 lemma some_h :
     "heir_after_n_switching n s (h, v) (h', v') \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
     inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
     heir s (h', v') (h'', v'')"
 apply(subgoal_tac "\<exists> x. prepared_by_both s h' v' x")
@@ -1141,7 +1141,7 @@ lemma smaller_induction_switching_case:
     \<not> on_same_heir_chain s (h', v') (h_two, v_two) \<Longrightarrow>
     heir_after_n_switching n_two s (h, v) (h_two, v_two) \<Longrightarrow>
     committed_by_both s (fst (h, v)) (snd (h, v)) \<Longrightarrow> committed_by_both s h_two v_two \<Longrightarrow> \<not> one_third (FwdValidators s (fst (h, v))) (slashed s) \<Longrightarrow> False) \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h', v') (h'', v'') \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h', v') (h'', v'') \<Longrightarrow>
     inherit_switching_validators s (h', v') (h'', v'') \<Longrightarrow>
     finite (FwdValidators s (fst (h, v))) \<Longrightarrow>
     v_two \<le> snd (h'', v'') \<Longrightarrow>
@@ -1290,7 +1290,7 @@ lemma use_highness :
     committed_by_both s h_two v_two \<Longrightarrow>
     heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
     inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow> False"
@@ -1312,14 +1312,14 @@ lemma confluence_should_not:
     committed_by_both s h_one v_one \<Longrightarrow>
     committed_by_both s h_two v_two \<Longrightarrow>
     heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
     inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow> heir s (h_two, v_two) (h_onea, v_onea) \<Longrightarrow> False"
 proof -
   assume "inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa)"
-  moreover assume "ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa)"
+  moreover assume "ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa)"
   ultimately have "heir s (h_onea, v_onea) (h_twoa, v_twoa)"
     by (meson heir_self heir_switching_step inherit_switching_validators.simps sourcing_switching_validators.simps)
   moreover assume "heir s (h_two, v_two) (h_onea, v_onea)"
@@ -1346,7 +1346,7 @@ lemma prev_switch_not_on_same_heir_chain :
  committed_by_both s h_two v_two \<Longrightarrow>
  heir_after_n_switching (Suc n_one_pre - 1) s (h, v) (h_onea, v_onea) \<Longrightarrow>
  inherit_switching_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
- ancestor_descendant_with_no_coup s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
+ ancestor_descendant_with_chosen_validators s (h_onea, v_onea) (h_twoa, v_twoa) \<Longrightarrow>
  heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
  \<not> on_same_heir_chain s (h_onea, v_onea) (h_two, v_two)"
 apply(auto simp only: on_same_heir_chain_def)
@@ -1581,8 +1581,8 @@ fun fork :: "situation \<Rightarrow>
 where
 "fork s (root, v) (h1, v1) (h2, v2) =
   (\<not> on_same_chain s h1 h2 \<and>
-   ancestor_descendant_with_no_coup s (root, v) (h1, v1) \<and>
-   ancestor_descendant_with_no_coup s (root, v) (h2, v2))"
+   ancestor_descendant_with_chosen_validators s (root, v) (h1, v1) \<and>
+   ancestor_descendant_with_chosen_validators s (root, v) (h2, v2))"
 
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
@@ -1637,10 +1637,10 @@ using heir_is_descendant by auto
 
 lemma prepared_self_is_heir :
  "prepared_by_both s h1 v v1_src \<Longrightarrow>
-  ancestor_descendant_with_no_coup s (h, v) (h1, v) \<Longrightarrow>
+  ancestor_descendant_with_chosen_validators s (h, v) (h1, v) \<Longrightarrow>
   heir s (h, v) (h1, v)"
 proof -
-  assume "ancestor_descendant_with_no_coup s (h,v) (h1, v)"
+  assume "ancestor_descendant_with_chosen_validators s (h,v) (h1, v)"
   then have "h = h1"
     using ancestor_with_same_view by auto
   assume "prepared_by_both s h1 v v1_src"
@@ -1654,7 +1654,7 @@ lemma younger_ancestor :
  "nat (v1 - v) \<le> 0 \<longrightarrow>
   validator_sets_finite s \<longrightarrow>
   prepared_by_both s h1 v1 v1_src \<longrightarrow>
-  ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+  ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
   heir s (h, v) (h1, v1)"
 using ancestor_with_same_view prepared_self_is_heir by fastforce
 
@@ -1695,23 +1695,23 @@ apply(subgoal_tac "more_than_two_thirds (RearValidators s h1) (\<lambda>n. \<not
 using not_one_third validator_sets_finite_def by auto
 
 lemma cutting_prev :
-      "ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+      "ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
        v < v1 \<Longrightarrow>
        PrevHash s h1 = Some a \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h, v) (a, v1 - 1)"
-apply(erule ancestor_descendant_with_no_coup.cases)
+       ancestor_descendant_with_chosen_validators s (h, v) (a, v1 - 1)"
+apply(erule ancestor_descendant_with_chosen_validators.cases)
  apply simp
 apply simp
 done
 
-lemma ancestor_descendant_with_no_coup_go_back:
+lemma ancestor_descendant_with_chosen_validators_go_back:
    "\<forall> v1 v1_src h v h_anc h1.
     k = nat (v1 - v1_src) \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<longrightarrow>
     v \<le> v1_src \<longrightarrow>
     v1_src < v1 \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h_anc, v1_src)"
+    ancestor_descendant_with_chosen_validators s (h, v) (h_anc, v1_src)"
 apply(induction k)
  apply clarify
  apply simp
@@ -1733,12 +1733,12 @@ apply(subgoal_tac
   apply(drule_tac x = a in spec)
   apply simp
   apply(case_tac "v1_src < v1 - 1")
-   apply(subgoal_tac "ancestor_descendant_with_no_coup s (h, v) (a, v1 - 1)")
+   apply(subgoal_tac "ancestor_descendant_with_chosen_validators s (h, v) (a, v1 - 1)")
     apply blast
    apply (simp add: cutting_prev)
   apply(subgoal_tac "v1_src = v1 - 1")
    apply simp
-   apply(erule ancestor_descendant_with_no_coup.cases)
+   apply(erule ancestor_descendant_with_chosen_validators.cases)
     apply simp
    apply simp
   apply simp
@@ -1774,10 +1774,10 @@ qed
 lemma ancestor_descendant_shorter :
    "\<forall> v1 h1 v1_src h_anc.
     nat (v1 - v) = k \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     nth_ancestor s (nat (v1 - v1_src)) h1 = Some h_anc \<longrightarrow>
     v1_src < v1 \<longrightarrow>
-    v \<le> v1_src \<longrightarrow> ancestor_descendant_with_no_coup s (h_anc, v1_src) (h1, v1)"
+    v \<le> v1_src \<longrightarrow> ancestor_descendant_with_chosen_validators s (h_anc, v1_src) (h1, v1)"
 apply(induction k)
  apply simp
 apply clarify
@@ -1786,12 +1786,12 @@ apply(case_tac "v1_src = v1 - 1")
  apply(case_tac "PrevHash s h1")
   apply simp
  apply simp
- apply(erule ancestor_descendant_with_no_coup.cases)
+ apply(erule ancestor_descendant_with_chosen_validators.cases)
   apply simp
- apply(subgoal_tac "prev_next_with_no_coup s (h_anc, v1 - 1) (h1, v1)")
+ apply(subgoal_tac "prev_next_with_chosen_validators s (h_anc, v1 - 1) (h1, v1)")
   using no_coup_self no_coups_step apply blast
  apply clarify
- apply(simp only: prev_next_with_no_coup.simps)
+ apply(simp only: prev_next_with_chosen_validators.simps)
  apply(rule conjI)
   apply blast
  apply(rule conjI)
@@ -1817,14 +1817,14 @@ apply(subgoal_tac "\<exists> h_prev. PrevHash s h1 = Some h_prev")
  apply(drule_tac x = v1_src in spec)
  apply(drule_tac x = h_anc in spec)
  apply(subgoal_tac "nat (v1 - 1 - v) = k")
-  apply(subgoal_tac "ancestor_descendant_with_no_coup s (h, v) (h_prev, v1 - 1)")
+  apply(subgoal_tac "ancestor_descendant_with_chosen_validators s (h, v) (h_prev, v1 - 1)")
    apply(subgoal_tac " nth_ancestor s (nat (v1 - 1 - v1_src)) h_prev = Some h_anc")
     apply(subgoal_tac "v1_src < v1 - 1")
-     apply(subgoal_tac " ancestor_descendant_with_no_coup s (h_anc, v1_src) (h_prev, v1 - 1)")
+     apply(subgoal_tac " ancestor_descendant_with_chosen_validators s (h_anc, v1_src) (h_prev, v1 - 1)")
       apply(rule_tac  no_coups_step)
        apply blast
       apply(simp)
-      apply(erule ancestor_descendant_with_no_coup.cases)
+      apply(erule ancestor_descendant_with_chosen_validators.cases)
        apply simp
       apply simp
      apply blast
@@ -1846,22 +1846,22 @@ lemma no_commits_in_between_induction :
     committed_by_both s h v \<longrightarrow>
     v \<noteq> v1 \<longrightarrow>
     v1_src < v \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     (\<forall>v>v1_src.
        nat (v1 - v) \<le> k \<longrightarrow>
-       (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1 \<or> \<not> ancestor_descendant_with_no_coup s (h, v) (h1, v1))) \<longrightarrow>
+       (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1 \<or> \<not> ancestor_descendant_with_chosen_validators s (h, v) (h1, v1))) \<longrightarrow>
     v < v1 \<and> (validators_match s h h1 \<or> validators_change s h h1)"
 apply(induction k)
  apply clarify
  apply (rule conjI)
   apply auto[1]
- apply(erule ancestor_descendant_with_no_coup.cases)
+ apply(erule ancestor_descendant_with_chosen_validators.cases)
   apply simp
  using ancestor_with_same_view apply fastforce
 apply clarsimp
 apply(rule conjI)
  apply auto[1]
-apply(erule ancestor_descendant_with_no_coup.cases)
+apply(erule ancestor_descendant_with_chosen_validators.cases)
  apply simp
 apply clarsimp
 apply(case_tac " committed_by_both s h1a v1a ")
@@ -1873,9 +1873,9 @@ apply(case_tac " committed_by_both s h1a v1a ")
    apply simp
    apply(drule_tac x = h1a in spec)
    apply simp
-   apply(subgoal_tac "ancestor_descendant_with_no_coup s (h1a, v1a) (h2, v1a + 1)")
+   apply(subgoal_tac "ancestor_descendant_with_chosen_validators s (h1a, v1a) (h2, v1a + 1)")
     apply blast
-   using no_coup_self no_coups_step prev_next_with_no_coup.simps apply blast
+   using no_coup_self no_coups_step prev_next_with_chosen_validators.simps apply blast
   apply linarith
  apply(subgoal_tac "v \<le> v1a")
   apply linarith
@@ -1889,7 +1889,7 @@ apply(subgoal_tac "nat (v1a - v) \<le> Suc k")
   apply(drule_tac x = h1a in spec)
   apply(subgoal_tac "\<forall>v>v1_src.
            nat (v1a - v) \<le> k \<longrightarrow>
-           (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1a \<or> \<not> ancestor_descendant_with_no_coup s (h, v) (h1a, v1a))")
+           (\<forall>h. committed_by_both s h v \<longrightarrow> v = v1a \<or> \<not> ancestor_descendant_with_chosen_validators s (h, v) (h1a, v1a))")
    apply simp
   apply(rule allI)
   apply(case_tac " v1_src < va")
@@ -1905,7 +1905,7 @@ apply(subgoal_tac "nat (v1a - v) \<le> Suc k")
      apply(drule_tac x = ha in spec)
      apply simp
      (* smt is not good *)
-     apply (smt ancestor_with_same_view no_coups_step prev_next_with_no_coup.simps prod.sel(2))
+     apply (smt ancestor_with_same_view no_coups_step prev_next_with_chosen_validators.simps prod.sel(2))
     apply linarith
    apply blast
   apply blast
@@ -1922,15 +1922,15 @@ lemma no_commits_in_between :
    v \<noteq> v1 \<longrightarrow>
    v1_src < v1 \<longrightarrow>
    v1_src < v \<longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
    (\<nexists>v h. nat (v1 - v) \<le> k \<and>
          validator_sets_finite s \<and>
          committed_by_both s h v \<and>
          prepared_by_both s h1 v1 v1_src \<and>
          - 1 \<le> v1_src \<and>
-         v \<noteq> v1 \<and> v1_src < v1 \<and> v1_src < v \<and> ancestor_descendant_with_no_coup s (h, v) (h1, v1)) \<longrightarrow>
+         v \<noteq> v1 \<and> v1_src < v1 \<and> v1_src < v \<and> ancestor_descendant_with_chosen_validators s (h, v) (h1, v1)) \<longrightarrow>
    committed_by_both s h v \<and>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<and>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<and>
    v1_src < v \<and> v < v1 \<and> (validators_match s h h1 \<or> validators_change s h h1)"
 apply clarsimp
 using no_commits_in_between_induction by blast
@@ -1946,10 +1946,10 @@ lemma pick_max_induction' :
     v \<noteq> v1 \<longrightarrow>
     v1_src < v1 \<longrightarrow>
     v1_src < v \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     (\<exists>h_max v_max.
        committed_by_both s h_max v_max \<and>
-       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       ancestor_descendant_with_chosen_validators s (h_max, v_max) (h1, v1) \<and>
        v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
 apply(induction k)
  using ancestor_with_same_view apply fastforce
@@ -1963,7 +1963,7 @@ apply(case_tac
           v \<noteq> v1 \<and>
           v1_src < v1 \<and>
           v1_src < v \<and>
-          ancestor_descendant_with_no_coup s (h, v) (h1, v1)")
+          ancestor_descendant_with_chosen_validators s (h, v) (h1, v1)")
  apply blast
 apply(rule_tac x = h in exI)
 apply(rule_tac x = v in exI)
@@ -1978,10 +1978,10 @@ lemma pick_max_induction :
     v \<noteq> v1 \<longrightarrow>
     v1_src < v1 \<longrightarrow>
     v1_src < v \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     (\<exists>h_max v_max.
        committed_by_both s h_max v_max \<and>
-       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       ancestor_descendant_with_chosen_validators s (h_max, v_max) (h1, v1) \<and>
        v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
 using pick_max_induction' apply blast
 done
@@ -1994,10 +1994,10 @@ lemma pick_max :
     v \<noteq> v1 \<longrightarrow>
     v1_src < v1 \<longrightarrow>
     v1_src < v \<longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
     (\<exists>h_max v_max.
        committed_by_both s h_max v_max \<and>
-       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+       ancestor_descendant_with_chosen_validators s (h_max, v_max) (h1, v1) \<and>
        v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
 	by (simp add: pick_max_induction)
 
@@ -2007,7 +2007,7 @@ lemma using_max :
        prepared_by_both s h1 v1 v1_src \<Longrightarrow>
        - 1 \<le> v1_src \<Longrightarrow>
        v1_src < v1 \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<Longrightarrow>
+       ancestor_descendant_with_chosen_validators s (h_max, v_max) (h1, v1) \<Longrightarrow>
        committed_by_both s h_max v_max \<Longrightarrow>
        v1_src < v_max \<Longrightarrow>
        v_max < v1 \<Longrightarrow> validators_match s h_max h1 \<or> validators_change s h_max h1 \<Longrightarrow> 
@@ -2046,12 +2046,12 @@ lemma commit_skipping :
     v \<noteq> v1 \<Longrightarrow>
     v1_src < v1 \<Longrightarrow>
     v1_src < v \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
     one_third_of_fwd_or_rear_slashed s h1
 "
 apply(subgoal_tac
     "\<exists> h_max v_max. committed_by_both s h_max v_max \<and>
-                    ancestor_descendant_with_no_coup s (h_max, v_max) (h1, v1) \<and>
+                    ancestor_descendant_with_chosen_validators s (h_max, v_max) (h1, v1) \<and>
                        v1_src < v_max \<and>
                        v_max < v1 \<and>
                        (validators_match s h_max h1 \<or> validators_change s h_max h1)
@@ -2095,15 +2095,15 @@ lemma use_slashed_two :
      v \<noteq> v1 \<Longrightarrow>
     v1_src < v1 \<Longrightarrow>
     0 \<le> v \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-    \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_no_coup s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+    ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
+    \<forall>h'. (\<forall>v'. \<not> ancestor_descendant_with_chosen_validators s (h, v) (h', v')) \<or> \<not> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
     - 1 < v1_src \<Longrightarrow>
     \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
     prepared_by_rear s h1 v1 v1_src \<Longrightarrow>
     \<exists>h_src srcsrc.
        prepared_by_both s h_src v1_src srcsrc \<and>
        - 1 \<le> srcsrc \<and>
-       srcsrc < v1_src \<and> ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and> heir s (h_src, v1_src) (h1, v1)"
+       srcsrc < v1_src \<and> ancestor_descendant_with_chosen_validators s (h, v) (h_src, v1_src) \<and> heir s (h_src, v1_src) (h1, v1)"
 apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
  apply clarify
  apply(simp only: sourcing_def sourcing_normal.simps sourcing_switching_validators.simps)
@@ -2119,7 +2119,7 @@ apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
    apply simp
   apply(case_tac "v \<le> v1_src")
    apply(rule conjI)
-    using ancestor_descendant_with_no_coup_go_back apply blast
+    using ancestor_descendant_with_chosen_validators_go_back apply blast
    apply(rule_tac h' = h_anc and v' = v1_src in heir_normal_step)
      using heir_self apply blast
     apply auto[1]
@@ -2138,7 +2138,7 @@ apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
   apply simp
  apply(case_tac "v \<le> v1_src")
   apply(rule conjI)
-   using ancestor_descendant_with_no_coup_go_back apply blast
+   using ancestor_descendant_with_chosen_validators_go_back apply blast
   apply(rule_tac h' = h_anc and v' = v1_src in heir_switching_step)
     using heir_self apply blast
    apply auto[1]
@@ -2158,9 +2158,9 @@ lemma induction_step_following_back_history:
           - 1 \<le> v1_src \<longrightarrow>
           v1_src < v1 \<longrightarrow>
           0 \<le> v \<longrightarrow>
-          ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+          ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
           heir s (h, v) (h1, v1) \<or>
-          (\<exists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h') \<Longrightarrow>
+          (\<exists>h' v'. ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h') \<Longrightarrow>
        nat (v1 - v) \<le> Suc k \<Longrightarrow>
        validator_sets_finite s \<Longrightarrow>
        committed_by_both s h v \<Longrightarrow>
@@ -2168,8 +2168,8 @@ lemma induction_step_following_back_history:
        - 1 \<le> v1_src \<Longrightarrow>
        v1_src < v1 \<Longrightarrow>
        0 \<le> v \<Longrightarrow>
-       ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-       \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
+       ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
+       \<nexists>h' v'. ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
        heir s (h, v) (h1, v1)"
 apply(case_tac "v = v1")
  defer
@@ -2180,7 +2180,7 @@ apply(case_tac "v = v1")
      -1 \<le> srcsrc \<and>
      srcsrc < v1_src \<and>
      0 \<le> v \<and>
-     ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and>
+     ancestor_descendant_with_chosen_validators s (h, v) (h_src, v1_src) \<and>
      heir s (h_src, v1_src) (h1, v1)
    ")
    apply clarify
@@ -2215,10 +2215,10 @@ lemma follow_back_history_with_prepares_ind :
    -1 \<le> v1_src \<longrightarrow>
    v1_src < v1 \<longrightarrow>
    v \<ge> 0 \<longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
-     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
 apply(induction k)
  apply (simp add: younger_ancestor)
@@ -2232,10 +2232,10 @@ lemma follow_back_history_with_prepares :
    -1 \<le> v1_src \<Longrightarrow>
    v1_src < v1 \<Longrightarrow>
    0 \<le> v \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
-     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
 using follow_back_history_with_prepares_ind apply blast
 done
@@ -2258,7 +2258,7 @@ apply(simp add: one_third_of_rear_slashed_def)
 by (metis one_third_mp slashed_def slashed_one_on_rear' validator_sets_finite_def)
 
 
-lemma slashed_one_on_descendant_with_no_coup' :
+lemma slashed_one_on_descendant_with_chosen_validators' :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
    (\<exists> v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or>
@@ -2266,28 +2266,28 @@ lemma slashed_one_on_descendant_with_no_coup' :
 apply(simp add: committed_by_both_def one_third_of_fwd_or_rear_slashed_def)
 using slashed_one_on_rear by auto
 
-lemma slashed_one_on_descendant_with_no_coup :
+lemma slashed_one_on_descendant_with_chosen_validators :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h v \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
    (\<exists> v1_src. -1 \<le> v1_src \<and> v1_src < v1 \<and> prepared_by_both s h1 v1 v1_src) \<or>
    (\<exists> h' v'.
-     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
-using slashed_one_on_descendant_with_no_coup' by blast
+using slashed_one_on_descendant_with_chosen_validators' by blast
 
 lemma follow_back_history :
   "validator_sets_finite s \<Longrightarrow>
    committed_by_both s h v \<Longrightarrow>
    committed_by_both s h1 v1 \<Longrightarrow>
    0 \<le> v \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+   ancestor_descendant_with_chosen_validators s (h, v) (h1, v1) \<Longrightarrow>
    heir s (h, v) (h1, v1) \<or>
    (\<exists> h' v'.
-     ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+     ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
      one_third_of_fwd_or_rear_slashed s h')"
-using follow_back_history_with_prepares slashed_one_on_descendant_with_no_coup' by blast
+using follow_back_history_with_prepares slashed_one_on_descendant_with_chosen_validators' by blast
 
 
 
@@ -2297,7 +2297,7 @@ lemma fork_contains_legitimacy_fork :
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<or>
  (\<exists> h' v'.
-   ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+   ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h')"
 apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps fork.simps)
 using follow_back_history heir_chain_means_same_chain by blast
@@ -2307,19 +2307,19 @@ section "Accountable Safety for Any Fork"
 
 lemma heir_means_ad_no_coup :
   "heir s (h, v) (h', v') \<Longrightarrow>
-   ancestor_descendant_with_no_coup s (h, v) (h', v')
+   ancestor_descendant_with_chosen_validators s (h, v) (h', v')
   "
 apply(induction rule: heir.induct)
   apply (simp add: no_coup_self)
- using ancestor_descendant_with_no_coup_trans apply blast
-using ancestor_descendant_with_no_coup_trans by blast
+ using ancestor_descendant_with_chosen_validators_trans apply blast
+using ancestor_descendant_with_chosen_validators_trans by blast
 
 lemma accountable_safety_for_legitimacy_fork_weak :
 "validator_sets_finite s \<Longrightarrow>
  v \<ge> 0 \<Longrightarrow>
  legitimacy_fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
-   ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+   ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
 using accountable_safety_for_legitimacy_fork heir_means_ad_no_coup by blast
 
@@ -2329,7 +2329,7 @@ lemma accountable_safety :
  v \<ge> 0 \<Longrightarrow>
  fork_with_commits s (h, v) (h1, v1) (h2, v2) \<Longrightarrow>
  \<exists> h' v'.
-   ancestor_descendant_with_no_coup s (h, v) (h', v') \<and>
+   ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h'"
 using accountable_safety_for_legitimacy_fork_weak fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
 
