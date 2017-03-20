@@ -1843,12 +1843,17 @@ lemma commit_skipping :
     committed_by_both s h v \<Longrightarrow>
     prepared_by_both s h1 v1 v1_src \<Longrightarrow>
     - 1 \<le> v1_src \<Longrightarrow>
+    v \<noteq> v1 \<Longrightarrow>
     v1_src < v1 \<Longrightarrow>
     v1_src < v \<Longrightarrow>
     ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
     one_third_of_fwd_or_rear_slashed s h1
 "
-(* need to take the max commit *)
+apply(subgoal_tac
+    "\<exists> h_max v_max. committed_by_both s h_max v_max \<and>
+                       v1_src < v_max \<and>
+                       v_max < v1")
+
 sorry
 
 lemma slashed_two_essense :
