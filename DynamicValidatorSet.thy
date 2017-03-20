@@ -1838,22 +1838,52 @@ apply simp
 apply(case_tac "PrevHash s h1"; auto)
 done
 
-lemma use_slashed_two :
- " \<forall>v1. nat (v1 - v) \<le> k \<longrightarrow>
-           (committed_by_both s h v \<longrightarrow>
-                (\<forall>h1 v1_src.
-                    prepared_by_both s h1 v1 v1_src \<longrightarrow>
-                    - 1 \<le> v1_src \<longrightarrow>
-                    v1_src < v1 \<longrightarrow>
-                    0 \<le> v \<longrightarrow>
-                    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<longrightarrow>
-                    heir s (h, v) (h1, v1) \<or>
-                    (\<exists>h'. (\<exists>v'. ancestor_descendant_with_no_coup s (h, v) (h', v')) \<and>
-                          one_third_of_fwd_or_rear_slashed s h'))) \<Longrightarrow>
-    nat (v1 - v) \<le> Suc k \<Longrightarrow>
-    validator_sets_finite s \<Longrightarrow>
+lemma commit_skipping :
+   "validator_sets_finite s \<Longrightarrow>
     committed_by_both s h v \<Longrightarrow>
     prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+    - 1 \<le> v1_src \<Longrightarrow>
+    v1_src < v1 \<Longrightarrow>
+    v1_src < v \<Longrightarrow>
+    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
+    one_third_of_fwd_or_rear_slashed s h1
+"
+(* need to take the max commit *)
+sorry
+
+lemma slashed_two_essense :
+  "validator_sets_finite s \<Longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+    v1_src < v1 \<Longrightarrow>
+    0 \<le> v \<Longrightarrow>
+    - 1 < v1_src \<Longrightarrow>
+    \<not> one_third (RearValidators s h1) (slashed s) \<Longrightarrow>
+    prepared_by_rear s h1 v1 v1_src \<Longrightarrow> \<exists>h_anc. sourcing s h_anc (h1, v1, v1_src)"
+apply(subgoal_tac "\<not> one_third (RearValidators s h1) (slashed_two s)")
+ apply(subgoal_tac "\<exists> n. n \<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s")
+  using slashed_two_def apply blast
+ apply(subgoal_tac "0 < card {n. n \<in> RearValidators s h1 \<and> \<not> slashed_two s n \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s}")
+  apply (metis (no_types, lifting) Collect_empty_eq card_0_eq card_infinite less_not_refl2)
+ apply(subgoal_tac "one_third (RearValidators s h1) (\<lambda> n.  (\<not> slashed_two s n) \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s)")
+  apply(subgoal_tac "0 < card (RearValidators s h1)")
+   apply(simp add: one_third_def)
+  using card_gt_0_iff validator_sets_finite_def apply auto[1]
+ apply(subgoal_tac "two_thirds (RearValidators s h1) (\<lambda>n. (n, Prepare (h1, v1, v1_src)) \<in> Messages s)")
+  apply(subgoal_tac "two_thirds (RearValidators s h1) (\<lambda>n. \<not> slashed_two s n)")
+   apply(rule two_thirds_two_thirds_one_third)
+     using validator_sets_finite_def apply blast
+    apply blast
+   apply blast
+  using more_than_two_thirds_def not_one_third two_thirds_def validator_sets_finite_def apply auto[1]
+ using prepared_by_rear_def prepared_def two_thirds_sent_message_def apply auto[1]
+by (meson one_third_mp slashed_def validator_sets_finite_def)
+
+
+lemma use_slashed_two :
+ "  validator_sets_finite s \<Longrightarrow>
+    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
+    committed_by_both s h v \<Longrightarrow>
+     v \<noteq> v1 \<Longrightarrow>
     v1_src < v1 \<Longrightarrow>
     0 \<le> v \<Longrightarrow>
     ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
@@ -1867,38 +1897,48 @@ lemma use_slashed_two :
        srcsrc < v1_src \<and> ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and> heir s (h_src, v1_src) (h1, v1)"
 apply(subgoal_tac "\<exists> h_anc. sourcing s h_anc (h1, v1, v1_src)")
  apply clarify
- apply(auto simp only: sourcing_def sourcing_normal.simps sourcing_switching_validators.simps)
+ apply(simp only: sourcing_def sourcing_normal.simps sourcing_switching_validators.simps)
+ apply(erule disjE)
+  apply clarify
   apply(rule_tac x = h_anc in exI)
   apply(rule_tac x = v_ss in exI)
+  apply(rule conjI)
+   apply simp
+  apply(rule conjI)
+   apply simp
+  apply (rule conjI)
+   apply simp
   apply(case_tac "v \<le> v1_src")
-   apply auto
-     using ancestor_descendant_with_no_coup_go_back apply blast
-    apply(drule_tac x = v1_src in spec)
-    apply(subgoal_tac "nat (v1_src - v) \<le> k")
-     apply simp
-           
-      
-     
+   apply(rule conjI)
+    using ancestor_descendant_with_no_coup_go_back apply blast
+   apply(rule_tac h' = h_anc and v' = v1_src in heir_normal_step)
+     using heir_self apply blast
+    apply auto[1]
+   using ancestor_descendant_shorter apply blast
+  apply(subgoal_tac "one_third_of_fwd_or_rear_slashed s h1")
+   apply blast
+  apply (simp add: commit_skipping)
+ apply clarify
+ apply(rule_tac x = h_anc in exI)
+ apply(rule_tac x = v_ss in exI)
+ apply(rule conjI)
+  apply simp
+ apply(rule conjI)
+  apply simp
+ apply (rule conjI)
+  apply simp
+ apply(case_tac "v \<le> v1_src")
+  apply(rule conjI)
+   using ancestor_descendant_with_no_coup_go_back apply blast
+  apply(rule_tac h' = h_anc and v' = v1_src in heir_switching_step)
+    using heir_self apply blast
+   apply auto[1]
+  using ancestor_descendant_shorter apply blast
+ apply(subgoal_tac "one_third_of_fwd_or_rear_slashed s h1")
+  apply blast
+ apply (simp add: commit_skipping)
+using slashed_two_essense by blast
 
-
-
-sorry
- 
-
-lemma commit_skipping :
-   "nat (v1 - v) \<le> Suc k \<Longrightarrow>
-    validator_sets_finite s \<Longrightarrow>
-    committed_by_both s h v \<Longrightarrow>
-    prepared_by_both s h1 v1 v1_src \<Longrightarrow>
-    - 1 \<le> v1_src \<Longrightarrow>
-    v1_src < v1 \<Longrightarrow>
-    0 \<le> v \<Longrightarrow>
-    ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
-    \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
-    \<not> - 1 < v1_src \<Longrightarrow> heir s (h, v) (h1, v1)"
-
-
-sorry
 
 lemma induction_step_following_back_history:
       "\<forall>v1 h1 v1_src.
@@ -1922,8 +1962,10 @@ lemma induction_step_following_back_history:
        ancestor_descendant_with_no_coup s (h, v) (h1, v1) \<Longrightarrow>
        \<nexists>h' v'. ancestor_descendant_with_no_coup s (h, v) (h', v') \<and> one_third_of_fwd_or_rear_slashed s h' \<Longrightarrow>
        heir s (h, v) (h1, v1)"
-apply(case_tac "-1 < v1_src")
- apply(subgoal_tac
+apply(case_tac "v = v1")
+ defer
+ apply(case_tac "-1 < v1_src")
+  apply(subgoal_tac
    "\<exists> h_src srcsrc.
      prepared_by_both s h_src v1_src srcsrc \<and>
      -1 \<le> srcsrc \<and>
@@ -1932,24 +1974,31 @@ apply(case_tac "-1 < v1_src")
      ancestor_descendant_with_no_coup s (h, v) (h_src, v1_src) \<and>
      heir s (h_src, v1_src) (h1, v1)
    ")
-  apply clarify
-  apply(drule_tac x = v1_src in spec)
-  apply(drule_tac x = h_src in spec)
-  apply(drule_tac x = srcsrc in spec)
-  apply clarsimp
-  apply(subgoal_tac " nat (v1_src - v) \<le> k ")
-   using heir_trans apply blast
-  apply linarith
- apply(case_tac "one_third_of_rear_slashed s h1")
-  using one_third_of_fwd_or_rear_slashed_def apply blast
- apply(simp add: one_third_of_rear_slashed_def)
- apply(subgoal_tac "prepared_by_rear s h1 v1 v1_src")
-  using use_slashed_two apply blast
- using prepared_by_both_def apply blast
-using commit_skipping by blast
+   apply clarify
+   apply(drule_tac x = v1_src in spec)
+   apply(drule_tac x = h_src in spec)
+   apply(drule_tac x = srcsrc in spec)
+   apply clarsimp
+   apply(subgoal_tac " nat (v1_src - v) \<le> k ")
+    using heir_trans apply blast
+   apply linarith
+  apply(case_tac "one_third_of_rear_slashed s h1")
+   using one_third_of_fwd_or_rear_slashed_def apply blast
+  apply(simp add: one_third_of_rear_slashed_def)
+  apply(subgoal_tac "prepared_by_rear s h1 v1 v1_src")
+   using use_slashed_two apply blast
+  using prepared_by_both_def apply blast
+ apply(subgoal_tac "v1_src < v")
+  apply(subgoal_tac "one_third_of_fwd_or_rear_slashed s h1")
+   apply blast
+  using commit_skipping apply blast
+ apply linarith
+using prepared_self_is_heir apply blast
+done
+
 
 lemma follow_back_history_with_prepares_ind :
-  "\<forall> v v1 h h1 v1_src.
+  "\<forall> v1 h1 v1_src.
    nat (v1 - v) \<le> k \<longrightarrow>
    validator_sets_finite s \<longrightarrow>
    committed_by_both s h v \<longrightarrow>
