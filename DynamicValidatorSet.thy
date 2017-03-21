@@ -1948,8 +1948,12 @@ apply(subgoal_tac "nat (v1a - v) \<le> Suc k")
      apply simp
      apply(drule_tac x = ha in spec)
      apply simp
-     (* smt is not good *)
-     apply (smt ancestor_with_same_view inheritances_step prev_next_with_chosen_validators.simps prod.sel(2))
+     apply(erule disjE)
+      apply simp
+      apply(subgoal_tac "\<not> v1a + 1 \<le> v1a")
+       apply (metis ancestor_with_same_view prod.sel(2))
+      apply simp
+     using inheritances_step prev_next_with_chosen_validators.simps apply blast
     apply linarith
    apply blast
   apply blast
