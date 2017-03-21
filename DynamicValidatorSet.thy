@@ -2049,6 +2049,20 @@ lemma pick_max :
        v1_src < v_max \<and> v_max < v1 \<and> (validators_match s h_max h1 \<or> validators_change s h_max h1))"
 	by (simp add: pick_max_induction)
 
+lemma slashing_three_aux' :
+   "finite (RearValidators s h1) \<Longrightarrow>
+    one_third (RearValidators s h1)
+     (\<lambda>n. (n, Commit (h_max, v_max)) \<in> Messages s \<and>
+           (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<and> v1_src < v_max \<and> v_max < v1) \<Longrightarrow>
+    one_third (RearValidators s h1)
+     (\<lambda>n. \<exists>x y v w u. (n, Commit (x, v)) \<in> Messages s \<and> (n, Prepare (y, w, u)) \<in> Messages s \<and> u < v \<and> v < w)"
+apply(rule one_third_mp)
+  apply simp
+ defer
+ apply blast
+apply blast
+done
+
 lemma using_max :
       "validator_sets_finite s \<Longrightarrow>
        committed_by_both s h v \<Longrightarrow>
@@ -2072,8 +2086,9 @@ apply(subgoal_tac
 apply(subgoal_tac "    one_third (RearValidators s h1)
      (\<lambda>n. (n, Commit (h_max, v_max)) \<in> Messages s \<and> (n, Prepare (h1, v1, v1_src)) \<in> Messages s \<and>
            v1_src < v_max \<and> v_max < v1)")
- (* smt is not good *)
- apply (smt one_third_mp validator_sets_finite_def)
+ apply(rule slashing_three_aux')
+  using validator_sets_finite_def apply blast
+ apply blast
 apply(rule two_thirds_two_thirds_one_third)
   using validator_sets_finite_def apply blast
  apply(erule disjE)
