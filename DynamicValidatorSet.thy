@@ -62,7 +62,12 @@ record situation =
   Messages :: "signed_message set"
   PrevHash :: "hash \<Rightarrow> hash option"
 
-text "In the next section, we are going to determine which of the validators are slashed in a situation."
+definition validator_sets_finite :: "situation \<Rightarrow> bool"
+  where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h) \<and>
+                                         finite (RearValidators s h) \<and>
+                                         (\<not> (FwdValidators s h = {})) \<and>
+                                         (\<not> (RearValidators s h = {}))
+                                         )"
 
 text "A hash's previous hash's previous hash is a second-ancestor.  Later, we will see that an honest
 validator will send a prepare message only after seeing enough prepare messages for an ancestor of a
@@ -75,6 +80,14 @@ where
    (case PrevHash s h of
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
+
+definition ancestor_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where
+"ancestor_descendant s x y = (\<exists> n. nth_ancestor s n y = Some x)"
+
+definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
+where "on_same_chain s x y = (ancestor_descendant s x y \<or> ancestor_descendant s y x)"
+
 
 text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
 
@@ -159,6 +172,7 @@ where
 "committed_by_both s h v =
    (committed_by_rear s h v \<and> committed_by_fwd s h v)"
 
+
 text "One type of prepare source is the normal one.  The normal source needs to have the same 
 rear validator set and the same forward validator set."
 
@@ -191,6 +205,32 @@ where
 | no_coups_step: "ancestor_descendant_with_chosen_validators s (h0, v0) (h1, v1) \<Longrightarrow>
                   prev_next_with_chosen_validators s (h1, v1) (h2, v2) \<Longrightarrow>
                   ancestor_descendant_with_chosen_validators s (h0, v0) (h2, v2)"
+
+fun fork :: "situation \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             (hash \<times> view) \<Rightarrow>
+             (hash \<times> view) \<Rightarrow> bool"
+where
+"fork s (root, v) (h1, v1) (h2, v2) =
+  (\<not> on_same_chain s h1 h2 \<and>
+   ancestor_descendant_with_chosen_validators s (root, v) (h1, v1) \<and>
+   ancestor_descendant_with_chosen_validators s (root, v) (h2, v2))"
+
+fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
+where
+"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
+   (fork s (h, v) (h1, v1) (h2, v2) \<and>
+    committed_by_both s h v \<and>
+    committed_by_both s h1 v1 \<and>
+    committed_by_both s h2 v2)"
+
+
+
+section "Unclassified things"
+
+
+text "In the next section, we are going to determine which of the validators are slashed in a situation."
+
 
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
@@ -1508,12 +1548,6 @@ lemma accountable_safety_from_legitimacy_fork_with_high_root :
    one_third_of_fwd_slashed s h'"
 by (meson accountable_safety_from_legitimacy_fork_with_high_root_with_n legitimacy_fork_with_center_with_high_root_has_n_switching)
 
-definition validator_sets_finite :: "situation \<Rightarrow> bool"
-  where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h) \<and>
-                                         finite (RearValidators s h) \<and>
-                                         (\<not> (FwdValidators s h = {})) \<and>
-                                         (\<not> (RearValidators s h = {}))
-                                         )"
 
 lemma accountable_safety_center :
 "validator_sets_finite s \<Longrightarrow>
@@ -1566,31 +1600,6 @@ We are now going to turn any forks into such legitimacy forks.  A fork is simply
 hashes that form a forking shape.
 "
 
-definition ancestor_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where
-"ancestor_descendant s x y = (\<exists> n. nth_ancestor s n y = Some x)"
-
-definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
-where "on_same_chain s x y = (ancestor_descendant s x y \<or> ancestor_descendant s y x)"
-
-
-fun fork :: "situation \<Rightarrow>
-             (hash \<times> view) \<Rightarrow>
-             (hash \<times> view) \<Rightarrow>
-             (hash \<times> view) \<Rightarrow> bool"
-where
-"fork s (root, v) (h1, v1) (h2, v2) =
-  (\<not> on_same_chain s h1 h2 \<and>
-   ancestor_descendant_with_chosen_validators s (root, v) (h1, v1) \<and>
-   ancestor_descendant_with_chosen_validators s (root, v) (h2, v2))"
-
-fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
-where
-"fork_with_commits s (h, v) (h1, v1) (h2, v2) =
-   (fork s (h, v) (h1, v1) (h2, v2) \<and>
-    committed_by_both s h v \<and>
-    committed_by_both s h1 v1 \<and>
-    committed_by_both s h2 v2)"
 
 definition heir_or_self :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
@@ -2302,7 +2311,6 @@ lemma fork_contains_legitimacy_fork :
 apply(simp only: fork_with_commits.simps legitimacy_fork_with_commits.simps legitimacy_fork.simps fork.simps)
 using follow_back_history heir_chain_means_same_chain by blast
 
-section "Accountable Safety for Any Fork"
 
 
 lemma heir_means_ad_no_coup :
@@ -2323,6 +2331,8 @@ lemma accountable_safety_for_legitimacy_fork_weak :
    one_third_of_fwd_slashed s h'"
 using accountable_safety_for_legitimacy_fork heir_means_ad_no_coup by blast
 
+
+section "Accountable Safety for Any Fork (not skippable)"
 
 lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
