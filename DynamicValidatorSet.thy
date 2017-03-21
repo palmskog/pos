@@ -22,17 +22,25 @@ begin
 
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
 
+subsection "Hashes, Views and Validators"
+
 text "In this development we do not know much about hashes.  There are many hashes.
-Two hashes might be equal or not."
+Two hashes might be equal or not.  The intention is that the hashes identify blocks but we don't
+have to talk about that."
 
 datatype hash = Hash int
 
 text "Views are numbers.  We actually need the fact that views are lines up in a total order.
-Otherwise accountable safety can be broken."
+Otherwise accountable safety can be broken.  We sometimes subtract views and obtain a number.
+So, for convenience, views are just defined as integers.  Of course when we are multiplying a view
+by a view, that would be very strange."
 
 type_synonym view = int
 
-text "We have two kinds of messages.  A Commit message contains a hash and a view.  A prepare message contains a hash and two views.
+text "We have two kinds of messages.  A Commit message contains a hash and a view,
+indicating that a hash is to be finalized at a view.  Many signatures on this message would
+actually finalize the hash at the view.
+A prepare message contains a hash and two views.
 At this point a message is not signed by anybody."
 
 datatype message =
@@ -41,8 +49,7 @@ datatype message =
 
 text "We need a set of validators.  Here, we just define a datatype containing infinitely many
 validators.
-Afterwards, when we look at a particular situation, the situation would contain a finite set
-of validators."
+Afterwards, when we look at a particular situation, each hash would specify two validator sets."
 
 datatype validator = Validator int
 
@@ -50,8 +57,8 @@ text "A message signed by a validator can be represented as a pair of a validato
 
 type_synonym signed_message = "validator * message"
 
-text "Almost everything in this document depends on situations.  A situation contains a set
-of validators, a set of signed messages, and a function specifying parents of hashes."
+text "Almost everything in this document depends on situations.  A situation contains a set of
+signed messages, two validator sets for each hash, and a function specifying parents of hashes."
 
 text "A situation might be seen from a global point of view where every sent messages can be seen,
 or more likely seen from a local point of view."
@@ -62,16 +69,24 @@ record situation =
   Messages :: "signed_message set"
   PrevHash :: "hash \<Rightarrow> hash option"
 
+text "
+The accountable safety will make sure that at least one-third of the validators are slashed.
+In Isabelle/HOL, the cardinality of an infinite set is defined to be zero, so we will avoid that
+because it does not make sense to divide the cardinality of an infinite set by three.
+We should be talking
+about situations where the set of validators is finite.
+At the same time, we assume that the validator sets are not empty (I haven't tried to remove the
+non-emptiness assumption)."
+
 definition validator_sets_finite :: "situation \<Rightarrow> bool"
   where "validator_sets_finite s = (\<forall> h. finite (FwdValidators s h) \<and>
                                          finite (RearValidators s h) \<and>
                                          (\<not> (FwdValidators s h = {})) \<and>
-                                         (\<not> (RearValidators s h = {}))
-                                         )"
+                                         (\<not> (RearValidators s h = {})))"
 
 text "A hash's previous hash's previous hash is a second-ancestor.  Later, we will see that an honest
-validator will send a prepare message only after seeing enough prepare messages for an ancestor of a
-particular degree."
+validator will send a prepare message only after seeing enough prepare messages for the ancestor of a
+particular degree.  So we need to define what is the ancestor of a particular degree."
 
 fun nth_ancestor :: "situation \<Rightarrow> nat \<Rightarrow> hash \<Rightarrow> hash option"
 where
@@ -81,18 +96,27 @@ where
       None \<Rightarrow> None
     | Some h' \<Rightarrow> nth_ancestor s n h')"
 
+text "When hashes are connected by @{term nth_ancestor} relation,
+they are in ancestor-descendant relation."
+
 definition ancestor_descendant :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
 "ancestor_descendant s x y = (\<exists> n. nth_ancestor s n y = Some x)"
 
+text "When two hashes are in ancestor-descendant relation in any ordering,
+they are on the same chain."
+
 definition on_same_chain :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where "on_same_chain s x y = (ancestor_descendant s x y \<or> ancestor_descendant s y x)"
 
+subsection "When Hashes are Prepared and Committed"
 
-text "In the slashing condition, we will be talking about two-thirds of the validators doing something."
+text "Blocks can be finalized only when two-thirds of the validators commit on the block.
+Also, in the slashing conditions, we will be talking about two-thirds of the validators doing
+something."
 
-text "We can lift any predicate about a validator into a predicate about a situation:
-two thirds of the validators satisfy the predicate."
+text "We can lift any predicate about a validator into a predicate about a set of validators:
+that two thirds of the validators satisfy the predicate."
 
 definition two_thirds :: "validator set \<Rightarrow> (validator \<Rightarrow> bool) \<Rightarrow> bool"
 where
@@ -106,14 +130,15 @@ where
 "one_third vs f =
    (card vs \<le> 3 * card ({n. n \<in> vs \<and> f n}))"
 
-text "It matters when two-thirds of validators are saying something."
+text "It matters when two-thirds of validators say something."
 
 definition two_thirds_sent_message :: "situation \<Rightarrow> validator set \<Rightarrow> message \<Rightarrow> bool"
 where
 "two_thirds_sent_message s vs m =
    two_thirds vs (\<lambda> n. (n, m) \<in> Messages s)"
 
-text "A hash is prepared when two-thirds of the validators have sent a certain message."
+text "A hash is prepared when two-thirds of the validators have sent a Prepare message
+with the same content."
 
 definition prepared :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> view \<Rightarrow> bool"
 where
@@ -121,13 +146,12 @@ where
    (two_thirds_sent_message s vs (Prepare (h, v, vsrc)))"
 
 
-text "A hash is committed when two-thirds of the validators have sent a certain message."
+text "A hash is committed when two-thirds of the validators have sent a Commit message
+with the same content."
 
 definition committed :: "situation \<Rightarrow> validator set \<Rightarrow> hash \<Rightarrow> view \<Rightarrow> bool"
 where
 "committed s vs h v = two_thirds_sent_message s vs (Commit (h, v))"
-
-subsection "Prepare Messages' Sources"
 
 text "As we will see, honest validators should send a prepare message only when
 it has enough prepare messages at a particular view.  Those prepare messages need
@@ -173,6 +197,16 @@ where
    (committed_by_rear s h v \<and> committed_by_fwd s h v)"
 
 
+subsection "Following Changing Validators to Define Forks"
+
+text "In the accountable safety statement, we need to slash 2/3 of a set of validators.
+This set of validators cannot be any set, but some legitimately chosen descendant of the
+first sets of validators.  We need to look at the history and see what validator set
+inherits the seats.
+For this, we need to see the sourcing relation of pepare messages."
+
+text "The sourcing relation is also used in a slashing condition."
+
 text "One type of prepare source is the normal one.  The normal source needs to have the same 
 rear validator set and the same forward validator set."
 
@@ -184,8 +218,8 @@ where
 
 text "Another type of sourcing allows changing the validator sets.
 The forward validator set of the source needs to coincide with the
-rear validator set of the newly prepared hash.
-"
+rear validator set of the newly prepared hash.  This can only happen
+when the older hash has been committed by both validator sets."
 
 definition validators_change :: "situation \<Rightarrow> hash \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -201,10 +235,15 @@ where
 
 inductive ancestor_descendant_with_chosen_validators :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
-  no_coup_self: "ancestor_descendant_with_chosen_validators s (h, v) (h, v)"
-| no_coups_step: "ancestor_descendant_with_chosen_validators s (h0, v0) (h1, v1) \<Longrightarrow>
+  inheritance_self: "ancestor_descendant_with_chosen_validators s (h, v) (h, v)"
+| inheritances_step: "ancestor_descendant_with_chosen_validators s (h0, v0) (h1, v1) \<Longrightarrow>
                   prev_next_with_chosen_validators s (h1, v1) (h2, v2) \<Longrightarrow>
                   ancestor_descendant_with_chosen_validators s (h0, v0) (h2, v2)"
+
+text "Accountable safety will prevent forks (unless some number of validators are slashed).
+The fork is defined using two branches whose tips do not belong to the same chain.
+The branches are made of hashes with valid validator transitions (otherwise, sometimes,
+we cannot blame any validators for the fork)."
 
 fun fork :: "situation \<Rightarrow>
              (hash \<times> view) \<Rightarrow>
@@ -216,6 +255,8 @@ where
    ancestor_descendant_with_chosen_validators s (root, v) (h1, v1) \<and>
    ancestor_descendant_with_chosen_validators s (root, v) (h2, v2))"
 
+text "A fork is particularly harmful when their tips and the root are all committed."
+
 fun fork_with_commits :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "fork_with_commits s (h, v) (h1, v1) (h2, v2) =
@@ -224,14 +265,12 @@ where
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
-
-
-section "Unclassified things"
-
+subsection "Prepare Messages' Sources"
 
 text "In the next section, we are going to determine which of the validators are slashed in a situation."
 
-
+text "One slashing condition requires sources for prepare messages.  Here we define what constitutes
+a source."
 
 fun sourcing_normal :: "situation \<Rightarrow> hash \<Rightarrow> (hash \<times> view \<times> view) \<Rightarrow> bool"
 where
@@ -319,13 +358,11 @@ where
                 slashed_three s n \<or>
                 slashed_four s n)"
 
+text "We will be frequently talking about one-third of some validators being slashed."
+
 definition one_third_slashed :: "situation \<Rightarrow> validator set \<Rightarrow> bool"
 where
 "one_third_slashed s vs = one_third vs (slashed s)"
-
-text "However, since it does not make sense to divide the cardinality of an infinite set by three,
-we should be talking
-about situations where the set of validators is finite."
 
 definition one_third_of_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
@@ -335,9 +372,14 @@ definition one_third_of_fwd_slashed :: "situation \<Rightarrow> hash \<Rightarro
 where
 "one_third_of_fwd_slashed s h = one_third (FwdValidators s h) (slashed s)"
 
+text "In the end, accountable safety will slash at least one-third of fwd-or-rear validator sets."
+
 definition one_third_of_fwd_or_rear_slashed :: "situation \<Rightarrow> hash \<Rightarrow> bool"
 where
 "one_third_of_fwd_or_rear_slashed s h = (one_third_of_fwd_slashed s h \<or> one_third_of_rear_slashed s h)"
+
+
+section "Auxiliary Things (skippable)"
 
 subsection "Validator History Tracking"
 
@@ -409,8 +451,6 @@ where
     committed_by_both s h1 v1 \<and>
     committed_by_both s h2 v2)"
 
-
-section "Auxiliary Things (skippable)"
 
 subsection "Sets and Arithmetics"
 
@@ -728,7 +768,7 @@ lemma ancestor_descendant_with_chosen_validators_trans:
    ancestor_descendant_with_chosen_validators s (h0, v0) (h2, v2)"
 apply(induction rule: ancestor_descendant_with_chosen_validators.induct)
  apply blast
-using no_coups_step by blast
+using inheritances_step by blast
 
 
 lemma heir_decomposition :
@@ -1575,9 +1615,7 @@ lemma legitimacy_fork_with_center_and_root :
 apply simp
 using heir_initial by blast
 
-section "Accountable Safety for Legitimacy Fork (don't skip)"
-
-text "The statement of accountable safety is simple.  If a situation has a finite number of
+text "If a situation has a finite number of
       validators on each hash, a legitimacy fork means some validator set suffers 1/3 slashing.
       A legitimacy fork is defined using the @{term heir} relation.  The slashed validator set
       is also a heir of the original validator set.
@@ -1593,19 +1631,16 @@ lemma accountable_safety_for_legitimacy_fork :
    one_third_of_fwd_slashed s h'"
 using accountable_safety_center legitimacy_fork_with_center_and_root by blast
 
-section "Definitions Necessary for Accountable Safety (don't skip)"
-
 text "The above theorem only works for forks whose branches are made of the chain of sourcing.
 We are now going to turn any forks into such legitimacy forks.  A fork is simply three
 hashes that form a forking shape.
 "
 
-
 definition heir_or_self :: "situation \<Rightarrow> (hash \<times> view) \<Rightarrow> (hash \<times> view) \<Rightarrow> bool"
 where
 "heir_or_self s p0 p1 = (p0 = p1 \<or> heir s p0 p1)"
 
-section "Turning Any Fork into Legitimacy-Fork"
+subsection "Turning Any Fork into Legitimacy-Fork"
 
 lemma inherit_normal_means_ancestor_descendant :
   "inherit_normal s (h', v') (h'', v'') \<Longrightarrow>
@@ -1798,7 +1833,7 @@ apply(case_tac "v1_src = v1 - 1")
  apply(erule ancestor_descendant_with_chosen_validators.cases)
   apply simp
  apply(subgoal_tac "prev_next_with_chosen_validators s (h_anc, v1 - 1) (h1, v1)")
-  using no_coup_self no_coups_step apply blast
+  using inheritance_self inheritances_step apply blast
  apply clarify
  apply(simp only: prev_next_with_chosen_validators.simps)
  apply(rule conjI)
@@ -1830,7 +1865,7 @@ apply(subgoal_tac "\<exists> h_prev. PrevHash s h1 = Some h_prev")
    apply(subgoal_tac " nth_ancestor s (nat (v1 - 1 - v1_src)) h_prev = Some h_anc")
     apply(subgoal_tac "v1_src < v1 - 1")
      apply(subgoal_tac " ancestor_descendant_with_chosen_validators s (h_anc, v1_src) (h_prev, v1 - 1)")
-      apply(rule_tac  no_coups_step)
+      apply(rule_tac  inheritances_step)
        apply blast
       apply(simp)
       apply(erule ancestor_descendant_with_chosen_validators.cases)
@@ -1884,7 +1919,7 @@ apply(case_tac " committed_by_both s h1a v1a ")
    apply simp
    apply(subgoal_tac "ancestor_descendant_with_chosen_validators s (h1a, v1a) (h2, v1a + 1)")
     apply blast
-   using no_coup_self no_coups_step prev_next_with_chosen_validators.simps apply blast
+   using inheritance_self inheritances_step prev_next_with_chosen_validators.simps apply blast
   apply linarith
  apply(subgoal_tac "v \<le> v1a")
   apply linarith
@@ -1914,7 +1949,7 @@ apply(subgoal_tac "nat (v1a - v) \<le> Suc k")
      apply(drule_tac x = ha in spec)
      apply simp
      (* smt is not good *)
-     apply (smt ancestor_with_same_view no_coups_step prev_next_with_chosen_validators.simps prod.sel(2))
+     apply (smt ancestor_with_same_view inheritances_step prev_next_with_chosen_validators.simps prod.sel(2))
     apply linarith
    apply blast
   apply blast
@@ -2313,12 +2348,12 @@ using follow_back_history heir_chain_means_same_chain by blast
 
 
 
-lemma heir_means_ad_no_coup :
+lemma heir_means_ad_inheritance :
   "heir s (h, v) (h', v') \<Longrightarrow>
    ancestor_descendant_with_chosen_validators s (h, v) (h', v')
   "
 apply(induction rule: heir.induct)
-  apply (simp add: no_coup_self)
+  apply (simp add: inheritance_self)
  using ancestor_descendant_with_chosen_validators_trans apply blast
 using ancestor_descendant_with_chosen_validators_trans by blast
 
@@ -2329,10 +2364,14 @@ lemma accountable_safety_for_legitimacy_fork_weak :
  \<exists> h' v'.
    ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
    one_third_of_fwd_slashed s h'"
-using accountable_safety_for_legitimacy_fork heir_means_ad_no_coup by blast
+using accountable_safety_for_legitimacy_fork heir_means_ad_inheritance by blast
 
 
-section "Accountable Safety for Any Fork (not skippable)"
+section "Accountable Safety for Any Fork with Commits (not skippable)"
+
+text "Accountable safety states that, if there is a fork with commits, there is some legitimate heir
+of the validator sets of the root, of which 2/3 are slashed.
+"
 
 lemma accountable_safety :
 "validator_sets_finite s \<Longrightarrow>
