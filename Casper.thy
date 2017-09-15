@@ -30,9 +30,9 @@ begin
 
 inductive hash_ancestor (infix "\<leftarrow>\<^sup>*" 50) where 
   "h1 \<leftarrow> h2 \<Longrightarrow> h1 \<leftarrow>\<^sup>* h2"
-| "\<lbrakk>h1 \<leftarrow>\<^sup>* h2; h2 \<leftarrow>\<^sup>* h3\<rbrakk> \<Longrightarrow> h1 \<leftarrow>\<^sup>* h3"
+| "\<lbrakk>h1 \<leftarrow> h2; h2 \<leftarrow>\<^sup>* h3\<rbrakk> \<Longrightarrow> h1 \<leftarrow>\<^sup>* h3"
 
-lemmas casper_assms_def = casper_def class.linorder_def class.order_def
+lemmas casper_assms_def = casper_def casper_axioms_def class.linorder_def class.order_def
     class.preorder_def class.order_axioms_def class.linorder_axioms_def byz_quorums_def
     class.order_bot_def class.order_bot_axioms_def
 
@@ -67,21 +67,21 @@ definition slashed where "slashed s n \<equiv>
 lemma assumes "fork s"
   shows "\<exists> q . \<forall> n . n \<in>\<^sub>2 q \<longrightarrow> slashed s n"
   using [[]]
-  nitpick[verbose, card 'b=2, card 'c=2, card 'a=5, card 'v=8, card 'h=7, card 'd=1,
+  nitpick[verbose, card 'b=2, card 'c=2, card 'a=5, card 'v=4, card 'h=3, card 'd=1,
       card "('a, 'h, 'v, 'd) state_scheme" = 1, dont_box, timeout=300] (*,
       eval="(slashed s, committed s)"] *)
   using assms casper_axioms
   apply -
   unfolding slashed_def slashed_1_def slashed_2_def slashed_4_def slashed_3_def
-      prepared_def fork_def committed_def slashed_2a_def
+      prepared_def fork_def committed_def
   apply (cases s)
   apply simp
+  using hash_ancestor.intros
   unfolding casper_assms_def
   apply (simp (no_asm_use))
   apply (match premises in P[thin]:"?x = ?y" \<Rightarrow> \<open>-\<close>)
   apply clarify
-  oops
-  using [[smt_timeout=3000,smt_oracle=true,smt_random_seed=456363655542,smt_certificates="./casper.cert"]]
+  using [[smt_infer_triggers,smt_timeout=3000,smt_oracle=true,smt_random_seed=8789797972,smt_certificates="./casper.cert"]]
   sledgehammer[timeout=5000, provers=z3 spass]()
 
 
