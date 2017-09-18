@@ -44,12 +44,7 @@ lemma "\<lbrakk>nth_ancestor (n+1) h1 h2; h3 \<leftarrow> h2\<rbrakk> \<Longrigh
   
 lemmas casper_assms_def = casper_def casper_axioms_def byz_quorums_def
 
-lemma "h1 \<leftarrow>\<^sup>* h2 \<Longrightarrow> \<not> h2 \<leftarrow>\<^sup>* h1" 
-  nitpick[no_assms,verbose, card 'h=2, eval="(op \<leftarrow>,UNIV::'h set)"]
-    -- "The definition allows loops."
-  oops
-
-  text {* All messages in epoch @{term 0} are ignored;  @{term 0} is used as a special value. 
+text {* All messages in epoch @{term 0} are ignored;  @{term 0} is used as a special value.
   This appears in the following definitions. *}
 
 definition prepared' where
@@ -87,20 +82,6 @@ lemmas slashed_defs = slashed_def slashed_1_def slashed_2_def slashed_4_def slas
 
 lemmas order_defs = class.linorder_axioms_def class.linorder_def class.order_def class.preorder_def class.order_axioms_def class.order_bot_def class.order_bot_axioms_def linorder_axioms[where ?'a=nat]
 lemmas casper_defs = slashed_defs prepared_def fork_def committed_def casper_assms_def
-
-lemma assumes "\<not>one_third_slashed s" and "committed s q1 h1 v1" and "committed s q2 h2 v2"
-  and "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow>\<^sup>* h1" shows False
-  nitpick[verbose, card 'b=1, card 'c=1, card 'a=1, card nat=3, card 'h=2, card 'd=1,
-      card "('a, 'h, nat, 'd) state_scheme" = 1, dont_box, timeout=300, eval="(\<lambda> h v1 v2 . \<exists> q . prepared s q h v1 v2)"]
-  -- "The slashing conditions allow loops in the block chain."
-  oops
-
-lemma assumes "\<not>one_third_slashed s" and "committed s q h v"
-  obtains q0 h0 v0 where "prepared s q0 h0 1 v0"
-  nitpick[verbose, card 'b=1, card 'c=1, card 'a=1, card nat=3, card 'h=2, card 'd=1,
-      card "('a, 'h, nat, 'd) state_scheme" = 1, dont_box, timeout=300, eval="fork s"]
-  -- "The slashing conditions allow a chain not anchored at 0."
-  oops
 
 lemma l1: assumes "prepared s q1 h1 v1 v2" and "committed s q2 h2 v3" and "v1 > v3" and "\<not>one_third_slashed s"
   shows "v1 > v2 \<and> v2 \<ge> v3"
@@ -186,5 +167,21 @@ proof -
       by (metis less_le not_less)
   qed
 qed
+
+text "Just two observations:"
+
+lemma assumes "\<not>one_third_slashed s" and "committed s q1 h1 v1" and "committed s q2 h2 v2"
+  and "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow>\<^sup>* h1" shows False
+  nitpick[verbose, card 'b=1, card 'c=1, card 'a=1, card nat=3, card 'h=2, card 'd=1,
+      card "('a, 'h, nat, 'd) state_scheme" = 1, dont_box, timeout=300, eval="(\<lambda> h v1 v2 . \<exists> q . prepared s q h v1 v2)"]
+  -- "The slashing conditions allow loops in the block chain."
+  oops
+
+lemma assumes "\<not>one_third_slashed s" and "committed s q h v"
+  obtains q0 h0 v0 where "prepared s q0 h0 1 v0"
+  nitpick[verbose, card 'b=1, card 'c=1, card 'a=1, card nat=3, card 'h=2, card 'd=1,
+      card "('a, 'h, nat, 'd) state_scheme" = 1, dont_box, timeout=300, eval="fork s"]
+  -- "The slashing conditions allow a chain not anchored at 0."
+  oops
 
 end
