@@ -87,7 +87,7 @@ lemma l1: assumes "prepared s q1 h1 v1 v2" and "committed s q2 h2 v3" and "v1 > 
 (*<*)  nitpick[verbose, card 'b=1, card 'c=1, card 'a=1, card nat=5, card 'h=4, card 'd=1,
       card "('a, 'h, 'd) state_scheme" = 1, dont_box, timeout=300, eval="fork s"] (*>*)
   using assms casper_axioms linorder_axioms[where ?'a=nat] unfolding casper_defs order_defs
-  by smt
+  by metis
 
 lemma l2: assumes "nth_ancestor n h1 h2" and "nth_ancestor m h2 h3" 
   shows "nth_ancestor (n+m) h1 h3" 
@@ -111,7 +111,7 @@ proof -
       proof (cases "v2=v3")
         case True
         then show ?thesis using less(2-5) casper_axioms linorder_axioms[where ?'a=nat]
-          using [[smt_solver=cvc4]] by (simp add: casper_defs, unfold order_defs) smt
+          using [[smt_solver=cvc4]] by (auto simp add: casper_defs, unfold order_defs) smt
       next
         case False
         obtain q3 h3 v4 where 1:"nth_ancestor (v1-v2) h3 h1" and 2:"prepared s q3 h3 v2 v4"
