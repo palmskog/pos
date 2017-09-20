@@ -77,9 +77,10 @@ definition slashed_4 where
 definition slashed where "slashed s n \<equiv> 
   slashed_1 s n \<or> slashed_2 s n \<or> slashed_3 s n \<or> slashed_4 s n"
 definition one_third_slashed where "one_third_slashed s \<equiv> \<exists> q . \<forall> n . n \<in>\<^sub>2 q \<longrightarrow> slashed s n"
-lemmas slashed_defs = slashed_def slashed_1_def slashed_2_def slashed_4_def slashed_3_def one_third_slashed_def
 
-lemmas order_defs = class.linorder_axioms_def class.linorder_def class.order_def class.preorder_def class.order_axioms_def class.order_bot_def class.order_bot_axioms_def linorder_axioms[where ?'a=nat]
+lemmas slashed_defs = slashed_def slashed_1_def slashed_2_def slashed_4_def slashed_3_def one_third_slashed_def
+lemmas order_defs = class.linorder_axioms_def class.linorder_def class.order_def class.preorder_def 
+  class.order_axioms_def class.order_bot_def class.order_bot_axioms_def linorder_axioms[where ?'a=nat]
 lemmas casper_defs = slashed_defs prepared_def fork_def committed_def casper_assms_def
 
 lemma l1: assumes "prepared s q1 h1 v1 v2" and "committed s q2 h2 v3" and "v1 > v3" and "\<not>one_third_slashed s"
@@ -104,14 +105,20 @@ lemma l3: assumes "prepared s q1 h1 v1 v2" and "committed s q2 h2 v3" and "v1 > 
 proof -
   show ?thesis using assms
   proof (induct "v1 - v3" arbitrary: v1 v2 v3 q1 q2 h1 h2 rule:less_induct)
+    -- "This is complete induction"
     case less then show ?case 
     proof (cases "v1-v3=0")
-      case True then show ?thesis using less.prems(3) by linarith  next
+      case True then show ?thesis using less.prems(3) by linarith  
+    next
       case False then show ?thesis
       proof (cases "v2=v3")
         case True
-        then show ?thesis using less(2-5) casper_axioms linorder_axioms[where ?'a=nat]
-          using [[smt_solver=cvc4]] by (auto simp add: casper_defs, unfold order_defs) smt
+        obtain v4 q3 where 1:"prepared s q3 h2 v2 v4"
+          by (metis True byz_quorums_axioms byz_quorums_def committed_def less.prems(2,4) one_third_slashed_def slashed_1_def slashed_def) 
+        moreover have 3:"h3 = h2 \<and> v5 = v4" if "prepared s q4 h3 v2 v5" for q4 h3 v5
+          by (metis "1" byz_quorums_axioms byz_quorums_def less.prems(4) one_third_slashed_def prepared_def slashed_4_def slashed_def that)
+        ultimately show ?thesis using less(2,5) byz_quorums_axioms True
+          by (simp only: casper_defs) metis
       next
         case False
         obtain q3 h3 v4 where 1:"nth_ancestor (v1-v2) h3 h1" and 2:"prepared s q3 h3 v2 v4"
