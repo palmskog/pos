@@ -10,7 +10,9 @@ In Alloy, *enable Options->Forbid Overflow*
 
 ## Some Isabelle/HOL Proofs
 
-`MinimumAlgo.thy` contains some proofs about safety and liveness of a protocol.  Open the file with [Isabelle 2016-1](http://isabelle.in.tum.de/).
+`Casper.thy` contains a very short proof about the safety property of a protocol.
+
+`MinimumAlgo.thy` contains some older, 100x longer proofs about safety and liveness of the same protocol.  Open the file with [Isabelle 2016-1](http://isabelle.in.tum.de/).
 
 Or, adjust the path in `document_generation.sh` and run it to obtain a PDF file (which should look like [this one](https://yoichihirai.com/minimal.pdf)).
 
