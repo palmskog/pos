@@ -717,14 +717,14 @@ lemma safety_sub_ind :
    not_on_same_chain s x y \<longrightarrow>
    two_thirds_sent_message s (Commit (x, v1)) \<longrightarrow>
    two_thirds_sent_message s (Commit (y, v2)) \<longrightarrow>
-   prepared s x v1' vs1 \<longrightarrow>
-   prepared s y v2' vs2 \<longrightarrow>
-   v1' \<ge> v2 \<or> v2' \<ge> v1 \<longrightarrow>
-   - 1 \<le> vs1 \<longrightarrow> vs1 < v1' \<longrightarrow> - 1 \<le> vs2 \<longrightarrow> vs2 < v2' \<longrightarrow> one_third_slashed s"
+   prepared s x v1 vs1 \<longrightarrow>
+   prepared s y v2 vs2 \<longrightarrow>
+   v1 \<ge> v2 \<or> v2 \<ge> v1 \<longrightarrow>
+   - 1 \<le> vs1 \<longrightarrow> vs1 < v1 \<longrightarrow> - 1 \<le> vs2 \<longrightarrow> vs2 < v2 \<longrightarrow> one_third_slashed s"
 apply(auto)
- apply(rule_tac s = s and c_view = v2 and v = v1' and n = "nat (v1' - v2)"
+ apply(rule_tac s = s and c_view = v2 and v = v1 and n = "nat (v1 - v2)"
        in safety_sub_ind''; simp?)
-apply(rule_tac s = s and c_view = v1 and v = v2' and n = "nat (v2' - v1)"
+apply(rule_tac s = s and c_view = v1 and v = v2 and n = "nat (v2 - v1)"
        in safety_sub_ind''; simp?)
 done
  
