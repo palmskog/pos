@@ -15,6 +15,8 @@ limitations under the License.
 */
 module votes
 
+enum Bool { True, False }
+
 abstract sig Node {}
 sig SaneNode extends Node {}
 sig SlashedNode extends Node {}
@@ -23,9 +25,18 @@ sig View {
   v_prev: lone View
 }
 
-sig Hash { // actually (H, v)
+abstract sig Hash { // actually (H, v)
   h_prev: lone Hash,
   h_view: one View
+}
+
+abstract sig JustifiedHash extends Hash{ finalized : Bool }
+sig Genesis extends JustifiedHash{}
+sig JustifiedNonGenesis extends JustifiedHash{}
+sig NonJustifiedHash extends Hash{}
+
+fact {
+   all g0, g1 : Genesis | g0 = g1
 }
 
 fact {
@@ -88,26 +99,30 @@ pred DBL_VOTE (s : Node) {
     vote0 != vote1 && vote0.sender = s && vote1.sender = s && vote0.epoch = vote1. epoch
 }
 
+pred SURROUND (s : Node) {
+  some vote1, vote2 : Vote |
+    vote1.epoch in vote2.epoch.(^v_prev) && vote2.source in vote1.source.(^v_prev)
+}
 
 fact {
-   { n : Node | n.DBL_VOTE } = { n : Node | not n in SaneNode }
+   { n : Node | n.DBL_VOTE or n.SURROUND } = { n : Node | not n in SaneNode }
 }
 
 
-/*
+
 pred incompatible_commits {
 
    some Node &&
    some h0, h1 : Hash | (not h0 in h1.(*h_prev)) &&
     (not h1 in h0.(*h_prev)) &&
-    (#{n0 : Node | some c0 : Commit | c0.c_sender = n0 && c0.c_hash = h0}).mul[3] >= (#Node).mul[2] &&
-    (#{n1 : Node | some c1 : Commit | c1.c_sender = n1 && c1.c_hash = h1}).mul[3] >= (#Node).mul[2] &&
+    (#{n0 : Node | some c0 : Vote | c0.sender = n0 && c0.checkpoint = h0}).mul[3] >= (#Node).mul[2] &&
+    (#{n1 : Node | some c1 : Vote | c1.sender = n1 && c1.checkpoint = h1}).mul[3] >= (#Node).mul[2] &&
     (#SlashedNode).mul[3] < (#Node)
 }
-*/
+
 
 // how to do the degree of ancestors
 
 // run ownPrev for 10
 
-run two_votes for 4
+run incompatible_commits for 4
