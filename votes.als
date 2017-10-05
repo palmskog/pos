@@ -65,6 +65,11 @@ pred some_votes {
      vote.sender in SaneNode
 }
 
+pred two_votes {
+  some vote0, vote1 : Vote |
+    vote0.sender = vote1.sender && vote0.sender in SaneNode
+}
+
 fact {
   all h : Hash |
     h.h_prev.h_view = h.h_view.v_prev
@@ -74,11 +79,20 @@ fact {
   all v0, v1 : View | v0 in v1.(*v_prev) or v1 in v0.(*v_prev)
 }
 
-/*
 fact {
-   { n : Node | n.slashed1 } = { n : Node | not n in SaneNode }
+  all vote : Vote | vote.checkpoint.h_view = vote.epoch
 }
-*/
+
+pred DBL_VOTE (s : Node) {
+  some vote0, vote1 : Vote |
+    vote0 != vote1 && vote0.sender = s && vote1.sender = s && vote0.epoch = vote1. epoch
+}
+
+
+fact {
+   { n : Node | n.DBL_VOTE } = { n : Node | not n in SaneNode }
+}
+
 
 /*
 pred incompatible_commits {
@@ -96,4 +110,4 @@ pred incompatible_commits {
 
 // run ownPrev for 10
 
-run some_votes for 4
+run two_votes for 4
