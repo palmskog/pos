@@ -30,14 +30,10 @@ abstract sig Hash { // actually (H, v)
   h_view: one View
 }
 
-abstract sig JustifiedHash extends Hash{ finalized : Bool }
-sig Genesis extends JustifiedHash{}
-sig JustifiedNonGenesis extends JustifiedHash{}
+abstract sig JustifiedHash extends Hash{}
+one sig Genesis extends JustifiedHash{}
+sig JustifiedNonGenesis extends JustifiedHash{ justification : one JustifiedHash }
 sig NonJustifiedHash extends Hash{}
-
-fact {
-   all g0, g1 : Genesis | g0 = g1
-}
 
 fact {
   no x : Hash | x in x.(^h_prev)
@@ -56,17 +52,6 @@ sig Vote {
   sender : one Node // TODO: 'one' here might not be necessary
 }
 
-// sig Commit {
-//  c_hash : Hash,
-//  c_sender: one Node
-//}
-
-// sig Prepare {
-//  p_hash : Hash,
-//  p_view_src : View,
-//  p_sender: one Node
-//}
-
 fact {
    all vote : Vote | vote.source in (vote.checkpoint.h_view.(^v_prev))
 }
@@ -79,6 +64,24 @@ pred some_votes {
 pred two_votes {
   some vote0, vote1 : Vote |
     vote0.sender = vote1.sender && vote0.sender in SaneNode
+}
+
+pred justification_link [h_src, h : Hash] {
+   h_src in h.(^h_prev) &&
+   (#{n : Node | some vote : Vote | vote.sender = n && vote.checkpoint = h && vote.source = h_src.h_view}).mul[3] >= (#Node).mul[2]
+}
+
+pred finalized(h : JustifiedNonGenesis)
+{
+   some child : JustifiedNonGenesis | child.h_prev = h && justification_link[h, child]
+}
+
+fact {
+   all j : JustifiedNonGenesis | justification_link[j.justification, j]
+}
+
+fact {
+  all j : JustifiedNonGenesis | Genesis in j.(^justification)
 }
 
 fact {
@@ -113,7 +116,7 @@ fact {
 pred incompatible_commits {
 
    some Node &&
-   some h0, h1 : Hash | (not h0 in h1.(*h_prev)) &&
+   some h0, h1 : JustifiedNonGenesis | h0.finalized && h1.finalized && (not h0 in h1.(*h_prev)) &&
     (not h1 in h0.(*h_prev)) &&
     (#{n0 : Node | some c0 : Vote | c0.sender = n0 && c0.checkpoint = h0}).mul[3] >= (#Node).mul[2] &&
     (#{n1 : Node | some c1 : Vote | c1.sender = n1 && c1.checkpoint = h1}).mul[3] >= (#Node).mul[2] &&
@@ -125,4 +128,4 @@ pred incompatible_commits {
 
 // run ownPrev for 10
 
-run incompatible_commits for 4
+run incompatible_commits for 10
