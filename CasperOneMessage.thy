@@ -2,6 +2,8 @@ theory CasperOneMessage
   imports Main
 begin
 
+text {* This formalization is a modification of Casper.thy by Giuliano Losa. *}
+
 text {* We use first-order modeling as much as possible. This allows to reduce the size of the model, 
   and also the size of the proofs from more than 1000 lines in Yoichi's proof to less than a 100. *}
 
