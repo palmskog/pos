@@ -10,6 +10,8 @@ In Alloy, *enable Options->Forbid Overflow*
 
 ## Some Isabelle/HOL Proofs
 
+Isabelle2017 should work.
+
 `Casper.thy` contains a very short proof about the safety property of a protocol.
 
 `MinimumAlgo.thy` contains some older, 100x longer proofs about safety and liveness of the same protocol.  Open the file with [Isabelle 2016-1](http://isabelle.in.tum.de/).
