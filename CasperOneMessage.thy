@@ -168,7 +168,7 @@ qed
 
 lemma l03: assumes "justified_link s q1 h2 v2 h1 v1" and "finalized s q2 h3 v3 c3" and "v1 > v3 + 1"
           and "\<not> h3 \<leftarrow>\<^sup>* h1" and "v2 < v3"
-          shows "one_third_slashed s"
+        shows "one_third_slashed s"
 using assms proof(simp)
   have "\<exists> q . \<forall> n . n \<in>\<^sub>2 q \<longrightarrow> slashed_SURROUND s n"
     using assms(1) assms(2) assms(3) assms(4) assms(5) l04 by blast
@@ -189,38 +189,6 @@ next
     using assms(3) by linarith
   then show ?thesis
     using assms(1) assms(2) assms(4) assms(5) l03 by blast
-qed
-
-lemma l1: assumes "justified_link s q1 h2 v2 h1 v1" and "finalized s q2 h3 v3 c3" and "v1 > v3"
-          and "\<not>one_third_slashed s" and "\<not> h3 \<leftarrow>\<^sup>* h1"
-  shows "v2 \<ge> v3"
-proof (cases "v2 < v3")
-  case True
-  then show ?thesis using assms l00 by blast
-next
-  case False
-  then show ?thesis
-    using assms by auto
-qed
-
-
-lemma l2: assumes "nth_ancestor n h1 h2" and "nth_ancestor m h2 h3" 
-  shows "nth_ancestor (n+m) h1 h3" 
-  using assms 
-proof (induct m arbitrary: h1 h2 h3)
-  case 0 then show ?case using nth_ancestor.cases by auto
-next
-  case (Suc m)
-  then show ?case by (metis Suc_eq_plus1 add_Suc_right nth_ancestor.simps nth_ancestor_succ)
-qed
-
-lemma l4:assumes "nth_ancestor n (h1::'h) h2" shows "h1 \<leftarrow>\<^sup>* h2 \<or> h1 = h2" using assms
-proof (induct n arbitrary:h1 h2)
-  case 0 then show ?case using zeroth_ancestor by auto
-next
-  case (Suc n)
-  obtain h3 where 1:"h3 \<leftarrow> h2" and 2:"nth_ancestor n h1 h3" using nth_ancestor_succ Suc.prems by (metis Suc_eq_plus1) 
-  show ?case using Suc.hyps[OF 2] 1 hash_ancestor_intro' by blast 
 qed
 
 lemma l5sub:
@@ -249,21 +217,18 @@ lemma l5'' :
  h1 = new"
 proof -
  assume a1: "justified_link s q parent pre new now"
- have b1: "\<forall> n. n \<in>\<^sub>1 q \<longrightarrow> vote_msg s n new now pre"
-	 by (meson a1 casper.justified_link_def casper_axioms)
  assume a2: "justified_link s q1 parent1 pre1 h1 v1"
- have b2: "\<forall> n. n \<in>\<^sub>1 q1 \<longrightarrow> vote_msg s n h1 v1 pre1"	
-   by (meson a2 casper.justified_link_def casper_axioms)
  have "\<exists> q2. \<forall> n. n \<in>\<^sub>2 q2 \<longrightarrow> n \<in>\<^sub>1 q \<and> n \<in>\<^sub>1 q1"
     using byz_quorums_axioms byz_quorums_def by fastforce
  then obtain q2 where q2good: "\<forall> n. n \<in>\<^sub>2 q2 \<longrightarrow> n \<in>\<^sub>1 q \<and> n \<in>\<^sub>1 q1" by blast
- have vv: "\<forall> n. n \<in>\<^sub>2 q2 \<longrightarrow> vote_msg s n new now pre \<and> vote_msg s n h1 v1 pre1" by (simp add: b1 b2 q2good)
+  have vv: "\<forall> n. n \<in>\<^sub>2 q2 \<longrightarrow> vote_msg s n new now pre \<and> vote_msg s n h1 v1 pre1"
+    by (meson a1 a2 casper.justified_link_def casper_axioms q2good)
  assume a3: "\<not> one_third_slashed s"
  assume a4: "now = v1"
- show ?thesis proof(cases "h1 = new")
+ show ?thesis
+   proof(cases "h1 = new")
  	 case True
- 	 then show ?thesis
- 	 	 by simp
+ 	 then show ?thesis by simp
  next
  	 case False
    have "\<forall> n. n \<in>\<^sub>2 q2 \<longrightarrow> slashed_DBL_VOTE s n" using vv False a4 l5sub by blast
@@ -279,34 +244,7 @@ lemma l5':
   \<not> one_third_slashed s \<Longrightarrow>
   h1 \<noteq> h2 \<Longrightarrow>
   v2 \<noteq> v1"
-proof(induction rule: justified.inducts)
-  case (orig s)
-  then show ?case
-  	by (meson gr_implies_not0 justified.cases l0)
-next
-  case (follow s parent pre q new now)
-  have "justified s h1 v1"
-  	by (simp add: follow.prems(1))
-  then have "((\<exists>s'. s = s' \<and> h1 = genesis \<and> v1 = 0) \<or>
-     (\<exists>s' parent pre q new1 now1. s = s' \<and> h1 = new1 \<and> v1 = now1 \<and> justified s' parent pre \<and> justified_link s' q parent pre new1 now1))
-  " (is "?c1 \<or> ?c2")	by (meson justified.cases)
-  then show ?case proof
-      assume a: "?c1"
-      have hg: "h1 = genesis" using a by blast
-      have v: "v1 = 0" using a by blast
-      have no: "justified_link s q parent pre new now" using follow.hyps(2) by auto
-      show ?thesis using l0 no v by force
-    next
-      assume a: "?c2"
-      have no: "justified_link s q parent pre new now" using follow.hyps(2) by auto
-      obtain s' parent1 pre1 q1 new1 now1 where a1: "s = s' \<and> h1 = new1 \<and> v1 = now1 \<and>
-            justified s' parent1 pre1 \<and> justified_link s' q1 parent1 pre1 new1 now1" using a by blast
-      have no2: "justified_link s q1 parent1 pre1 h1 v1" using a1 by blast
-      have diff : "h1 \<noteq> new" by (simp add: follow.prems(3))
-      show ?thesis
-      	using a diff follow.prems(2) l5'' no by blast
-    qed
-qed
+  by (metis justified.cases l0 l5'' not_less0)
 
 lemma l5:
   assumes "finalized s q2 h2 v2 xa"
@@ -325,17 +263,13 @@ lemma non_equal_case_ind:
  shows "one_third_slashed s"
 using assms proof (induct "v1 - v2" arbitrary: h1 v1 rule:less_induct)
   case less
-    then have ih: "\<And>v1a h1. v1a - v2 < v1 - v2 \<Longrightarrow>
-                       justified s h1 v1a \<Longrightarrow>
-                       finalized s q2 h2 v2 xa \<Longrightarrow> \<not> h2 \<leftarrow>\<^sup>* h1 \<Longrightarrow> h1 \<noteq> h2 \<Longrightarrow> v2 < v1a \<Longrightarrow> one_third_slashed s"
-      by auto
     have "(h1 = genesis \<and> v1 = 0) \<or>
             (\<exists> q parent pre. justified s parent pre \<and> justified_link s q parent pre h1 v1)"
          (is "?caseL \<or> ?caseR")
       using justified.simps less.prems(1) by blast
     moreover have "?caseL \<longrightarrow> ?thesis" using assms
       using less.prems(5) by blast
-    moreover have "?caseR \<Longrightarrow> ?thesis" using assms ih proof(cases "one_third_slashed s")
+    moreover have "?caseR \<Longrightarrow> ?thesis" using assms proof(cases "one_third_slashed s")
     	case True
     	then show ?thesis	by simp
     next
@@ -343,30 +277,8 @@ using assms proof (induct "v1 - v2" arbitrary: h1 v1 rule:less_induct)
       have sanity: "\<not> one_third_slashed s"	by (simp add: False)
       assume "\<exists>q parent pre. justified s parent pre \<and> justified_link s q parent pre h1 v1"
       then obtain q1 parent pre where link: "justified s parent pre \<and> justified_link s q1 parent pre h1 v1" by blast
-      then have pre_small: "pre < v1" using l0 by blast
-      have "v1 > v2" by (simp add: less.prems(5))
-      moreover have "justified_link s q1 parent pre h1 v1" by (simp add: link)
-      moreover have "\<not> h2 \<leftarrow>\<^sup>* h1" 	by (simp add: less.prems(3))
-      ultimately have pre_big: "pre \<ge> v2"
-      	using l00 less.prems(2) not_le_imp_less sanity by blast
-      have a1: "pre - v2 < v1 - v2"
-      	using diff_less_mono pre_big pre_small by blast
-      have a2: " justified s parent pre"
-      	using link by auto
-      have ph: "parent \<leftarrow>\<^sup>* h1"
-      	using justified_means_ancestor link by blast
-      moreover have "\<not> h2  \<leftarrow>\<^sup>* h1"
-      	by (simp add: less.prems(3))
-      ultimately have a4: "\<not> h2 \<leftarrow>\<^sup>* parent"
-      	using hash_ancestor_other by blast
-      have a5: "parent \<noteq> h2"
-      	using ph less.prems(3) by blast
-      have "v2 \<noteq> pre"
-      	using a5 casper.l5 casper_axioms less.prems(2) link sanity by fastforce
-      then have a6: "pre > v2"
-      	by (simp add: order.not_eq_order_implies_strict pre_big)
     	show ?thesis
-    		using a1 a4 a5 a6 ih less.prems(2) link by blast
+    	  by (metis (mono_tags, lifting) casper.justified_means_ancestor casper.l00 casper_axioms diff_less_mono hash_ancestor_concat l0 l5 less.hyps less.prems(2) less.prems(3) less.prems(5) link linorder_neqE_nat not_le_imp_less)
     qed
     moreover have "?caseR \<longrightarrow> ?thesis"
     	by (simp add: calculation(3))
