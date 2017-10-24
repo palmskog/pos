@@ -20,6 +20,23 @@ imports Main
 
 begin
 
+(* many things are copied and adjusted from @nano-o's contribution. *)
+
+locale byz_quorums =
+  -- "Here we fix two types @{typ 'q1} and @{typ 'q2} for quorums and one type @{typ 'v} for
+      validator sets. of cardinality greater than 2/3 of 
+the validators and quorum of cardinality greater than 1/3 of the validators."
+  fixes member_1 :: "'n \<Rightarrow> 'q1 \<Rightarrow> 'v \<Rightarrow> bool" ("_ \<in>\<^sub>1 _ of _" 50)
+    -- "Membership in 2/3 set"
+    and member_2 :: "'n \<Rightarrow> 'q2 \<Rightarrow> 'v \<Rightarrow> bool" ("_ \<in>\<^sub>2 _ of _" 50)
+    -- "Membership in 1/3 set"
+  assumes "\<And> q1 q2 vs. \<exists> q3 . \<forall> n . (n \<in>\<^sub>2 q3 of vs) \<longrightarrow> (n \<in>\<^sub>1 q1 of vs) \<and> (n \<in>\<^sub>1 q2 of vs)"  
+    -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need: 
+2/3 quorums have 1/3 intersection"
+
+
+
+
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
 
 subsection "Hashes, Views and Validators"
