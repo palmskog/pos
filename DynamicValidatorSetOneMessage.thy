@@ -34,8 +34,31 @@ the validators and quorum of cardinality greater than 1/3 of the validators."
     -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need: 
 2/3 quorums have 1/3 intersection"
 
+(* how do we get the forward and the backward validator set? *)
+record ('n,'h)state =
+  -- "@{typ 'n} is the type of validators (nodes), @{typ 'h} hashes, and views are @{typ nat}"
+  -- "vote_msg node hash view view_src"
+  vote_msg :: "'n \<Rightarrow> 'h \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool"
 
 
+locale casper = byz_quorums +
+  -- "Here we make assumptions about hashes. In reality any message containing a hash not satisfying those
+should be dropped."
+fixes 
+  hash_parent :: "'h \<Rightarrow> 'h \<Rightarrow> bool" (infix "\<leftarrow>" 50)
+fixes
+  genesis :: 'h
+fixes
+  hash_forward :: "'h \<Rightarrow> 'v"
+fixes
+  hash_backward :: "'h \<Rightarrow> 'v"
+assumes
+  -- "a hash has at most one parent which is not itself"
+  "\<And> h1 h2 . h1 \<leftarrow> h2 \<Longrightarrow> h1 \<noteq> h2"
+  and "\<And> h1 h2 h3 . \<lbrakk>h2 \<leftarrow> h1; h3 \<leftarrow> h1\<rbrakk> \<Longrightarrow> h2 = h3"
+begin
+
+end
 
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
 
@@ -2416,9 +2439,7 @@ lemma accountable_safety :
  \<exists> h' v'.
    ancestor_descendant_with_chosen_validators s (h, v) (h', v') \<and>
    one_third_of_fwd_or_rear_slashed s h'"
-using accountable_safety_for_legitimacy_fork_weak fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
-
-
+  using accountable_safety_for_legitimacy_fork_weak fork_contains_legitimacy_fork one_third_of_fwd_or_rear_slashed_def by blast
 
 
 end
