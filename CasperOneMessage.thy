@@ -103,7 +103,7 @@ definition fork where
 
 definition slashed_DBL_VOTE where
   "slashed_DBL_VOTE (s :: ('a, 'h, 'd) state_scheme) n \<equiv>
-     \<exists> h1 h2 v s1 s2. vote_msg s n h1 v s1 \<and> vote_msg s n h2 v s2 \<and> (h1 \<noteq> h2 \<or> s1 \<noteq> s2)"
+     \<exists> h1 h2. h1 \<noteq> h2 \<and> (\<exists> v s1 s2. vote_msg s n h1 v s1 \<and> vote_msg s n h2 v s2)"
 
 definition slashed_SURROUND where
   "slashed_SURROUND (s :: ('a, 'h, 'd) state_scheme) n \<equiv>
@@ -134,8 +134,12 @@ using assms proof(simp)
     using byz_quorums_axioms byz_quorums_def by fastforce
   ultimately have "\<exists> q. \<forall> n. n \<in>\<^sub>2 q \<longrightarrow> vote_msg s n h1 (v3 + 1) v2 \<and> vote_msg s n c3 (v3 + 1) v3 "
     by blast
+  moreover have " h1 \<noteq> c3 "
+    using assms(2) assms(3) finalized_def by blast
+  ultimately have "h1 \<noteq> c3 \<and> (\<exists> q. \<forall> n. n \<in>\<^sub>2 q \<longrightarrow> vote_msg s n h1 (v3 + 1) v2 \<and> vote_msg s n c3 (v3 + 1) v3)"
+    by blast
   then show ?thesis
-    by (metis assms(4) less_not_refl3 slashed_DBL_VOTE_def)
+    by (meson casper.casper_defs(2) casper_axioms)
 qed
 
 lemma l01: assumes "justified_link s q1 h2 v2 h1 (v3 + 1)" and "finalized s q2 h3 v3 c3"
