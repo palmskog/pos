@@ -33,6 +33,20 @@ the validators and quorum of cardinality greater than 1/3 of the validators."
   assumes "\<And> q1 q2 vs. \<exists> q3 . \<forall> n . (n \<in>\<^sub>2 q3 of vs) \<longrightarrow> (n \<in>\<^sub>1 q1 of vs) \<and> (n \<in>\<^sub>1 q2 of vs)"  
     -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need: 
 2/3 quorums have 1/3 intersection"
+  fixes 
+    hash_parent :: "'h \<Rightarrow> 'h \<Rightarrow> bool" (infix "\<leftarrow>" 50)
+  fixes
+    genesis :: 'h
+  fixes
+    vset_fwd :: "'h \<Rightarrow> 'v"
+  fixes
+    vset_bwd :: "'h \<Rightarrow> 'v"
+  assumes
+  -- "Here we make assumptions about hashes. In reality any message containing a hash not satisfying those
+should be dropped."
+  -- "a hash has at most one parent which is not itself"
+  "\<And> h1 h2 . h1 \<leftarrow> h2 \<Longrightarrow> h1 \<noteq> h2"
+  and "\<And> h1 h2 h3 . \<lbrakk>h2 \<leftarrow> h1; h3 \<leftarrow> h1\<rbrakk> \<Longrightarrow> h2 = h3"
 
 (* how do we get the forward and the backward validator set? *)
 record ('n,'h)state =
@@ -41,22 +55,19 @@ record ('n,'h)state =
   vote_msg :: "'n \<Rightarrow> 'h \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool"
 
 
-locale casper = byz_quorums +
-  -- "Here we make assumptions about hashes. In reality any message containing a hash not satisfying those
-should be dropped."
-fixes 
-  hash_parent :: "'h \<Rightarrow> 'h \<Rightarrow> bool" (infix "\<leftarrow>" 50)
-fixes
-  genesis :: 'h
-fixes
-  hash_forward :: "'h \<Rightarrow> 'v"
-fixes
-  hash_backward :: "'h \<Rightarrow> 'v"
-assumes
-  -- "a hash has at most one parent which is not itself"
-  "\<And> h1 h2 . h1 \<leftarrow> h2 \<Longrightarrow> h1 \<noteq> h2"
-  and "\<And> h1 h2 h3 . \<lbrakk>h2 \<leftarrow> h1; h3 \<leftarrow> h1\<rbrakk> \<Longrightarrow> h2 = h3"
+locale casper = byz_quorums
 begin
+
+definition voted_by_fwd where
+  "voted_by_fwd s q h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_fwd h) \<longrightarrow> vote_msg s n h v1 v2)"
+
+definition voted_by_bwd where
+  "voted_by_bwd s q h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd h) \<longrightarrow> vote_msg s n h v1 v2)"
+
+definition voted_by_both where
+  "voted_by_both s q h v1 v2 \<equiv> voted_by_fwd s q h v1 v2 \<and> voted_by_bwd s q h v1 v2"
 
 end
 
