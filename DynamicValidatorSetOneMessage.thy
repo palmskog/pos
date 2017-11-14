@@ -69,6 +69,16 @@ definition voted_by_bwd where
 definition voted_by_both where
   "voted_by_both s q h v1 v2 \<equiv> voted_by_fwd s q h v1 v2 \<and> voted_by_bwd s q h v1 v2"
 
+inductive nth_parent where
+  zeroth_parent: "nth_parent 0 h h"
+| Sth_parent: "nth_parent n oldest mid \<Longrightarrow> mid \<leftarrow> newest \<Longrightarrow> nth_parent (Succ n) oldest newest"
+
+inductive justified where
+  justified_genesis: "justified s genesis 0"
+  (* This still needs to talk about 'orig' being a v2-v1 ancestor of h *)
+| justified_voted: "justified s orig v2 \<Longrightarrow> nth_parent (v1 - v2) orig h
+                     \<Longrightarrow> voted_by_both s q h v1 v2 \<Longrightarrow> justified s h v1"
+
 end
 
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
