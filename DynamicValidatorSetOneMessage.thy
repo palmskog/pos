@@ -33,7 +33,7 @@ the validators and quorum of cardinality greater than 1/3 of the validators."
   assumes "\<And> q1 q2 vs. \<exists> q3 . \<forall> n . (n \<in>\<^sub>2 q3 of vs) \<longrightarrow> (n \<in>\<^sub>1 q1 of vs) \<and> (n \<in>\<^sub>1 q2 of vs)"  
     -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need: 
 2/3 quorums have 1/3 intersection"
-  fixes 
+  fixes
     hash_parent :: "'h \<Rightarrow> 'h \<Rightarrow> bool" (infix "\<leftarrow>" 50)
   fixes
     genesis :: 'h
@@ -67,17 +67,38 @@ definition voted_by_bwd where
     (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd h) \<longrightarrow> vote_msg s n h v1 v2)"
 
 definition voted_by_both where
-  "voted_by_both s q h v1 v2 \<equiv> voted_by_fwd s q h v1 v2 \<and> voted_by_bwd s q h v1 v2"
+  "voted_by_both s q0 q1 h v1 v2 \<equiv> voted_by_fwd s q0 h v1 v2 \<and> voted_by_bwd s q1 h v1 v2"
 
 inductive nth_parent where
   zeroth_parent: "nth_parent 0 h h"
 | Sth_parent: "nth_parent n oldest mid \<Longrightarrow> mid \<leftarrow> newest \<Longrightarrow> nth_parent (Succ n) oldest newest"
 
+inductive hash_ancestor (infix "\<leftarrow>\<^sup>*" 50) where 
+  "h1 \<leftarrow> h2 \<Longrightarrow> h1 \<leftarrow>\<^sup>* h2"
+| "\<lbrakk>h1 \<leftarrow> h2; h2 \<leftarrow>\<^sup>* h3\<rbrakk> \<Longrightarrow> h1 \<leftarrow>\<^sup>* h3"
+declare hash_ancestor.intros[simp,intro]
+lemma hash_ancestor_intro': assumes "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow> h3" shows "h1 \<leftarrow>\<^sup>* h3" 
+  using assms by (induct h1 h2 rule:hash_ancestor.induct) auto
+
 inductive justified where
   justified_genesis: "justified s genesis 0"
   (* This still needs to talk about 'orig' being a v2-v1 ancestor of h *)
 | justified_voted: "justified s orig v2 \<Longrightarrow> nth_parent (v1 - v2) orig h
-                     \<Longrightarrow> voted_by_both s q h v1 v2 \<Longrightarrow> justified s h v1"
+                     \<Longrightarrow> voted_by_both s q0 q1 h v1 v2 \<Longrightarrow> justified s h v1"
+
+(* shall I try to hide existential quantifier or not, maybe not, for the ease of reasoning. *)
+definition finalized' where
+  "finalized' s h v q0 q1 child \<equiv> h \<leftarrow> child \<and> voted_by_both s q0 q1 child (v + 1) v"
+
+(*
+abbreviation finalized where
+  "finalized s h v \<equiv> \<exists> q0 q1 child. finalized' s h v q0 q1 child"
+*)
+
+definition fork where
+  "fork s \<equiv> \<exists> h0 v0 q00 q01 child0 h1 v1 q10 q11 child1.
+    (finalized' s h0 v0 q00 q01 child0 \<and> finalized' s h1 v1 q10 q11 child1 \<and>
+     \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
 
 end
 
