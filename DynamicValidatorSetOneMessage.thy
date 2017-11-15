@@ -149,16 +149,59 @@ definition fork_with_root where
         \<and> finalized_with_root' root root_epoch s h1 v1 q10 q11 child1 \<and>
         \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1)))"
 
-(*
-definition fork_with_shallow_root where
-   (* it should say the root is the highest with such h0 v0 h1 v1 *)
-   ""
-*)
+definition fork_with_highest_root where
+  "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<equiv>
+     fork_with_root s root root_epoch h0 v0 h1 v1 \<and>
+     (\<forall> root_higher root_epoch_higher.
+        root_epoch < root_epoch_higher \<longrightarrow> \<not> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1 )"
+
+lemma accountable_safety_with_highest_root :
+  "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+sorry
+
+lemma fork_root_edge0:
+  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   root_epoch < v0"
+  sorry
+
+lemma find_highest_root :
+  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h_root h_root_epoch.
+     fork_with_highest_root s h_root h_root_epoch h0 v0 h1 v1"
+proof(induct "v0 - root_epoch" arbitrary: v0 root_epoch root rule: less_induct)
+  case less
+  then show ?case
+  proof (cases "fork_with_highest_root s root root_epoch h0 v0 h1 v1")
+    case True
+    then show ?thesis by auto
+  next
+    case False
+    then have a: "\<exists> root_higher root_epoch_higher.
+                   root_epoch < root_epoch_higher \<and> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1"
+      by (simp add: fork_with_highest_root_def less.prems)
+    obtain root_higher root_epoch_higher where b: "root_epoch < root_epoch_higher \<and> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1"
+      using a by blast
+    have "root_epoch_higher < v0"
+      using b fork_root_edge0 by blast
+    then have "v0 - root_epoch_higher < v0 - root_epoch"
+      using b diff_less_mono2 dual_order.strict_trans by blast
+    then show ?thesis
+      using b less.hyps by blast
+  qed
+qed
 
 lemma accountable_safety_with_root :
   "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified_with_root root root_epoch s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-sorry
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+proof -
+  assume a1: "fork_with_root s root root_epoch h0 v0 h1 v1"
+  obtain ee :: "('a, 'e, 'f) state_scheme \<Rightarrow> 'e" and nn :: "('a, 'e, 'f) state_scheme \<Rightarrow> nat" and dd :: "('a, 'e, 'f) state_scheme \<Rightarrow> 'd" where
+    "\<forall>s e n ea na eb nb. \<not> fork_with_highest_root s e n ea na eb nb \<or> justified s (ee s) (nn s) \<and> one_third_of_fwd_or_bwd_slashed s (ee s) (dd s)"
+    using accountable_safety_with_highest_root by moura
+  then show ?thesis
+    using a1 by (meson find_highest_root)
+qed
 
 lemma finalized_as_finalized_with_root :
   "finalized' s h v q0 q1 child = finalized_with_root' genesis 0 s h v q0 q1 child"
