@@ -99,7 +99,7 @@ inductive justified_with_root where
                      \<Longrightarrow> justified_with_root r rE s h v1"
 
 abbreviation justified where
-  "justified s h v1 \<equiv> justified_with_root genesis 0 s h v1"
+  "justified s h v \<equiv> justified_with_root genesis 0 s h v"
 
 (* shall I try to use the existential quantifier or not, maybe not, for the ease of reasoning. *)
 definition finalized' where
@@ -111,7 +111,7 @@ abbreviation finalized where
 *)
 
 definition fork where
-  "fork s \<equiv> \<exists> h0 v0 q00 q01 child0 h1 v1 q10 q11 child1.
+  "fork s h0 v0 h1 v1 \<equiv> \<exists> q00 q01 child0 q10 q11 child1.
     (finalized' s h0 v0 q00 q01 child0 \<and> finalized' s h1 v1 q10 q11 child1 \<and>
      \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
 
@@ -143,15 +143,21 @@ definition finalized_with_root' where
      justified_with_root root root_epoch s h v \<and> voted_by_both s q0 q1 h child (v + 1) v"
 
 definition fork_with_root where
-  "fork_with_root s root root_epoch \<equiv> \<exists> h0 v0 q00 q01 child0 h1 v1 q10 q11 child1.
-    (finalized_with_root' root root_epoch s h0 v0 q00 q01 child0
-     \<and> finalized_with_root' root root_epoch s h1 v1 q10 q11 child1 \<and>
-     \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
+  "fork_with_root s root root_epoch h0 v0 h1 v1 \<equiv> justified s root root_epoch \<and>
+     (\<exists> q00 q01 child0 q10 q11 child1.
+       (finalized_with_root' root root_epoch s h0 v0 q00 q01 child0
+        \<and> finalized_with_root' root root_epoch s h1 v1 q10 q11 child1 \<and>
+        \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1)))"
+
+(*
+definition fork_with_shallow_root where
+   (* it should say the root is the highest with such h0 v0 h1 v1 *)
+   ""
+*)
 
 lemma accountable_safety_with_root :
-  "fork_with_root s root root_epoch \<Longrightarrow>
+  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified_with_root root root_epoch s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-(* induction on the leg size? *)
 sorry
 
 lemma finalized_as_finalized_with_root :
@@ -159,15 +165,15 @@ lemma finalized_as_finalized_with_root :
 by(simp add: finalized'_def finalized_with_root'_def)
 
 lemma fork_as_fork_with_root :
-  "fork s = fork_with_root s genesis 0"
-by(simp add: fork_def fork_with_root_def finalized_as_finalized_with_root)
+  "fork s h0 v0 h1 v1 = fork_with_root s genesis 0 h0 v0 h1 v1"
+by(simp add: fork_def fork_with_root_def finalized_as_finalized_with_root justified_genesis)
 
 (**** intermediate stuff ends ****)
 
 lemma accountable_safety :
-  "fork s \<Longrightarrow>
+  "fork s h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  using accountable_safety_with_root fork_as_fork_with_root by blast
+using accountable_safety_with_root fork_as_fork_with_root by blast
 
 end
 
