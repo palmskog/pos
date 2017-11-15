@@ -158,12 +158,28 @@ definition fork_with_highest_root where
 lemma accountable_safety_with_highest_root :
   "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-sorry
+  sorry
+
+lemma voted_higher:
+  "voted_by_both s q0 q1 orig h v1 v2 \<Longrightarrow> v2 < v1"
+  by (simp add: voted_by_both_def voted_by_fwd_def)
+
+lemma justified_higher:
+  "justified_with_root root root_epoch s h v \<Longrightarrow>
+   root_epoch \<le> v"
+proof(induct rule: justified_with_root.induct)
+  case (justified_genesis r rE s)
+  then show ?case by simp
+next
+  case (justified_voted r rE s orig v2 q0 q1 h v1)
+  then show ?case
+    by (meson dual_order.order_iff_strict le_trans voted_higher)
+qed
 
 lemma finalized_higher:
   "finalized_with_root' root root_epoch s h0 v0 q00 q01 child0 \<Longrightarrow>
    root_epoch \<le> v0"
-  sorry
+  using finalized_with_root'_def justified_higher by blast
 
 lemma fork_root_edge0:
 "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
