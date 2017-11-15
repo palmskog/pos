@@ -160,10 +160,23 @@ lemma accountable_safety_with_highest_root :
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
 sorry
 
-lemma fork_root_edge0:
-  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   root_epoch < v0"
+lemma finalized_higher:
+  "finalized_with_root' root root_epoch s h0 v0 q00 q01 child0 \<Longrightarrow>
+   root_epoch \<le> v0"
   sorry
+
+lemma fork_root_edge0:
+"fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   root_epoch \<le> v0"
+proof -
+  assume "fork_with_root s root root_epoch h0 v0 h1 v1"
+  then have a: "\<exists> q0 q1 child. finalized_with_root' root root_epoch s h0 v0 q0 q1 child"
+    by (simp add: fork_with_root_def)
+  obtain q0 q1 child where "finalized_with_root' root root_epoch s h0 v0 q0 q1 child"
+    using a by blast
+  then show "root_epoch \<le> v0"
+    using finalized_higher by blast
+qed
 
 lemma find_highest_root :
   "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
@@ -182,10 +195,10 @@ proof(induct "v0 - root_epoch" arbitrary: v0 root_epoch root rule: less_induct)
       by (simp add: fork_with_highest_root_def less.prems)
     obtain root_higher root_epoch_higher where b: "root_epoch < root_epoch_higher \<and> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1"
       using a by blast
-    have "root_epoch_higher < v0"
+    have "root_epoch_higher \<le> v0"
       using b fork_root_edge0 by blast
     then have "v0 - root_epoch_higher < v0 - root_epoch"
-      using b diff_less_mono2 dual_order.strict_trans by blast
+      using b by auto
     then show ?thesis
       using b less.hyps by blast
   qed
