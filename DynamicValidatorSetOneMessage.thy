@@ -58,20 +58,23 @@ record ('n,'h)state =
 locale casper = byz_quorums
 begin
 
-definition voted_by_fwd where
-  "voted_by_fwd s q h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and>
-    (\<forall> n . (n \<in>\<^sub>1 q of vset_fwd h) \<longrightarrow> vote_msg s n h v1 v2)"
-
-definition voted_by_bwd where
-  "voted_by_bwd s q h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and>
-    (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd h) \<longrightarrow> vote_msg s n h v1 v2)"
-
-definition voted_by_both where
-  "voted_by_both s q0 q1 h v1 v2 \<equiv> voted_by_fwd s q0 h v1 v2 \<and> voted_by_bwd s q1 h v1 v2"
-
 inductive nth_parent where
   zeroth_parent: "nth_parent 0 h h"
 | Sth_parent: "nth_parent n oldest mid \<Longrightarrow> mid \<leftarrow> newest \<Longrightarrow> nth_parent (Succ n) oldest newest"
+
+(* the forward set and the backward set must be taken from orig, not from h.
+ * Otherwise, there is a forking situation.
+ *)
+definition voted_by_fwd where
+  "voted_by_fwd s q orig h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_fwd orig (* this cannot be h *)) \<longrightarrow> vote_msg s n h v1 v2)"
+
+definition voted_by_bwd where
+  "voted_by_bwd s q orig h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd orig (* this cannot be h *)) \<longrightarrow> vote_msg s n h v1 v2)"
+
+definition voted_by_both where
+  "voted_by_both s q0 q1 orig h v1 v2 \<equiv> voted_by_fwd s q0 orig h v1 v2 \<and> voted_by_bwd s q1 orig h v1 v2"
 
 inductive hash_ancestor (infix "\<leftarrow>\<^sup>*" 50) where 
   "h1 \<leftarrow> h2 \<Longrightarrow> h1 \<leftarrow>\<^sup>* h2"
@@ -80,15 +83,24 @@ declare hash_ancestor.intros[simp,intro]
 lemma hash_ancestor_intro': assumes "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow> h3" shows "h1 \<leftarrow>\<^sup>* h3" 
   using assms by (induct h1 h2 rule:hash_ancestor.induct) auto
 
+(* when v1 is v2 + 1, the validator sets change. Otherwise, the validator sets stay. *)
+definition validators_match where
+"validators_match h v1 orig v2 \<equiv>
+   if v1 = v2 + 1 then (vset_bwd h = vset_fwd orig)
+   else (vset_bwd h = vset_bwd orig \<and> vset_fwd h = vset_fwd orig)"
+
+(* I smuggled the validator set validation into the justified definition. *)
 inductive justified where
   justified_genesis: "justified s genesis 0"
   (* This still needs to talk about 'orig' being a v2-v1 ancestor of h *)
-| justified_voted: "justified s orig v2 \<Longrightarrow> nth_parent (v1 - v2) orig h
-                     \<Longrightarrow> voted_by_both s q0 q1 h v1 v2 \<Longrightarrow> justified s h v1"
+| justified_voted: "justified s orig v2
+                     \<Longrightarrow> voted_by_both s q0 q1 orig h v1 v2
+                     \<Longrightarrow> validators_match h v1 orig v2
+                     \<Longrightarrow> justified s h v1"
 
-(* shall I try to hide existential quantifier or not, maybe not, for the ease of reasoning. *)
+(* shall I try to use the existential quantifier or not, maybe not, for the ease of reasoning. *)
 definition finalized' where
-  "finalized' s h v q0 q1 child \<equiv> h \<leftarrow> child \<and> voted_by_both s q0 q1 child (v + 1) v"
+  "finalized' s h v q0 q1 child \<equiv> voted_by_both s q0 q1 h child (v + 1) v"
 
 (*
 abbreviation finalized where
@@ -103,6 +115,30 @@ definition fork where
 definition slashed_dbl where "slashed_dbl s n \<equiv>
   \<exists> h0 h1 v v0 v1. h0 \<noteq> h1 \<and> vote_msg s n h0 v v0 \<and> vote_msg s n h1 v v1"
 
+definition slashed_surround where "slashed_surround s n \<equiv>
+  \<exists> h0 h1 v0 v1 vs0 vs1. vs0 < vs1 \<and> vs1 < v1 \<and> v1 < v0
+          \<and> vote_msg s n h0 v0 vs0 \<and> vote_msg s n h1 v1 vs1"
+
+definition slashed where "slashed s n \<equiv> 
+  slashed_dbl s n \<or> slashed_surround s n"
+
+definition one_third_of_fwd_slashed where
+"one_third_of_fwd_slashed s h q \<equiv>
+  \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd h)) \<longrightarrow> slashed s n"
+
+definition one_third_of_bwd_slashed where
+"one_third_of_bwd_slashed s h q \<equiv>
+  \<forall> n. (n \<in>\<^sub>2 q of (vset_bwd h)) \<longrightarrow> slashed s n"
+
+definition one_third_of_fwd_or_bwd_slashed where
+"one_third_of_fwd_or_bwd_slashed s h q \<equiv>
+   one_third_of_fwd_slashed s h q \<or> one_third_of_bwd_slashed s h q"
+
+lemma accountable_safety :
+  "fork s \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+(* now what should be the generalized lemma? *)
+  sorry
 end
 
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
