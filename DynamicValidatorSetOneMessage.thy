@@ -100,6 +100,9 @@ definition fork where
     (finalized' s h0 v0 q00 q01 child0 \<and> finalized' s h1 v1 q10 q11 child1 \<and>
      \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
 
+definition slashed_dbl where "slashed_dbl s n \<equiv>
+  \<exists> h0 h1 v v0 v1. h0 \<noteq> h1 \<and> vote_msg s n h0 v v0 \<and> vote_msg s n h1 v v1"
+
 end
 
 section "Definitions Necessary to Understand Accountable Safety (not skippable)"
