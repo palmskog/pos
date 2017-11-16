@@ -30,9 +30,6 @@ the validators and quorum of cardinality greater than 1/3 of the validators."
     -- "Membership in 2/3 set"
     and member_2 :: "'n \<Rightarrow> 'q2 \<Rightarrow> 'v \<Rightarrow> bool" ("_ \<in>\<^sub>2 _ of _" 50)
     -- "Membership in 1/3 set"
-  assumes "\<And> q1 q2 vs. \<exists> q3 . \<forall> n . (n \<in>\<^sub>2 q3 of vs) \<longrightarrow> (n \<in>\<^sub>1 q1 of vs) \<and> (n \<in>\<^sub>1 q2 of vs)"  
-    -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need: 
-2/3 quorums have 1/3 intersection"
   fixes
     hash_parent :: "'h \<Rightarrow> 'h \<Rightarrow> bool" (infix "\<leftarrow>" 50)
   fixes
@@ -47,6 +44,10 @@ should be dropped."
   -- "a hash has at most one parent which is not itself"
   "\<And> h1 h2 . h1 \<leftarrow> h2 \<Longrightarrow> h1 \<noteq> h2"
   and "\<And> h1 h2 h3 . \<lbrakk>h2 \<leftarrow> h1; h3 \<leftarrow> h1\<rbrakk> \<Longrightarrow> h2 = h3"
+  and "\<And> q1 q2 vs. \<exists> q3 . \<forall> n . (n \<in>\<^sub>2 q3 of vs) \<longrightarrow> (n \<in>\<^sub>1 q1 of vs) \<and> (n \<in>\<^sub>1 q2 of vs)"  
+
+    -- "This is the only property of types @{typ 'q1} and @{typ 'q2} that we need:
+2/3 quorums have 1/3 intersection"
 
 (* how do we get the forward and the backward validator set? *)
 record ('n,'h)state =
@@ -57,6 +58,10 @@ record ('n,'h)state =
 
 locale casper = byz_quorums
 begin
+
+lemma hoge:
+  "\<exists> q.  \<forall> n.  (n \<in>\<^sub>2 q of (vset_fwd root)) \<longrightarrow> ((n \<in>\<^sub>1 q0 of (vset_fwd root)) \<and> (n \<in>\<^sub>1 q1 of (vset_fwd root)))"
+  using byz_quorums_axioms byz_quorums_def by force
 
 inductive nth_parent where
   zeroth_parent: "nth_parent 0 h h"
@@ -167,10 +172,41 @@ lemma root_is_justified :
    justified s root root_epoch"
   by (simp add: fork_with_root_def small_fork_def)
 
+lemma fork_with_root_sym :
+  "fork_with_root s r re h0 v0 h1 v1 = fork_with_root s r re h1 v1 h0 v0"
+  by(auto simp add: fork_with_root_def)
+
+lemma small_fork_sym :
+  "small_fork s root root_epoch h0 v0 h1 v1 = small_fork s root root_epoch h1 v1 h0 v0"
+  by(auto simp add:small_fork_def fork_with_root_sym)
+
+lemma small_fork_leaf_voted:
+  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 v0 vs"
+  sorry
+
 lemma root_is_slashed_dbl_eq_case:
   "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
    \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd root) \<longrightarrow> slashed_dbl s n"
-  sorry
+proof -
+  assume s: "small_fork s root root_epoch h0 vv h1 vv"
+  have "\<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs"
+    by (meson casper.small_fork_leaf_voted casper_axioms s)
+  then obtain q0 vs0 where v0: "\<forall> n. (n \<in>\<^sub>1 q0 of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs0"
+    by blast
+  have "\<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h1 vv vs"
+    by (meson casper.small_fork_leaf_voted casper_axioms s small_fork_sym)
+  then obtain q1 vs1 where v1: "\<forall> n. (n \<in>\<^sub>1 q1 of vset_fwd root) \<longrightarrow> vote_msg s n h1 vv vs1"
+    by blast
+  have "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd root)) \<longrightarrow> ((n \<in>\<^sub>1 q0 of (vset_fwd root)) \<and> (n \<in>\<^sub>1 q1 of (vset_fwd root)))"
+    using hoge by blast
+  then obtain q where qp: "\<forall> n. (n \<in>\<^sub>2 q of (vset_fwd root)) \<longrightarrow> ((n \<in>\<^sub>1 q0 of (vset_fwd root)) \<and> (n \<in>\<^sub>1 q1 of (vset_fwd root)))"
+    by blast
+  have vB: "\<forall> n. (n \<in>\<^sub>2 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs0 \<and> vote_msg s n h1 vv vs1"
+    by (simp add: qp v0 v1)
+  show ?thesis
+    by (metis casper.small_fork_def casper_axioms fork_with_root_def s slashed_dbl_def vB)
+qed
 
 lemma root_is_slashed_eq_case:
   "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
@@ -188,14 +224,6 @@ lemma accountable_safety_small_lt_case :
    v0 < v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
   sorry
-
-lemma fork_with_root_sym :
-  "fork_with_root s r re h0 v0 h1 v1 = fork_with_root s r re h1 v1 h0 v0"
-  by(auto simp add: fork_with_root_def)
-
-lemma small_fork_sym :
-  "small_fork s root root_epoch h0 v0 h1 v1 = small_fork s root root_epoch h1 v1 h0 v0"
-  by(auto simp add:small_fork_def fork_with_root_sym)
 
 lemma accountable_safety_small :
   "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
