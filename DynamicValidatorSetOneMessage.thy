@@ -162,10 +162,67 @@ definition small_fork where
        v1_lower < v1 \<longrightarrow>
        \<not> fork_with_root s root root_epoch h0 v0 h1_lower v1_lower)"
 
+lemma root_is_justified :
+  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   justified s root root_epoch"
+  by (simp add: fork_with_root_def small_fork_def)
+
+lemma root_is_slashed_dbl_eq_case:
+  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
+   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd root) \<longrightarrow> slashed_dbl s n"
+  sorry
+
+lemma root_is_slashed_eq_case:
+  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
+   \<exists> q. one_third_of_fwd_slashed s root q"
+  apply(simp add: one_third_of_fwd_slashed_def slashed_def)
+  using root_is_slashed_dbl_eq_case by blast
+
+lemma accountable_safety_small_eq_case :
+  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  by (meson casper.root_is_justified casper_axioms one_third_of_fwd_or_bwd_slashed_def root_is_slashed_eq_case)
+
+lemma accountable_safety_small_lt_case :
+  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   v0 < v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  sorry
+
+lemma fork_with_root_sym :
+  "fork_with_root s r re h0 v0 h1 v1 = fork_with_root s r re h1 v1 h0 v0"
+  by(auto simp add: fork_with_root_def)
+
+lemma small_fork_sym :
+  "small_fork s root root_epoch h0 v0 h1 v1 = small_fork s root root_epoch h1 v1 h0 v0"
+  by(auto simp add:small_fork_def fork_with_root_sym)
+
 lemma accountable_safety_small :
   "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+proof(cases "v0 = v1")
+  case True
+  assume "small_fork s root root_epoch h0 v0 h1 v1"
+  then have a: "small_fork s root root_epoch h0 v0 h1 v0"
+    by (simp add: True)
+  then show ?thesis
+    using accountable_safety_small_eq_case by blast
+next
+  case False
+  assume s: "small_fork s root root_epoch h0 v0 h1 v1"
+  consider "v0 < v1" | "v1 < v0"
+    using False nat_neq_iff by blast
+  then show ?thesis
+  proof cases
+    case 1
+    then show ?thesis
+      using accountable_safety_small_lt_case s by blast
+  next
+    case 2
+    then show ?thesis
+      using accountable_safety_small_lt_case s small_fork_sym by blast
+  qed
+qed
 
 lemma voted_higher:
   "voted_by_both s q0 q1 orig h v1 v2 \<Longrightarrow> v2 < v1"
