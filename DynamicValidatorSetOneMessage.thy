@@ -180,10 +180,137 @@ lemma small_fork_sym :
   "small_fork s root root_epoch h0 v0 h1 v1 = small_fork s root root_epoch h1 v1 h0 v0"
   by(auto simp add:small_fork_def fork_with_root_sym)
 
+(* it's worth clarifying... when can the validator set change? *)
+
+(* justified with n validator set changes. *)
+inductive n_justified_with_root where
+  n_justified_genesis: "n_justified_with_root 0 r rE s r rE"
+| n_justified_normal: "n_justified_with_root n r rE s orig v2
+                     \<Longrightarrow> voted_by_both s q0 q1 orig h v1 v2
+                     \<Longrightarrow> v2 + 1 < v1
+                     \<Longrightarrow> vset_fwd orig = vset_fwd h
+                     \<Longrightarrow> vset_bwd orig = vset_bwd h
+                     \<Longrightarrow> n_justified_with_root n r rE s h v1"
+| n_justified_change: "n_justified_with_root n r rE s orig v2
+                     \<Longrightarrow> voted_by_both s q0 q1 orig h (v2 + 1) v2
+                     \<Longrightarrow> vset_fwd orig = vset_bwd h
+                     \<Longrightarrow> n_justified_with_root (Succ n) r rE s h (v2 + 1)"
+
+lemma n_justified_means_justified :
+  "n_justified_with_root n r rE s h v \<Longrightarrow>
+   justified_with_root r rE s h v"
+proof(induct rule: n_justified_with_root.induct)
+case (n_justified_genesis r rE s)
+  then show ?case
+    by (simp add: justified_genesis)
+next
+  case (n_justified_normal n r rE s orig v2 q0 q1 h v1)
+  then show ?case
+    using justified_voted validators_match_def by fastforce
+next
+  case (n_justified_change n r rE s orig v2 q0 q1 h Succ)
+  then show ?case
+    using justified_voted validators_match_def by fastforce
+qed
+
+lemma justified_means_n_justified :
+  "justified_with_root r rE s h v \<Longrightarrow>
+   \<exists> n. n_justified_with_root n r rE s h v
+  "
+proof(induct rule: justified_with_root.induct)
+case (justified_genesis r rE s)
+then show ?case
+  using n_justified_genesis by auto
+next
+  case (justified_voted r rE s orig v2 q0 q1 h v1)
+  then show ?case
+  proof(cases "v1 = v2 + 1")
+    case True
+    then show ?thesis
+      by (metis (mono_tags, lifting) justified_voted.hyps(2) justified_voted.hyps(3) justified_voted.hyps(4) n_justified_change validators_match_def)
+  next
+    case False
+    then show ?thesis
+      by (metis (mono_tags, lifting) Suc_eq_plus1 Suc_leI casper.n_justified_normal casper.voted_by_bwd_def casper_axioms justified_voted.hyps(2) justified_voted.hyps(3) justified_voted.hyps(4) order.strict_iff_order validators_match_def voted_by_both_def)
+  qed
+qed
+
+lemma small_fork_up_to_one_para:
+  "n_justified_with_root n root root_epoch s h0 v0 \<Longrightarrow>
+   small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   n \<ge> (2 :: nat) \<Longrightarrow> False"
+proof -
+  assume nj: "n_justified_with_root n root root_epoch s h0 v0"
+  assume n_big: "n \<ge> (2 :: nat)"
+  assume sf: "small_fork s root root_epoch h0 v0 h1 v1"
+  obtain h0L v0L q00 q01 chL where L: "n_justified_with_root (n - 1) root root_epoch s h0L v0L \<and>
+                        h0L \<leftarrow>\<^sup>* h0 \<and> root \<leftarrow>\<^sup>* h0L \<and> v0L < v0 \<and>
+                        finalized_with_root' root root_epoch s h0L v0L q00 q01 chL"
+    sorry
+  have un0: "\<not> h0L \<leftarrow>\<^sup>* h1" sorry
+  have un1: "\<not> h1 \<leftarrow>\<^sup>* h0L" sorry
+  have un2: "h0L \<noteq> h1" sorry
+  have ff: "fork_with_root s root root_epoch h0 v0 h1 v1"
+    using sf small_fork_def by blast
+  have jroot: "justified s root root_epoch"
+    using ff fork_with_root_def by blast
+  have f1: "\<exists> q10 q11 ch1. finalized_with_root' root root_epoch s h1 v1 q10 q11 ch1"
+    using ff fork_with_root_def by blast
+  have f: "fork_with_root s root root_epoch h0L v0L h1 v1"
+    using L f1 fork_with_root_def jroot un0 un1 un2 by blast
+  show ?thesis
+    by (meson L casper.small_fork_def casper_axioms f sf)
+qed
+
+lemma small_fork_up_to_one:
+  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   n_justified_with_root (0 :: nat) root root_epoch s h0 v0 \<or>
+   n_justified_with_root (1 :: nat) root root_epoch s h0 v0"
+proof -
+  assume s: "small_fork s root root_epoch h0 v0 h1 v1"
+  then have f: "fork_with_root s root root_epoch h0 v0 h1 v1"
+    using small_fork_def by blast
+  then have j: "justified_with_root root root_epoch s h0 v0"
+    by (simp add: finalized_with_root'_def fork_with_root_def)
+  then have nj: "\<exists> n. n_justified_with_root n root root_epoch s h0 v0"
+    using j justified_means_n_justified by blast
+  then obtain n :: nat where njj: "n_justified_with_root n root root_epoch s h0 v0"
+    by blast
+  then show ?thesis
+  proof(cases "n < 2")
+    case True
+    then consider "n = 0" | "n = 1"
+      by linarith
+    then show ?thesis
+    proof cases
+      case 1
+      moreover have  "n_justified_with_root n root root_epoch s h0 v0"
+        by (simp add: njj)
+      moreover have "n = 0"
+        by (simp add: "1")
+      ultimately show ?thesis by simp
+    next
+      case 2
+      then show ?thesis
+        using njj by blast
+    qed
+  next
+    case False
+    then show ?thesis
+      by (meson linorder_not_less njj s small_fork_up_to_one_para)
+  qed
+qed
+
+lemma up_to_one_means_vote :
+  "n_justified_with_root 0 root root_epoch s h0 v0 \<or>
+   n_justified_with_root 1 root root_epoch s h0 v0 \<Longrightarrow>
+   \<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 v0 vs"
+  sorry
+
 lemma small_fork_leaf_voted:
   "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
    \<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 v0 vs"
-  sorry
+  using small_fork_up_to_one up_to_one_means_vote by blast
 
 lemma root_is_slashed_dbl_eq_case:
   "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
