@@ -153,12 +153,110 @@ definition fork_with_highest_root where
   "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<equiv>
      fork_with_root s root root_epoch h0 v0 h1 v1 \<and>
      (\<forall> root_higher root_epoch_higher.
-        root_epoch < root_epoch_higher \<longrightarrow> \<not> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1 )"
+        root_epoch < root_epoch_higher \<longrightarrow>
+        \<not> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1 )"
+
+definition small_fork_with_highest_root where
+  "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<equiv>
+    fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<and>
+    (\<forall> h0_lower v0_lower.
+       v0_lower < v0 \<longrightarrow>
+       \<not> fork_with_highest_root s root root_epoch h0_lower v0_lower h1 v1) \<and>
+    (\<forall> h1_lower v1_lower.
+       v1_lower < v1 \<longrightarrow>
+       \<not> fork_with_highest_root s root root_epoch h0 v0 h1_lower v1_lower)"
+
+definition small_fork where
+  "small_fork s root root_epoch h0 v0 h1 v1 \<equiv>
+    fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<and>
+    (\<forall> h0_lower v0_lower.
+       v0_lower < v0 \<longrightarrow>
+       \<not> fork_with_root s root root_epoch h0_lower v0_lower h1 v1) \<and>
+    (\<forall> h1_lower v1_lower.
+       v1_lower < v1 \<longrightarrow>
+       \<not> fork_with_root s root root_epoch h0 v0 h1_lower v1_lower)"
+
+lemma accountable_safety_small :
+  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  sorry
+
+lemma small_high_small0 :
+  "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   v0_lower < v0 \<Longrightarrow> \<not> fork_with_root s root root_epoch h0_lower v0_lower h1 v1"
+proof -
+  assume s: "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1"
+  assume l: "v0_lower < v0"
+  have n: "\<not> fork_with_highest_root s root root_epoch h0_lower v0_lower h1 v1"
+    using l s small_fork_with_highest_root_def by blast
+  have k: "\<forall> root_higher root_epoch_higher.
+        root_epoch < root_epoch_higher \<longrightarrow>
+        \<not> fork_with_root s root_higher root_epoch_higher h0_lower v0_lower h1 v1"
+    (* there should be a new lemma *)
+    sorry
+  show ?thesis
+    by (meson casper.fork_with_highest_root_def casper_axioms k n)
+qed
+
+lemma small_high_small1 :
+  "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   v1_lower < v1 \<Longrightarrow>
+   \<not> fork_with_root s root root_epoch h0 v0 h1_lower v1_lower"
+  sorry
+
+lemma small_high_to_small :
+  "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   small_fork s root root_epoch h0 v0 h1 v1"
+  by (simp add: small_fork_def small_fork_with_highest_root_def small_high_small0 small_high_small1)
+
+lemma accountable_safety_small_high :
+  "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  using casper.accountable_safety_small casper_axioms small_high_to_small by fastforce
+
+lemma highest_to_small :
+  "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h0' v0' h1' v1'.
+     small_fork_with_highest_root s root root_epoch h0' v0' h1' v1'"
+proof(induct "v0 + v1" arbitrary: v0 h0 v1 h1 rule:less_induct)
+  case less
+  then show ?case
+  proof(cases "\<exists> h0_l v0_l.
+                 v0_l < v0 \<and> fork_with_highest_root s root root_epoch h0_l v0_l h1 v1")
+    case True
+    then show ?thesis
+      using add_mono_thms_linordered_field(1) less.hyps by fastforce
+  next
+    case False
+    then have a: "\<forall> h0_lower v0_lower.
+     v0_lower < v0 \<longrightarrow>
+     \<not> fork_with_highest_root s root root_epoch h0_lower v0_lower h1 v1"
+        by blast
+    then show ?thesis
+    proof(cases "\<exists> h1_l v1_l.
+                   v1_l < v1 \<and> fork_with_highest_root s root root_epoch h0 v0 h1_l v1_l")
+      case True
+      then show ?thesis
+        using add_mono_thms_linordered_field(2) less.hyps by blast
+    next
+      case False
+      then have b: "\<forall> h1_lower v1_lower.
+       v1_lower < v1 \<longrightarrow>
+       \<not> fork_with_highest_root s root root_epoch h0 v0 h1_lower v1_lower"
+        by blast
+      then have "small_fork_with_highest_root s root root_epoch h0 v0 h1 v1"
+        by (simp add: a less.prems small_fork_with_highest_root_def)
+      then show ?thesis
+        by blast
+    qed
+  qed
+qed
+
 
 lemma accountable_safety_with_highest_root :
   "fork_with_highest_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+  using casper.accountable_safety_small_high casper_axioms highest_to_small by fastforce
 
 lemma voted_higher:
   "voted_by_both s q0 q1 orig h v1 v2 \<Longrightarrow> v2 < v1"
