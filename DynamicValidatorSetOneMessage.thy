@@ -156,10 +156,74 @@ definition one_third_of_fwd_or_bwd_slashed where
 
 (**** intermediate stuff ends ****)
 
+definition justification_fork_with_root where
+  "justification_fork_with_root s r rE h0 v0 h1 v1 \<equiv> \<exists> child0 child1.
+    (finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1 \<and>
+     \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1))"
+
+lemma justification_accountable_safety :
+  "justification_fork_with_root s genesis 0 h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  sorry
+
+lemma nth_parent_is_ancestor:
+  "nth_parent n orig h \<Longrightarrow>
+   orig \<leftarrow>\<^sup>* h \<or> orig = h"
+proof(induct rule: nth_parent.induct)
+  case (zeroth_parent h)
+  then show ?case by simp
+next
+  case (Sth_parent n oldest mid newest Succ)
+  then show ?case using hash_ancestor_intro' by blast
+qed
+
+lemma voted_by_both_connects_ancestor_descendant:
+  "voted_by_both s q0 q1 orig origE new newE \<Longrightarrow>
+   orig \<leftarrow>\<^sup>* new \<or> orig = new"
+  by (meson casper.voted_by_both_def casper_axioms nth_parent_is_ancestor voted_by_bwd_def)
+
+lemma usual_link_connects_ancestor_descendant:
+  "usual_link s q0 q1 orig origE new newE \<Longrightarrow>
+   orig \<leftarrow>\<^sup>* new \<or> orig = new"
+  using usual_link_def voted_by_both_connects_ancestor_descendant by blast
+
+lemma justification_is_ancestor:
+  "justified_with_root h1 v1 s h0 v0 \<Longrightarrow>
+   h1 \<leftarrow>\<^sup>* h0 \<or> h1 = h0" and
+  "finalized_with_root r rE s p c e \<Longrightarrow>
+   r \<leftarrow>\<^sup>* c \<or> r = c"
+proof(induct rule:justified_with_root_finalized_with_root.inducts)
+  case (justified_genesis r rE s)
+  then show ?case by simp
+next
+  case (usual_justification r rE s orig origE q0 q1 new newE)
+  then show ?case
+    using hash_ancestor_trans usual_link_connects_ancestor_descendant by blast
+next
+  case (finalized_is_justified r rE s p c e)
+  then show ?case
+    by blast
+next
+  case (justified_on_finalization r rE s p c e q0 q1 h ee)
+  then show ?case
+    by (metis hash_ancestor_trans validator_changing_link_def voted_by_both_connects_ancestor_descendant)
+next
+  case (finalize r rE s p e q0 q1 c)
+  then show ?case
+    using hash_ancestor_trans usual_link_connects_ancestor_descendant by blast
+qed
+
+lemma fork_to_justification_fork_with_root:
+  "fork s h0 v0 h1 v1 \<Longrightarrow>
+   justification_fork_with_root s genesis 0 h0 v0 h1 v1"
+  by (metis fork_def justification_fork_with_root_def justification_is_ancestor)
+
+(** intermediate stuff ends here **)
+
 lemma accountable_safety :
   "fork s h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+  using fork_to_justification_fork_with_root justification_accountable_safety by blast
 
 end
 
