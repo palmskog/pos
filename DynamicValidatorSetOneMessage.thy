@@ -38,6 +38,9 @@ the validators and quorum of cardinality greater than 1/3 of the validators."
     vset_fwd :: "'h \<Rightarrow> 'v"
   fixes
     vset_bwd :: "'h \<Rightarrow> 'v"
+  fixes
+    vset_chosen :: "'h \<Rightarrow> 'v"
+    -- "the next set chosen in the dynasity: https://ethresear.ch/t/casper-ffg-with-one-message-type-and-simpler-fork-choice-rule/103/34"
   assumes
   -- "Here we make assumptions about hashes. In reality any message containing a hash not satisfying those
 should be dropped."
@@ -71,15 +74,15 @@ inductive nth_parent where
  * Otherwise, there is a forking situation.
  *)
 definition voted_by_fwd where
-  "voted_by_fwd s q orig h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
-    (\<forall> n . (n \<in>\<^sub>1 q of vset_fwd orig (* this cannot be h *)) \<longrightarrow> vote_msg s n h v1 v2)"
+  "voted_by_fwd s q orig v2 h v1 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_fwd h) \<longrightarrow> vote_msg s n h v1 v2)"
 
 definition voted_by_bwd where
-  "voted_by_bwd s q orig h v1 v2 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
-    (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd orig (* this cannot be h *)) \<longrightarrow> vote_msg s n h v1 v2)"
+  "voted_by_bwd s q orig v2 h v1 \<equiv> v1 \<noteq> 0 \<and> v2 < v1 \<and> nth_parent (v1 - v2) orig h \<and>
+    (\<forall> n . (n \<in>\<^sub>1 q of vset_bwd h) \<longrightarrow> vote_msg s n h v1 v2)"
 
 definition voted_by_both where
-  "voted_by_both s q0 q1 orig h v1 v2 \<equiv> voted_by_fwd s q0 orig h v1 v2 \<and> voted_by_bwd s q1 orig h v1 v2"
+  "voted_by_both s q0 q1 orig v2 h v1 \<equiv> voted_by_fwd s q0 orig v2 h v1 \<and> voted_by_bwd s q1 orig v2 h v1"
 
 inductive hash_ancestor (infix "\<leftarrow>\<^sup>*" 50) where 
   "h1 \<leftarrow> h2 \<Longrightarrow> h1 \<leftarrow>\<^sup>* h2"
@@ -88,36 +91,44 @@ declare hash_ancestor.intros[simp,intro]
 lemma hash_ancestor_intro': assumes "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow> h3" shows "h1 \<leftarrow>\<^sup>* h3" 
   using assms by (induct h1 h2 rule:hash_ancestor.induct) auto
 
-(* when v1 is v2 + 1, the validator sets change. Otherwise, the validator sets stay. *)
-definition validators_match where
-"validators_match h v1 orig v2 \<equiv>
-   if v1 = v2 + 1 then (vset_bwd h = vset_fwd orig)
-   else (vset_bwd h = vset_bwd orig \<and> vset_fwd h = vset_fwd orig)"
+lemma hash_ancestor_trans: assumes "h1 \<leftarrow>\<^sup>* h2" and "h2 \<leftarrow>\<^sup>* h3" shows "h1 \<leftarrow>\<^sup>* h3" 
+  using assms by (induct h1 h2 rule:hash_ancestor.induct) auto
 
-(* I smuggled the validator set validation into the justified definition. *)
-inductive justified_with_root where
+definition validator_changing_link where
+"validator_changing_link s q0 q1 orig origE new newE \<equiv>
+   voted_by_both s q0 q1 orig origE new newE \<and>
+   vset_bwd new = vset_fwd orig \<and> vset_fwd new = vset_chosen orig"
+
+definition usual_link where
+"usual_link s q0 q1 orig origE new newE \<equiv>
+   voted_by_both s q0 q1 orig origE new newE \<and>
+   vset_bwd orig = vset_bwd new \<and> vset_fwd orig = vset_fwd new"
+
+inductive justified_with_root and finalized_with_root where
   justified_genesis: "justified_with_root r rE s r rE"
-  (* This still needs to talk about 'orig' being a v2-v1 ancestor of h *)
-| justified_voted: "justified_with_root r rE s orig v2
-                     \<Longrightarrow> voted_by_both s q0 q1 orig h v1 v2
-                     \<Longrightarrow> validators_match h v1 orig v2
-                     \<Longrightarrow> justified_with_root r rE s h v1"
+| usual_justification:
+    "justified_with_root r rE s orig origE \<Longrightarrow>
+     usual_link s q0 q1 orig origE new newE \<Longrightarrow>
+     justified_with_root r rE s new newE"
+| finalized_is_justified: "finalized_with_root r rE s p c e \<Longrightarrow> justified_with_root r rE s c (e + 1)"
+| justified_on_finalization:
+   "finalized_with_root r rE s p c e \<Longrightarrow>
+    validator_changing_link s q0 q1 c (e + 1) h ee \<Longrightarrow>
+    (* validator set consistency should be checked in the predicate validator_changing_vote *)
+    justified_with_root r rE s h ee"
+ | finalize:
+    "justified_with_root r rE s p e \<Longrightarrow>
+     usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
+     finalized_with_root r rE s p c e"
+
+(* Does this yield useful induction schema?  Let us see. *)
 
 abbreviation justified where
   "justified s h v \<equiv> justified_with_root genesis 0 s h v"
 
-(* shall I try to use the existential quantifier or not, maybe not, for the ease of reasoning. *)
-definition finalized' where
-  "finalized' s h v q0 q1 child \<equiv> justified s h v \<and> voted_by_both s q0 q1 h child (v + 1) v"
-
-(*
-abbreviation finalized where
-  "finalized s h v \<equiv> \<exists> q0 q1 child. finalized' s h v q0 q1 child"
-*)
-
 definition fork where
-  "fork s h0 v0 h1 v1 \<equiv> \<exists> q00 q01 child0 q10 q11 child1.
-    (finalized' s h0 v0 q00 q01 child0 \<and> finalized' s h1 v1 q10 q11 child1 \<and>
+  "fork s h0 v0 h1 v1 \<equiv> \<exists> child0 child1.
+    (finalized_with_root genesis 0 s h0 child0 v0 \<and> finalized_with_root genesis 0 s h1 child1 v1 \<and>
      \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
 
 definition slashed_dbl where "slashed_dbl s n \<equiv>
@@ -142,370 +153,13 @@ definition one_third_of_fwd_or_bwd_slashed where
 "one_third_of_fwd_or_bwd_slashed s h q \<equiv>
    one_third_of_fwd_slashed s h q \<or> one_third_of_bwd_slashed s h q"
 
-(**** intermediate stuff ****)
-definition finalized_with_root' where
-  "finalized_with_root' root root_epoch s h v q0 q1 child \<equiv>
-     justified_with_root root root_epoch s h v \<and> voted_by_both s q0 q1 h child (v + 1) v"
-
-definition fork_with_root where
-  "fork_with_root s root root_epoch h0 v0 h1 v1 \<equiv> justified s root root_epoch \<and>
-     (\<exists> q00 q01 child0 q10 q11 child1.
-       (finalized_with_root' root root_epoch s h0 v0 q00 q01 child0
-        \<and> finalized_with_root' root root_epoch s h1 v1 q10 q11 child1 \<and>
-        \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1)))"
-
-definition small_fork where
-  "small_fork s root root_epoch h0 v0 h1 v1 \<equiv>
-    fork_with_root s root root_epoch h0 v0 h1 v1 \<and>
-     (\<forall> root_higher root_epoch_higher.
-        root_epoch < root_epoch_higher \<longrightarrow>
-        \<not> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1 ) \<and>
-    (\<forall> h0_lower v0_lower.
-       v0_lower < v0 \<longrightarrow>
-       \<not> fork_with_root s root root_epoch h0_lower v0_lower h1 v1) \<and>
-    (\<forall> h1_lower v1_lower.
-       v1_lower < v1 \<longrightarrow>
-       \<not> fork_with_root s root root_epoch h0 v0 h1_lower v1_lower)"
-
-lemma root_is_justified :
-  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   justified s root root_epoch"
-  by (simp add: fork_with_root_def small_fork_def)
-
-lemma fork_with_root_sym :
-  "fork_with_root s r re h0 v0 h1 v1 = fork_with_root s r re h1 v1 h0 v0"
-  by(auto simp add: fork_with_root_def)
-
-lemma small_fork_sym :
-  "small_fork s root root_epoch h0 v0 h1 v1 = small_fork s root root_epoch h1 v1 h0 v0"
-  by(auto simp add:small_fork_def fork_with_root_sym)
-
-(* it's worth clarifying... when can the validator set change? *)
-
-(* justified with n validator set changes. *)
-inductive n_justified_with_root where
-  n_justified_genesis: "n_justified_with_root 0 r rE s r rE"
-| n_justified_normal: "n_justified_with_root n r rE s orig v2
-                     \<Longrightarrow> voted_by_both s q0 q1 orig h v1 v2
-                     \<Longrightarrow> v2 + 1 < v1
-                     \<Longrightarrow> vset_fwd orig = vset_fwd h
-                     \<Longrightarrow> vset_bwd orig = vset_bwd h
-                     \<Longrightarrow> n_justified_with_root n r rE s h v1"
-| n_justified_change: "n_justified_with_root n r rE s orig v2
-                     \<Longrightarrow> voted_by_both s q0 q1 orig h (v2 + 1) v2
-                     \<Longrightarrow> vset_fwd orig = vset_bwd h
-                     \<Longrightarrow> n_justified_with_root (Succ n) r rE s h (v2 + 1)"
-
-lemma n_justified_means_justified :
-  "n_justified_with_root n r rE s h v \<Longrightarrow>
-   justified_with_root r rE s h v"
-proof(induct rule: n_justified_with_root.induct)
-case (n_justified_genesis r rE s)
-  then show ?case
-    by (simp add: justified_genesis)
-next
-  case (n_justified_normal n r rE s orig v2 q0 q1 h v1)
-  then show ?case
-    using justified_voted validators_match_def by fastforce
-next
-  case (n_justified_change n r rE s orig v2 q0 q1 h Succ)
-  then show ?case
-    using justified_voted validators_match_def by fastforce
-qed
-
-lemma justified_means_n_justified :
-  "justified_with_root r rE s h v \<Longrightarrow>
-   \<exists> n. n_justified_with_root n r rE s h v
-  "
-proof(induct rule: justified_with_root.induct)
-case (justified_genesis r rE s)
-then show ?case
-  using n_justified_genesis by auto
-next
-  case (justified_voted r rE s orig v2 q0 q1 h v1)
-  then show ?case
-  proof(cases "v1 = v2 + 1")
-    case True
-    then show ?thesis
-      by (metis (mono_tags, lifting) justified_voted.hyps(2) justified_voted.hyps(3) justified_voted.hyps(4) n_justified_change validators_match_def)
-  next
-    case False
-    then show ?thesis
-      by (metis (mono_tags, lifting) Suc_eq_plus1 Suc_leI casper.n_justified_normal casper.voted_by_bwd_def casper_axioms justified_voted.hyps(2) justified_voted.hyps(3) justified_voted.hyps(4) order.strict_iff_order validators_match_def voted_by_both_def)
-  qed
-qed
-
-lemma small_fork_up_to_one_para:
-  "n_justified_with_root n root root_epoch s h0 v0 \<Longrightarrow>
-   small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   n \<ge> (2 :: nat) \<Longrightarrow> False"
-proof -
-  assume nj: "n_justified_with_root n root root_epoch s h0 v0"
-  assume n_big: "n \<ge> (2 :: nat)"
-  assume sf: "small_fork s root root_epoch h0 v0 h1 v1"
-  obtain h0L v0L q00 q01 chL where L: "n_justified_with_root (n - 1) root root_epoch s h0L v0L \<and>
-                        h0L \<leftarrow>\<^sup>* h0 \<and> root \<leftarrow>\<^sup>* h0L \<and> v0L < v0 \<and>
-                        finalized_with_root' root root_epoch s h0L v0L q00 q01 chL"
-    sorry
-  have un0: "\<not> h0L \<leftarrow>\<^sup>* h1" sorry
-  have un1: "\<not> h1 \<leftarrow>\<^sup>* h0L" sorry
-  have un2: "h0L \<noteq> h1" sorry
-  have ff: "fork_with_root s root root_epoch h0 v0 h1 v1"
-    using sf small_fork_def by blast
-  have jroot: "justified s root root_epoch"
-    using ff fork_with_root_def by blast
-  have f1: "\<exists> q10 q11 ch1. finalized_with_root' root root_epoch s h1 v1 q10 q11 ch1"
-    using ff fork_with_root_def by blast
-  have f: "fork_with_root s root root_epoch h0L v0L h1 v1"
-    using L f1 fork_with_root_def jroot un0 un1 un2 by blast
-  show ?thesis
-    by (meson L casper.small_fork_def casper_axioms f sf)
-qed
-
-lemma small_fork_up_to_one:
-  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   n_justified_with_root (0 :: nat) root root_epoch s h0 v0 \<or>
-   n_justified_with_root (1 :: nat) root root_epoch s h0 v0"
-proof -
-  assume s: "small_fork s root root_epoch h0 v0 h1 v1"
-  then have f: "fork_with_root s root root_epoch h0 v0 h1 v1"
-    using small_fork_def by blast
-  then have j: "justified_with_root root root_epoch s h0 v0"
-    by (simp add: finalized_with_root'_def fork_with_root_def)
-  then have nj: "\<exists> n. n_justified_with_root n root root_epoch s h0 v0"
-    using j justified_means_n_justified by blast
-  then obtain n :: nat where njj: "n_justified_with_root n root root_epoch s h0 v0"
-    by blast
-  then show ?thesis
-  proof(cases "n < 2")
-    case True
-    then consider "n = 0" | "n = 1"
-      by linarith
-    then show ?thesis
-    proof cases
-      case 1
-      moreover have  "n_justified_with_root n root root_epoch s h0 v0"
-        by (simp add: njj)
-      moreover have "n = 0"
-        by (simp add: "1")
-      ultimately show ?thesis by simp
-    next
-      case 2
-      then show ?thesis
-        using njj by blast
-    qed
-  next
-    case False
-    then show ?thesis
-      by (meson linorder_not_less njj s small_fork_up_to_one_para)
-  qed
-qed
-
-lemma up_to_one_means_vote :
-  "n_justified_with_root 0 root root_epoch s h0 v0 \<or>
-   n_justified_with_root 1 root root_epoch s h0 v0 \<Longrightarrow>
-   \<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 v0 vs"
-  sorry
-
-lemma small_fork_leaf_voted:
-  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 v0 vs"
-  using small_fork_up_to_one up_to_one_means_vote by blast
-
-lemma root_is_slashed_dbl_eq_case:
-  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
-   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd root) \<longrightarrow> slashed_dbl s n"
-proof -
-  assume s: "small_fork s root root_epoch h0 vv h1 vv"
-  have "\<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs"
-    by (meson casper.small_fork_leaf_voted casper_axioms s)
-  then obtain q0 vs0 where v0: "\<forall> n. (n \<in>\<^sub>1 q0 of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs0"
-    by blast
-  have "\<exists> q vs. \<forall> n. (n \<in>\<^sub>1 q of vset_fwd root) \<longrightarrow> vote_msg s n h1 vv vs"
-    by (meson casper.small_fork_leaf_voted casper_axioms s small_fork_sym)
-  then obtain q1 vs1 where v1: "\<forall> n. (n \<in>\<^sub>1 q1 of vset_fwd root) \<longrightarrow> vote_msg s n h1 vv vs1"
-    by blast
-  have "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd root)) \<longrightarrow> ((n \<in>\<^sub>1 q0 of (vset_fwd root)) \<and> (n \<in>\<^sub>1 q1 of (vset_fwd root)))"
-    using hoge by blast
-  then obtain q where qp: "\<forall> n. (n \<in>\<^sub>2 q of (vset_fwd root)) \<longrightarrow> ((n \<in>\<^sub>1 q0 of (vset_fwd root)) \<and> (n \<in>\<^sub>1 q1 of (vset_fwd root)))"
-    by blast
-  have vB: "\<forall> n. (n \<in>\<^sub>2 q of vset_fwd root) \<longrightarrow> vote_msg s n h0 vv vs0 \<and> vote_msg s n h1 vv vs1"
-    by (simp add: qp v0 v1)
-  show ?thesis
-    by (metis casper.small_fork_def casper_axioms fork_with_root_def s slashed_dbl_def vB)
-qed
-
-lemma root_is_slashed_eq_case:
-  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
-   \<exists> q. one_third_of_fwd_slashed s root q"
-  apply(simp add: one_third_of_fwd_slashed_def slashed_def)
-  using root_is_slashed_dbl_eq_case by blast
-
-lemma accountable_safety_small_eq_case :
-  "small_fork s root root_epoch h0 vv h1 vv \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  by (meson casper.root_is_justified casper_axioms one_third_of_fwd_or_bwd_slashed_def root_is_slashed_eq_case)
-
-lemma accountable_safety_small_lt_case :
-  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   v0 < v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
-
-lemma accountable_safety_small :
-  "small_fork s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-proof(cases "v0 = v1")
-  case True
-  assume "small_fork s root root_epoch h0 v0 h1 v1"
-  then have a: "small_fork s root root_epoch h0 v0 h1 v0"
-    by (simp add: True)
-  then show ?thesis
-    using accountable_safety_small_eq_case by blast
-next
-  case False
-  assume s: "small_fork s root root_epoch h0 v0 h1 v1"
-  consider "v0 < v1" | "v1 < v0"
-    using False nat_neq_iff by blast
-  then show ?thesis
-  proof cases
-    case 1
-    then show ?thesis
-      using accountable_safety_small_lt_case s by blast
-  next
-    case 2
-    then show ?thesis
-      using accountable_safety_small_lt_case s small_fork_sym by blast
-  qed
-qed
-
-lemma voted_higher:
-  "voted_by_both s q0 q1 orig h v1 v2 \<Longrightarrow> v2 < v1"
-  by (simp add: voted_by_both_def voted_by_fwd_def)
-
-lemma justified_higher:
-  "justified_with_root root root_epoch s h v \<Longrightarrow>
-   root_epoch \<le> v"
-proof(induct rule: justified_with_root.induct)
-  case (justified_genesis r rE s)
-  then show ?case by simp
-next
-  case (justified_voted r rE s orig v2 q0 q1 h v1)
-  then show ?case
-    by (meson dual_order.order_iff_strict le_trans voted_higher)
-qed
-
-lemma finalized_higher:
-  "finalized_with_root' root root_epoch s h0 v0 q00 q01 child0 \<Longrightarrow>
-   root_epoch \<le> v0"
-  using finalized_with_root'_def justified_higher by blast
-
-lemma fork_root_edge0:
-"fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   root_epoch \<le> v0"
-proof -
-  assume "fork_with_root s root root_epoch h0 v0 h1 v1"
-  then have a: "\<exists> q0 q1 child. finalized_with_root' root root_epoch s h0 v0 q0 q1 child"
-    by (simp add: fork_with_root_def)
-  obtain q0 q1 child where "finalized_with_root' root root_epoch s h0 v0 q0 q1 child"
-    using a by blast
-  then show "root_epoch \<le> v0"
-    using finalized_higher by blast
-qed
-
-lemma fork_with_root_to_small :
-  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> rs rse h0e v0e h1e v1e.
-     small_fork s rs rse h0e v0e h1e v1e"
-proof(induct "v0 + v1 - root_epoch" arbitrary: root root_epoch h0 v0 h1 v1 rule: less_induct)
-  case less
-  then show ?case
-  proof(cases "\<exists> rh reh. root_epoch < reh \<and> fork_with_root s rh reh h0 v0 h1 v1")
-    case True
-    then show ?thesis
-    proof -
-      obtain nn :: nat and ee :: 'e where
-        f1: "root_epoch < nn \<and> fork_with_root s ee nn h0 v0 h1 v1"
-        using True by moura
-      then have "v0 + v1 - nn < v0 + v1 - root_epoch"
-        by (meson casper.fork_root_edge0 casper_axioms diff_less_mono2 dual_order.strict_trans1 le_add1)
-      then show ?thesis
-        using f1 less.hyps by blast
-    qed
-  next
-    case False
-    have r: "\<forall> root_higher root_epoch_higher.
-      root_epoch < root_epoch_higher \<longrightarrow>
-      \<not> fork_with_root s root_higher root_epoch_higher h0 v0 h1 v1"
-      using False by blast
-    then show ?thesis
-    proof(cases "\<exists> v0l h0l. v0l < v0 \<and> fork_with_root s root root_epoch h0l v0l h1 v1")
-      case True
-      then show ?thesis
-      proof -
-        obtain nn :: nat and ee :: 'e where
-          f1: "nn < v0 \<and> fork_with_root s root root_epoch ee nn h1 v1"
-          using True by blast
-        have "\<forall>p pa pb e f fa s ea n eb na ec nb. \<not> casper p (pa::'a \<Rightarrow> 'd \<Rightarrow> 'c \<Rightarrow> bool) pb \<or> casper.fork_with_root p pb e f fa (s::(_, 'e, 'f) state_scheme) ea n eb na ec nb = (casper.justified_with_root p pb f fa e 0 s ea n \<and> (\<exists>b ba e bb bc ed. casper.finalized_with_root' p pb f fa ea n s eb na (b::'b) ba e \<and> casper.finalized_with_root' p pb f fa ea n s ec nb bb bc ed \<and> \<not> casper.hash_ancestor pb ec eb \<and> \<not> casper.hash_ancestor pb eb ec \<and> eb \<noteq> ec))"
-          by (simp add: casper.fork_with_root_def)
-        then have "nn + v1 - root_epoch < v0 + v1 - root_epoch"
-        using f1 by (metis Nat.diff_add_assoc add_less_mono1 casper_axioms finalized_higher)
-        then show ?thesis
-          using f1 less.hyps by blast
-      qed
-    next
-      case False
-      then have l0: "\<forall> h0_lower v0_lower.
-       v0_lower < v0 \<longrightarrow>
-       \<not> fork_with_root s root root_epoch h0_lower v0_lower h1 v1"
-        by blast
-      then show ?thesis
-      proof(cases "\<exists> v1l h1l. v1l < v1 \<and> fork_with_root s root root_epoch h0 v0 h1l v1l")
-        case True
-        then show ?thesis
-        proof -
-          obtain nn :: nat and ee :: 'e where
-            f1: "nn < v1 \<and> fork_with_root s root root_epoch h0 v0 ee nn"
-            using True by force
-          then have "v0 + nn - root_epoch < v0 + v1 - root_epoch"
-            by (metis (no_types) Nat.diff_add_assoc2 add_mono_thms_linordered_field(2) casper.fork_root_edge0 casper_axioms)
-          then show ?thesis
-            using f1 less.hyps by blast
-        qed
-      next
-        case False
-        then have l1: "\<forall> h1_lower v1_lower.
-       v1_lower < v1 \<longrightarrow>
-       \<not> fork_with_root s root root_epoch h0 v0 h1_lower v1_lower"
-          by blast
-        then have "small_fork s root root_epoch h0 v0 h1 v1"
-          by (simp add: l0 less.prems r small_fork_def)
-        then show ?thesis
-          by blast
-      qed
-    qed
-  qed
-qed
-
-lemma accountable_safety_with_root :
-  "fork_with_root s root root_epoch h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  using accountable_safety_small fork_with_root_to_small by fastforce
-
-lemma finalized_as_finalized_with_root :
-  "finalized' s h v q0 q1 child = finalized_with_root' genesis 0 s h v q0 q1 child"
-by(simp add: finalized'_def finalized_with_root'_def)
-
-lemma fork_as_fork_with_root :
-  "fork s h0 v0 h1 v1 = fork_with_root s genesis 0 h0 v0 h1 v1"
-by(simp add: fork_def fork_with_root_def finalized_as_finalized_with_root justified_genesis)
 
 (**** intermediate stuff ends ****)
 
 lemma accountable_safety :
   "fork s h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-using accountable_safety_with_root fork_as_fork_with_root by blast
+  sorry
 
 end
 
@@ -1512,7 +1166,7 @@ lemma shallower_legitimacy_fork :
     heir_after_n_switching 0 s (h_twoa, v_twoa) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_two, v_two) (h_one, v_one) \<Longrightarrow>
     \<not> heir s (h_one, v_one) (h_two, v_two) \<Longrightarrow>
-    heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow>
+    heir s (h_onea, v_onea) (h_two, v_two) \<Longrightarrow> (* how to get this? *)
     v < v_onea \<Longrightarrow> legitimacy_fork_with_center s (h_orig, v_orig) (h_onea, v_onea) (h_one, v_one) (h_two, v_two)"
 apply(simp only: legitimacy_fork_with_center.simps)
 apply(rule conjI)
