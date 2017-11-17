@@ -156,10 +156,13 @@ definition one_third_of_fwd_or_bwd_slashed where
 
 (**** intermediate stuff ends ****)
 
+
 definition justification_fork_with_root where
-  "justification_fork_with_root s r rE h0 v0 h1 v1 \<equiv> \<exists> child0 child1.
-    (finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1 \<and>
-     \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1))"
+  "justification_fork_with_root s r rE h0 v0 h1 v1 \<equiv>
+     justified s r rE \<and>
+     (\<exists> child0 child1.
+     (finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1 \<and>
+     \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1)))"
 
 lemma justification_accountable_safety :
   "justification_fork_with_root s genesis 0 h0 v0 h1 v1 \<Longrightarrow>
@@ -216,7 +219,7 @@ qed
 lemma fork_to_justification_fork_with_root:
   "fork s h0 v0 h1 v1 \<Longrightarrow>
    justification_fork_with_root s genesis 0 h0 v0 h1 v1"
-  by (metis fork_def justification_fork_with_root_def justification_is_ancestor)
+  by (metis fork_def justification_fork_with_root_def justification_is_ancestor justified_genesis)
 
 (** intermediate stuff ends here **)
 
