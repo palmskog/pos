@@ -213,6 +213,10 @@ lemma small_fork_sym :
   "small_fork s r rE h0 v0 h1 v1 = small_fork s r rE h1 v1 h0 v0"
   by (simp add: add.commute justification_fork_with_root_sym small_fork_def)
 
+lemma close_justification_refl:
+  "close_justification s r rE r rE"
+  by (simp add: close_justification_def justified_genesis_n)
+
 lemma close_justification_four :
  "  justified_with_root r rE s h0 v0 \<Longrightarrow>
     justified s r rE \<Longrightarrow>
@@ -223,7 +227,22 @@ lemma close_justification_four :
    close_justification s r rE h0 v0"
 (* do I need to do this kind of thing in a mutual induction? *)
 (* maybe not, just try less_induct with hights *)
-  sorry
+proof(induct "v0 - rE" arbitrary: r rE h0 v0 rule: less_induct)
+  case less
+  assume "justified_with_root r rE s h0 v0"
+  then show ?case
+  proof(erule_tac local.justified_with_root.cases)
+    (* ! *)
+    show ?thesis
+      sorry
+    show ?thesis
+      sorry
+    show ?thesis
+      sorry
+    show ?thesis
+      sorry
+  qed
+qed
 
 lemma finalized_is_justified :
   "finalized_with_root r rE s h c v \<Longrightarrow>
