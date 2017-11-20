@@ -175,15 +175,32 @@ inductive justified_with_root_with_n_switchings and finalized_with_root_with_n_s
      usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
      finalized_with_root_with_n_switchings n r rE s p c e"
 
+lemma justified_with_root_refl:
+  "justified_with_root h v s h v"
+  by (simp add: justified_genesis)
 
+definition close_finalization where
+  "close_finalization s r rE h v \<equiv>
+     \<exists> child.
+       finalized_with_root_with_n_switchings (0 :: nat) r rE s h child v \<or>
+       finalized_with_root_with_n_switchings (1 :: nat) r rE s h child v"
 
+definition close_justification where
+  "close_justification s r rE h v \<equiv>
+       justified_with_root_with_n_switchings (0 :: nat) r rE s h v \<or>
+       justified_with_root_with_n_switchings (1 :: nat) r rE s h v"
 
 definition justification_fork_with_root where
   "justification_fork_with_root s r rE h0 v0 h1 v1 \<equiv>
      justified s r rE \<and>
      (\<exists> child0 child1.
-     (finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1 \<and>
-     \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1)))"
+       finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1) \<and>
+    \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1)"
+
+lemma justification_fork_with_root_sym :
+  "justification_fork_with_root s r rE h0 v0 h1 v1 =
+   justification_fork_with_root s r rE h1 v1 h0 v0"
+  using justification_fork_with_root_def by blast
 
 definition small_fork where
   "small_fork s r rE h0 v0 h1 v1 \<equiv>
@@ -192,14 +209,139 @@ definition small_fork where
        v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow>
        \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1')"
 
-(* I guess, the branches of a small fork should not contain any? more than one?
-   finalizing links... use justified_with_root_n_switchings
- *)
+lemma small_fork_sym :
+  "small_fork s r rE h0 v0 h1 v1 = small_fork s r rE h1 v1 h0 v0"
+  by (simp add: add.commute justification_fork_with_root_sym small_fork_def)
+
+lemma close_justification_four :
+ "  justified_with_root r rE s h0 v0 \<Longrightarrow>
+    justified s r rE \<Longrightarrow>
+    finalized_with_root r rE s h1 child1 v1 \<Longrightarrow>
+    \<not> justified_with_root h1 v1 s h0 v0 \<Longrightarrow> \<not> justified_with_root h0 v0 s h1 v1 \<Longrightarrow>
+   \<forall>r' rE' h0' v0' h1' v1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
+   close_justification s r rE h0 v0"
+(* do I need to do this kind of thing in a mutual induction? *)
+(* maybe not, just try less_induct with hights *)
+  sorry
+
+lemma finalized_is_justified :
+  "finalized_with_root r rE s h c v \<Longrightarrow>
+   justified_with_root r rE s h v"
+  by(erule_tac finalized_with_root.cases; auto)
+
+lemma when_n_justified_is_justified:
+  "finalized_with_root r rE s h c v \<Longrightarrow>
+   justified_with_root_with_n_switchings n r rE s h v \<Longrightarrow>
+   finalized_with_root_with_n_switchings n r rE s h c v"
+  apply(erule_tac finalized_with_root.cases; clarsimp)
+  by (metis Suc_eq_plus1 finalize_n)
+
+lemma when_close_justification_is_finalized :
+  "close_justification s r rE h v \<Longrightarrow>
+   finalized_with_root r rE s h c v \<Longrightarrow>
+   close_finalization s r rE h v"
+  by (meson casper.when_n_justified_is_justified casper_axioms close_finalization_def close_justification_def)
+
+lemma close_justification_three:
+ "justified s r rE \<Longrightarrow>
+    finalized_with_root r rE s h0 child0 v0 \<Longrightarrow>
+    finalized_with_root r rE s h1 child1 v1 \<Longrightarrow>
+    \<not> justified_with_root h1 v1 s h0 v0 \<Longrightarrow> \<not> justified_with_root h0 v0 s h1 v1 \<Longrightarrow>
+   \<forall>r' rE' h0' v0' h1' v1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
+   close_finalization s r rE h0 v0"
+  by (simp add: close_justification_four local.finalized_is_justified when_close_justification_is_finalized)
+
+lemma close_justification_two:
+ "justified s r rE \<Longrightarrow>
+    (\<exists>child0. finalized_with_root r rE s h0 child0 v0) \<Longrightarrow>
+    (\<exists>child1. finalized_with_root r rE s h1 child1 v1) \<Longrightarrow>
+    \<not> justified_with_root h1 v1 s h0 v0 \<Longrightarrow> \<not> justified_with_root h0 v0 s h1 v1 \<Longrightarrow>
+   \<forall>r' rE' h0' v0' h1' v1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
+   close_finalization s r rE h0 v0"
+  using close_justification_three by blast
+
+lemma close_justification_one:
+  "justification_fork_with_root s r rE h0 v0 h1 v1 \<Longrightarrow>
+   \<forall>r' rE' h0' v0' h1' v1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
+   close_finalization s r rE h0 v0"
+  apply (simp add: justification_fork_with_root_def)
+  apply (rule_tac close_justification_two; auto)
+  apply (auto simp add: justification_fork_with_root_def)
+  by blast
+
+lemma small_fork_has_close_justification :
+  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
+   close_finalization s r rE h0 v0"
+  using close_justification_one small_fork_def by blast
+
+lemma justification_fork_with_root_has_different_tips :
+  "justification_fork_with_root s r rE h0 v h1 v \<Longrightarrow> h0 \<noteq> h1"
+  using justification_fork_with_root_def justified_genesis by blast
+
+lemma small_fork_has_different_tips :
+  "small_fork s r rE h0 v h1 v \<Longrightarrow> h0 \<noteq> h1"
+  using justification_fork_with_root_has_different_tips small_fork_def by blast
+
+lemma close_finalizations_cause_slashing :
+  "close_finalization s r rE h0 v \<Longrightarrow>
+   close_finalization s r rE h1 v \<Longrightarrow>
+   h0 \<noteq> h1 \<Longrightarrow>
+   \<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
+  sorry
+
+lemma small_accountable_safety_equal :
+  "small_fork s r rE h0 v h1 v \<Longrightarrow>
+   \<exists> q. justified s r rE \<and> one_third_of_fwd_or_bwd_slashed s r q"
+proof -
+  assume a: "small_fork s r rE h0 v h1 v"
+  have b0: "close_finalization s r rE h0 v"
+    using a small_fork_has_close_justification by blast
+  have b1: "close_finalization s r rE h1 v"
+    using a small_fork_has_close_justification small_fork_sym by blast
+  have n: "h0 \<noteq> h1"
+    using a small_fork_has_different_tips by blast
+  show ?thesis
+    using a b0 b1 casper.small_fork_def casper_axioms close_finalizations_cause_slashing justification_fork_with_root_def n by fastforce
+qed
+
+lemma small_accountable_safety_gt :
+  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
+   v0 > v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  sorry
 
 lemma small_accountable_safety :
   "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+proof(cases "v0 = v1")
+  case True
+  moreover assume "small_fork s r rE h0 v0 h1 v1"
+  ultimately have "small_fork s r rE h0 v1 h1 v1" by simp
+  then show ?thesis
+    using small_accountable_safety_equal by blast
+next
+  case False
+  moreover assume a: "small_fork s r rE h0 v0 h1 v1"
+  then have b: "small_fork s r rE h1 v1 h0 v0"
+    by (simp add: justification_fork_with_root_def small_fork_def)
+  consider "v0 > v1" | "v1 > v0"
+    using calculation nat_neq_iff by blast
+  then show ?thesis
+  using a b proof cases
+    case 1
+    then show ?thesis
+      using a small_accountable_safety_gt by blast
+  next
+    case 2
+    then show ?thesis
+      using b small_accountable_safety_gt by blast
+  qed
+qed
+
 
 lemma justification_fork_to_small:
   "justification_fork_with_root s r rE h0 v0 h1 v1 \<Longrightarrow>
