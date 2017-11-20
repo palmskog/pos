@@ -154,6 +154,32 @@ definition one_third_of_fwd_or_bwd_slashed where
 
 (**** intermediate stuff ends ****)
 
+lemma usual_link_higher:
+  "usual_link s q0 q1 orig origE new newE \<Longrightarrow>
+   origE < newE"
+  by (metis casper.usual_link_def casper.voted_by_both_def casper.voted_by_bwd_def casper_axioms)
+
+lemma validator_changing_link_higher:
+    "validator_changing_link s q0 q1 c e h ee \<Longrightarrow>
+     e < ee"
+  by (simp add: validator_changing_link_def voted_by_both_def voted_by_bwd_def)
+
+lemma justifies_higher:
+  "justified_with_root r rE s h v \<Longrightarrow>
+   rE \<le> v"
+proof(induct rule: justified_with_root.induct)
+  case (justified_genesis r rE s)
+  then show ?case by auto
+next
+  case (usual_justification r rE s orig origE q0 q1 new newE)
+  then show ?case
+    by (meson le_trans order.strict_iff_order usual_link_higher)
+next
+  case (justified_on_finalization r rE s p e q0 q1 c h ee)
+  then show ?case
+    by (metis Suc_eq_plus1 dual_order.strict_trans le_imp_less_Suc less_imp_le validator_changing_link_higher)
+qed
+
 inductive justified_with_root_with_n_switchings where
   justified_genesis_n: "justified_with_root_with_n_switchings (0 :: nat) r rE s r rE"
 | usual_justification_n:
@@ -220,13 +246,29 @@ lemma close_justification_four :
    \<forall>r' rE' h0' v0' h1' v1'.
       v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
    close_justification s r rE h0 v0"
-(* do I need to do this kind of thing in a mutual induction? *)
-(* maybe not, just try less_induct with hights *)
 proof(induct "v0 - rE" arbitrary: r rE h0 v0 rule: less_induct)
   case less
   assume "justified_with_root r rE s h0 v0"
   then show ?case
-    sorry
+  proof(cases rule: justified_with_root.cases)
+    case justified_genesis
+    then show ?thesis
+      using close_justification_refl by blast
+  next
+    case (usual_justification orig origE q0 q1)
+    then show ?thesis proof -
+      assume j: "justified_with_root r rE s orig origE"
+      assume a: "usual_link s q0 q1 orig origE h0 v0"
+      have "origE < v0"
+        by (meson casper.voted_by_both_def casper_axioms local.usual_justification(2) usual_link_def voted_by_bwd_def)
+      moreover have "rE \<le> origE" sledgehammer
+      ultimately have s: "origE - rE < v0 - rE"
+        by (simp add: diff_less_mono)
+      show ?thesis sorry
+    qed
+  next
+    case (justified_on_finalization p e q0 q1 c)
+    then show ?thesis sorry
 qed
 
 lemma finalized_is_justified :
