@@ -104,24 +104,22 @@ definition usual_link where
    voted_by_both s q0 q1 orig origE new newE \<and>
    vset_bwd orig = vset_bwd new \<and> vset_fwd orig = vset_fwd new"
 
-inductive justified_with_root and finalized_with_root where
+inductive justified_with_root where
   justified_genesis: "justified_with_root r rE s r rE"
 | usual_justification:
     "justified_with_root r rE s orig origE \<Longrightarrow>
      usual_link s q0 q1 orig origE new newE \<Longrightarrow>
      justified_with_root r rE s new newE"
-| finalized_is_justified: "finalized_with_root r rE s p c e \<Longrightarrow> justified_with_root r rE s c (e + 1)"
 | justified_on_finalization:
-   "finalized_with_root r rE s p c e \<Longrightarrow>
+   "justified_with_root r rE s p e \<Longrightarrow>
+    usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
     validator_changing_link s q0 q1 c (e + 1) h ee \<Longrightarrow>
-    (* validator set consistency should be checked in the predicate validator_changing_vote *)
     justified_with_root r rE s h ee"
- | finalize:
-    "justified_with_root r rE s p e \<Longrightarrow>
-     usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
-     finalized_with_root r rE s p c e"
 
-(* Does this yield useful induction schema?  Let us see. *)
+(* should I be hiding c q0 q1 here? *)
+definition finalized_with_root where
+  "finalized_with_root r rE s p c pE \<equiv>
+    \<exists> q0 q1. justified_with_root r rE s p pE \<and> usual_link s q0 q1 p pE c (pE + 1)"
 
 abbreviation justified where
   "justified s h v \<equiv> justified_with_root genesis 0 s h v"
@@ -156,28 +154,25 @@ definition one_third_of_fwd_or_bwd_slashed where
 
 (**** intermediate stuff ends ****)
 
-inductive justified_with_root_with_n_switchings and finalized_with_root_with_n_switchings where
-  justified_genesis_n: "justified_with_root_with_n_switchings 0 r rE s r rE"
+inductive justified_with_root_with_n_switchings where
+  justified_genesis_n: "justified_with_root_with_n_switchings (0 :: nat) r rE s r rE"
 | usual_justification_n:
     "justified_with_root_with_n_switchings n r rE s orig origE \<Longrightarrow>
      usual_link s q0 q1 orig origE new newE \<Longrightarrow>
      justified_with_root_with_n_switchings n r rE s new newE"
-| finalized_is_justified_n:
-    "finalized_with_root_with_n_switchings n r rE s p c e \<Longrightarrow>
-     justified_with_root_with_n_switchings n r rE s c (e + 1)"
 | justified_on_finalization_n:
-     "finalized_with_root_with_n_switchings n r rE s p c e \<Longrightarrow>
-      validator_changing_link s q0 q1 c (e + 1) h ee \<Longrightarrow>
-      (* validator set consistency should be checked in the predicate validator_changing_vote *)
-      justified_with_root_with_n_switchings (Succ n) r rE s h ee"
-| finalize_n:
-    "justified_with_root_with_n_switchings n r rE s p e \<Longrightarrow>
-     usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
-     finalized_with_root_with_n_switchings n r rE s p c e"
+   "justified_with_root_with_n_switchings n r rE s p e \<Longrightarrow>
+    usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
+    validator_changing_link s q0 q1 c (e + 1) h ee \<Longrightarrow>
+    justified_with_root_with_n_switchings (Suc n) r rE s h ee"
 
 lemma justified_with_root_refl:
   "justified_with_root h v s h v"
   by (simp add: justified_genesis)
+
+definition finalized_with_root_with_n_switchings where
+  "finalized_with_root_with_n_switchings n r rE s p c pE \<equiv>
+    \<exists> q0 q1. justified_with_root_with_n_switchings n r rE s p pE \<and> usual_link s q0 q1 p pE c (pE + 1)"
 
 definition close_finalization where
   "close_finalization s r rE h v \<equiv>
@@ -231,30 +226,19 @@ proof(induct "v0 - rE" arbitrary: r rE h0 v0 rule: less_induct)
   case less
   assume "justified_with_root r rE s h0 v0"
   then show ?case
-  proof(erule_tac local.justified_with_root.cases)
-    (* ! *)
-    show ?thesis
-      sorry
-    show ?thesis
-      sorry
-    show ?thesis
-      sorry
-    show ?thesis
-      sorry
-  qed
+    sorry
 qed
 
 lemma finalized_is_justified :
   "finalized_with_root r rE s h c v \<Longrightarrow>
    justified_with_root r rE s h v"
-  by(erule_tac finalized_with_root.cases; auto)
+  by (simp add: finalized_with_root_def)
 
 lemma when_n_justified_is_justified:
   "finalized_with_root r rE s h c v \<Longrightarrow>
    justified_with_root_with_n_switchings n r rE s h v \<Longrightarrow>
    finalized_with_root_with_n_switchings n r rE s h c v"
-  apply(erule_tac finalized_with_root.cases; clarsimp)
-  by (metis Suc_eq_plus1 finalize_n)
+  by (simp add: finalized_with_root_def finalized_with_root_with_n_switchings_def)
 
 lemma when_close_justification_is_finalized :
   "close_justification s r rE h v \<Longrightarrow>
@@ -409,29 +393,21 @@ lemma usual_link_connects_ancestor_descendant:
 
 lemma justification_is_ancestor:
   "justified_with_root h1 v1 s h0 v0 \<Longrightarrow>
-   h1 \<leftarrow>\<^sup>* h0 \<or> h1 = h0" and
-  "finalized_with_root r rE s p c e \<Longrightarrow>
-   r \<leftarrow>\<^sup>* c \<or> r = c"
-proof(induct rule:justified_with_root_finalized_with_root.inducts)
+   h1 \<leftarrow>\<^sup>* h0 \<or> h1 = h0"
+proof(induct rule:justified_with_root.induct)
   case (justified_genesis r rE s)
-  then show ?case by simp
+  then show ?case
+    by simp
 next
   case (usual_justification r rE s orig origE q0 q1 new newE)
   then show ?case
     using hash_ancestor_trans usual_link_connects_ancestor_descendant by blast
 next
-  case (finalized_is_justified r rE s p c e)
+  case (justified_on_finalization r rE s p e q0 q1 c h ee)
   then show ?case
-    by blast
-next
-  case (justified_on_finalization r rE s p c e q0 q1 h ee)
-  then show ?case
-    by (metis hash_ancestor_trans validator_changing_link_def voted_by_both_connects_ancestor_descendant)
-next
-  case (finalize r rE s p e q0 q1 c)
-  then show ?case
-    using hash_ancestor_trans usual_link_connects_ancestor_descendant by blast
+    by (metis hash_ancestor_trans usual_link_connects_ancestor_descendant validator_changing_link_def voted_by_both_connects_ancestor_descendant)
 qed
+
 
 lemma fork_to_justification_fork_with_root:
   "fork s h0 v0 h1 v1 \<Longrightarrow>
