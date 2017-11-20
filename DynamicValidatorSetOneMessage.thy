@@ -156,6 +156,27 @@ definition one_third_of_fwd_or_bwd_slashed where
 
 (**** intermediate stuff ends ****)
 
+inductive justified_with_root_with_n_switchings and finalized_with_root_with_n_switchings where
+  justified_genesis_n: "justified_with_root_with_n_switchings 0 r rE s r rE"
+| usual_justification_n:
+    "justified_with_root_with_n_switchings n r rE s orig origE \<Longrightarrow>
+     usual_link s q0 q1 orig origE new newE \<Longrightarrow>
+     justified_with_root_with_n_switchings n r rE s new newE"
+| finalized_is_justified_n:
+    "finalized_with_root_with_n_switchings n r rE s p c e \<Longrightarrow>
+     justified_with_root_with_n_switchings n r rE s c (e + 1)"
+| justified_on_finalization_n:
+     "finalized_with_root_with_n_switchings n r rE s p c e \<Longrightarrow>
+      validator_changing_link s q0 q1 c (e + 1) h ee \<Longrightarrow>
+      (* validator set consistency should be checked in the predicate validator_changing_vote *)
+      justified_with_root_with_n_switchings (Succ n) r rE s h ee"
+| finalize_n:
+    "justified_with_root_with_n_switchings n r rE s p e \<Longrightarrow>
+     usual_link s q0 q1 p e c (e + 1) \<Longrightarrow>
+     finalized_with_root_with_n_switchings n r rE s p c e"
+
+
+
 
 definition justification_fork_with_root where
   "justification_fork_with_root s r rE h0 v0 h1 v1 \<equiv>
@@ -164,10 +185,45 @@ definition justification_fork_with_root where
      (finalized_with_root r rE s h0 child0 v0 \<and> finalized_with_root r rE s h1 child1 v1 \<and>
      \<not>(justified_with_root h1 v1 s h0 v0 \<or> justified_with_root h0 v0 s h1 v1)))"
 
+definition small_fork where
+  "small_fork s r rE h0 v0 h1 v1 \<equiv>
+    justification_fork_with_root s r rE h0 v0 h1 v1 \<and>
+    (\<forall> r' rE' h0' v0' h1' v1'.
+       v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow>
+       \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1')"
+
+(* I guess, the branches of a small fork should not contain any? more than one?
+   finalizing links... use justified_with_root_n_switchings
+ *)
+
+lemma small_accountable_safety :
+  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  sorry
+
+lemma justification_fork_to_small:
+  "justification_fork_with_root s r rE h0 v0 h1 v1 \<Longrightarrow>
+   \<exists> r' rE' h0' v0' h1' v1'.
+     small_fork s r' rE' h0' v0' h1' v1'"
+proof(induct "v0 + v1 - rE" arbitrary: r rE h0 v0 h1 v1 rule: less_induct)
+  case less
+  then show ?case
+  proof (cases "\<exists> r' rE' h0' v0' h1' v1'. v0' + v1' - rE' < v0 + v1 - rE \<and>
+                                 justification_fork_with_root s r' rE' h0' v0' h1' v1'")
+    case True
+    then show ?thesis
+      using less.hyps by blast
+  next
+    case False
+    then show ?thesis
+      by (metis less.prems small_fork_def)
+  qed
+qed
+
 lemma justification_accountable_safety :
   "justification_fork_with_root s genesis 0 h0 v0 h1 v1 \<Longrightarrow>
    \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+  using justification_fork_to_small small_accountable_safety by blast
 
 lemma nth_parent_is_ancestor:
   "nth_parent n orig h \<Longrightarrow>
