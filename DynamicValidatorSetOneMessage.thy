@@ -469,32 +469,42 @@ lemma small_fork_has_close_justification :
   by blast
 
 lemma justification_fork_with_root_has_different_tips :
-  "justification_fork_with_root s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1"
-  sorry
+  "justification_fork_with_root s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1 \<or> m0 \<noteq> m1"
+  using justification_fork_with_root_def justified_genesis by blast
 
 lemma small_fork_has_different_tips :
-  "small_fork s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1"
+  "small_fork s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1 \<or> m0 \<noteq> m1"
   using casper.justification_fork_with_root_has_different_tips casper_axioms small_fork_def by fastforce
 
 (* after child, it must rotate *)
 lemma close_finalizations_cause_slashing :
   "close_finalization s r rE rM h0 v m0 \<Longrightarrow>
    close_finalization s r rE rM h1 v m1 \<Longrightarrow>
-   h0 \<noteq> h1 \<Longrightarrow>
-   \<exists> r' rE' rM' q. justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
+   h0 \<noteq> h1 \<or> m0 \<noteq> m1 \<Longrightarrow>
+   \<exists> q r' rE' rM'. justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
 (* the first case analysis would be if r is a finalizing child. *)
   sorry
 
 lemma small_accountable_safety_equal :
   "small_fork s r rE rM h0 v m0 h1 v m1 \<Longrightarrow>
    \<exists> q r' rE' rM' . justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
-  sorry
+proof -
+  assume a: "small_fork s r rE rM h0 v m0 h1 v m1"
+  have dif: "h0 \<noteq> h1 \<or> m0 \<noteq> m1"
+    using a casper.small_fork_has_different_tips casper_axioms by fastforce
+  have c0: "close_finalization s r rE rM h0 v m0"
+    by (meson a casper.small_fork_has_close_justification casper_axioms)
+  have c1: "close_finalization s r rE rM h1 v m1"
+    using a small_fork_has_close_justification small_fork_sym by blast
+  show ?thesis
+    using dif c0 c1 close_finalizations_cause_slashing by blast
+qed
 
 lemma small_accountable_safety_gt :
   "small_fork s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
    v0 > v1 \<Longrightarrow>
    \<exists> h v m q. justified s h v m \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  sorry
+  sorry (* this one is the harder case, so leave it until _equal is done *)
 
 lemma small_accountable_safety :
   "small_fork s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
@@ -539,8 +549,9 @@ proof(induct "v0 + v1 - rE" arbitrary: r rE rM h0 v0 m0 h1 v1 m1 rule: less_indu
       using less.hyps by blast
   next
     case False
-    then show ?thesis
-      sorry
+    then have "small_fork s r rE rM h0 v0 m0 h1 v1 m1"
+      by (simp add: less.prems small_fork_def)
+    then show ?thesis by blast
   qed
 qed
 
