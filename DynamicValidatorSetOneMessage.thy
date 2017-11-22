@@ -449,7 +449,19 @@ lemma close_justification_two:
    \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
       v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1' \<Longrightarrow>
    close_finalization s r rE rM h0 v0 m0"
-  sorry
+proof -
+  assume j: "justified s r rE rM"
+  assume "\<exists>child0. finalized_with_root r rE rM s h0 child0 v0 m0"
+  then obtain child0 where a0: "finalized_with_root r rE rM s h0 child0 v0 m0" by blast
+  assume "\<exists>child1. finalized_with_root r rE rM s h1 child1 v1 m1"
+  then obtain child1 where a1: "finalized_with_root r rE rM s h1 child1 v1 m1" by blast
+  assume a2: "\<not> justified_with_root h1 v1 m1 s h0 v0 m0"
+  assume a3: "\<not> justified_with_root h0 v0 m0 s h1 v1 m1"
+  assume a4: "
+   \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1'"
+  show ?thesis using j a0 a1 a2 a3 a4 by(rule close_justification_three; auto)
+qed
 
 lemma close_justification_one:
   "justification_fork_with_root s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
