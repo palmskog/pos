@@ -131,8 +131,8 @@ abbreviation justified where
   "justified s h v m \<equiv> justified_with_root genesis 0 Usual s h v m"
 
 definition fork where
-  "fork s h0 v0 h1 v1 \<equiv> \<exists> child0 child1 his0 his1.
-    (finalized_with_root genesis 0 Usual s h0 child0 v0 his0 \<and> finalized_with_root genesis 0 Usual s h1 child1 v1 his1 \<and>
+  "fork s h0 v0 m0 h1 v1 m1 \<equiv> \<exists> child0 child1.
+    (finalized_with_root genesis 0 Usual s h0 child0 v0 m0 \<and> finalized_with_root genesis 0 Usual s h1 child1 v1 m1 \<and>
      \<not>(h1 \<leftarrow>\<^sup>* h0 \<or> h0 \<leftarrow>\<^sup>* h1 \<or> h0 = h1))"
 
 definition slashed_dbl where "slashed_dbl s n \<equiv>
@@ -406,25 +406,24 @@ lemma close_justification_alt :
 (* induction on the first assumption *)
   sorry
 
-(**** now here, basically adding rM and m, for the modes *)
-
 lemma close_finalization_alt :
-  "finalized_with_root r rE s h c v \<Longrightarrow>
-   \<forall> h' c' v'.
+  "finalized_with_root r rE rM s h c v m \<Longrightarrow>
+   \<forall> h' c' v' m'.
       rE \<noteq> v' \<longrightarrow> v' \<noteq> v \<longrightarrow>
-      justified_with_root r rE s h' v' \<longrightarrow>
-      justified_with_root h' v' s h v \<longrightarrow> \<not> finalized_with_root r rE s h' c' v' \<Longrightarrow>
-   close_finalization s r rE h v"
+      justified_with_root r rE rM s h' v' m' \<longrightarrow>
+      justified_with_root h' v' m' s h v m \<longrightarrow> \<not> finalized_with_root r rE rM s h' c' v' m' \<Longrightarrow>
+   close_finalization s r rE rM h v m"
   by (simp add: close_justification_alt finalized_is_justified when_close_justification_is_finalized)
 
 lemma close_justification_three:
- "justified s r rE \<Longrightarrow>
-    finalized_with_root r rE s h0 child0 v0 \<Longrightarrow>
-    finalized_with_root r rE s h1 child1 v1 \<Longrightarrow>
-    \<not> justified_with_root h1 v1 s h0 v0 \<Longrightarrow> \<not> justified_with_root h0 v0 s h1 v1 \<Longrightarrow>
-   \<forall>r' rE' h0' v0' h1' v1'.
-      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
-   close_finalization s r rE h0 v0"
+ "justified s r rE rM \<Longrightarrow>
+    finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+    finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
+    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+   \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1' \<Longrightarrow>
+   close_finalization s r rE rM h0 v0 m0"
+(*
 proof -
   assume "justified s r rE"
   moreover assume f0: "finalized_with_root r rE s h0 child0 v0"
@@ -439,84 +438,77 @@ proof -
     using small_fork_has_no_middle_fin by blast
   then show ?thesis
     using close_finalization_alt f0 by blast
-qed
+qed *)
+  sorry
 
 lemma close_justification_two:
- "justified s r rE \<Longrightarrow>
-    (\<exists>child0. finalized_with_root r rE s h0 child0 v0) \<Longrightarrow>
-    (\<exists>child1. finalized_with_root r rE s h1 child1 v1) \<Longrightarrow>
-    \<not> justified_with_root h1 v1 s h0 v0 \<Longrightarrow> \<not> justified_with_root h0 v0 s h1 v1 \<Longrightarrow>
-   \<forall>r' rE' h0' v0' h1' v1'.
-      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
-   close_finalization s r rE h0 v0"
-  using close_justification_three by blast
+ "justified s r rE rM \<Longrightarrow>
+    (\<exists>child0. finalized_with_root r rE rM s h0 child0 v0 m0) \<Longrightarrow>
+    (\<exists>child1. finalized_with_root r rE rM s h1 child1 v1 m1) \<Longrightarrow>
+    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+   \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1' \<Longrightarrow>
+   close_finalization s r rE rM h0 v0 m0"
+  sorry
 
 lemma close_justification_one:
-  "justification_fork_with_root s r rE h0 v0 h1 v1 \<Longrightarrow>
-   \<forall>r' rE' h0' v0' h1' v1'.
-      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' h0' v0' h1' v1' \<Longrightarrow>
-   close_finalization s r rE h0 v0"
+  "justification_fork_with_root s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+      v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1' \<Longrightarrow>
+   close_finalization s r rE rM h0 v0 m0"
   apply (simp add: justification_fork_with_root_def)
   apply (rule_tac close_justification_two; auto)
   apply (auto simp add: justification_fork_with_root_def)
   by blast
 
 lemma small_fork_has_close_justification :
-  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
-   close_finalization s r rE h0 v0"
-  using close_justification_one small_fork_def by blast
+  "small_fork s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   close_finalization s r rE rM h0 v0 m0"
+  apply(simp add: small_fork_def)
+  apply(rule close_justification_one; auto)
+  by blast
 
 lemma justification_fork_with_root_has_different_tips :
-  "justification_fork_with_root s r rE h0 v h1 v \<Longrightarrow> h0 \<noteq> h1"
-  using justification_fork_with_root_def justified_genesis by blast
+  "justification_fork_with_root s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1"
+  sorry
 
 lemma small_fork_has_different_tips :
-  "small_fork s r rE h0 v h1 v \<Longrightarrow> h0 \<noteq> h1"
-  using justification_fork_with_root_has_different_tips small_fork_def by blast
+  "small_fork s r rE rM h0 v m0 h1 v m1 \<Longrightarrow> h0 \<noteq> h1"
+  using casper.justification_fork_with_root_has_different_tips casper_axioms small_fork_def by fastforce
 
 (* after child, it must rotate *)
 lemma close_finalizations_cause_slashing :
-  "close_finalization s r rE h0 v \<Longrightarrow>
-   close_finalization s r rE h1 v \<Longrightarrow>
+  "close_finalization s r rE rM h0 v m0 \<Longrightarrow>
+   close_finalization s r rE rM h1 v m1 \<Longrightarrow>
    h0 \<noteq> h1 \<Longrightarrow>
-   \<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
+   \<exists> r' rE' rM' q. justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
 (* the first case analysis would be if r is a finalizing child. *)
   sorry
 
 lemma small_accountable_safety_equal :
-  "small_fork s r rE h0 v h1 v \<Longrightarrow>
-   \<exists> q. justified s r rE \<and> one_third_of_fwd_or_bwd_slashed s r q"
-proof -
-  assume a: "small_fork s r rE h0 v h1 v"
-  have b0: "close_finalization s r rE h0 v"
-    using a small_fork_has_close_justification by blast
-  have b1: "close_finalization s r rE h1 v"
-    using a small_fork_has_close_justification small_fork_sym by blast
-  have n: "h0 \<noteq> h1"
-    using a small_fork_has_different_tips by blast
-  show ?thesis
-    using a b0 b1 casper.small_fork_def casper_axioms close_finalizations_cause_slashing justification_fork_with_root_def n by fastforce
-qed
+  "small_fork s r rE rM h0 v m0 h1 v m1 \<Longrightarrow>
+   \<exists> q r' rE' rM' . justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
+  sorry
 
 lemma small_accountable_safety_gt :
-  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
+  "small_fork s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
    v0 > v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+   \<exists> h v m q. justified s h v m \<and> one_third_of_fwd_or_bwd_slashed s h q"
   sorry
 
 lemma small_accountable_safety :
-  "small_fork s r rE h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  "small_fork s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   \<exists> h v m q. justified s h m v \<and> one_third_of_fwd_or_bwd_slashed s h q"
 proof(cases "v0 = v1")
   case True
-  moreover assume "small_fork s r rE h0 v0 h1 v1"
-  ultimately have "small_fork s r rE h0 v1 h1 v1" by simp
+  moreover assume "small_fork s r rE rM h0 v0 m0 h1 v1 m1"
+  ultimately have "small_fork s r rE rM h0 v1 m0 h1 v1 m1" by simp
   then show ?thesis
     using small_accountable_safety_equal by blast
 next
   case False
-  moreover assume a: "small_fork s r rE h0 v0 h1 v1"
-  then have b: "small_fork s r rE h1 v1 h0 v0"
+  moreover assume a: "small_fork s r rE rM h0 v0 m0 h1 v1 m1"
+  then have b: "small_fork s r rE rM h1 v1 m1 h0 v0 m0"
     by (simp add: justification_fork_with_root_def small_fork_def)
   consider "v0 > v1" | "v1 > v0"
     using calculation nat_neq_iff by blast
@@ -534,28 +526,28 @@ qed
 
 
 lemma justification_fork_to_small:
-  "justification_fork_with_root s r rE h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> r' rE' h0' v0' h1' v1'.
-     small_fork s r' rE' h0' v0' h1' v1'"
-proof(induct "v0 + v1 - rE" arbitrary: r rE h0 v0 h1 v1 rule: less_induct)
+  "justification_fork_with_root s r rE rM h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   \<exists> r' rE' rM' h0' v0' m0' h1' v1' m1'.
+     small_fork s r' rE' rM' h0' v0' m0' h1' v1' m1'"
+proof(induct "v0 + v1 - rE" arbitrary: r rE rM h0 v0 m0 h1 v1 m1 rule: less_induct)
   case less
   then show ?case
-  proof (cases "\<exists> r' rE' h0' v0' h1' v1'. v0' + v1' - rE' < v0 + v1 - rE \<and>
-                                 justification_fork_with_root s r' rE' h0' v0' h1' v1'")
+  proof (cases "\<exists> r' rE' rM' h0' v0' m0' h1' v1' m1'. v0' + v1' - rE' < v0 + v1 - rE \<and>
+                justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1'")
     case True
     then show ?thesis
       using less.hyps by blast
   next
     case False
     then show ?thesis
-      by (metis less.prems small_fork_def)
+      sorry
   qed
 qed
 
 lemma justification_accountable_safety :
-  "justification_fork_with_root s genesis 0 h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
-  using justification_fork_to_small small_accountable_safety by blast
+  "justification_fork_with_root s genesis 0 Usual h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   \<exists> h v m q. justified s h v m \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  using casper.small_accountable_safety casper_axioms justification_fork_to_small by fastforce
 
 lemma nth_parent_is_ancestor:
   "nth_parent n orig h \<Longrightarrow>
@@ -581,7 +573,7 @@ lemma usual_link_connects_ancestor_descendant:
   using usual_link_def voted_by_both_connects_ancestor_descendant by blast
 
 lemma justification_is_ancestor:
-  "justified_with_root h1 v1 s h0 v0 \<Longrightarrow>
+  "justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
    h1 \<leftarrow>\<^sup>* h0 \<or> h1 = h0"
 proof(induct rule:justified_with_root.induct)
   case (justified_genesis r rE s)
@@ -594,20 +586,20 @@ next
 next
   case (justified_on_finalization r rE s p e q0 q1 c h ee)
   then show ?case
-    by (metis hash_ancestor_trans usual_link_connects_ancestor_descendant validator_changing_link_def voted_by_both_connects_ancestor_descendant)
+    by (metis hash_ancestor_trans validator_changing_link_def voted_by_both_connects_ancestor_descendant)
 qed
 
 
 lemma fork_to_justification_fork_with_root:
-  "fork s h0 v0 h1 v1 \<Longrightarrow>
-   justification_fork_with_root s genesis 0 h0 v0 h1 v1"
+  "fork s h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   justification_fork_with_root s genesis 0 Usual h0 v0 m0 h1 v1 m1"
   by (metis fork_def justification_fork_with_root_def justification_is_ancestor justified_genesis)
 
 (** intermediate stuff ends here **)
 
 lemma accountable_safety :
-  "fork s h0 v0 h1 v1 \<Longrightarrow>
-   \<exists> h v q. justified s h v \<and> one_third_of_fwd_or_bwd_slashed s h q"
+  "fork s h0 v0 m0 h1 v1 m1 \<Longrightarrow>
+   \<exists> h v m q. justified s h v m \<and> one_third_of_fwd_or_bwd_slashed s h q"
   using fork_to_justification_fork_with_root justification_accountable_safety by blast
 
 end
