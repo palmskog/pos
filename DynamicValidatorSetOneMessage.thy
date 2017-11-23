@@ -307,10 +307,10 @@ qed
 definition close_finalization where
   "close_finalization s r rE rM h v m \<equiv>
   (rE + 1 < v \<longrightarrow> m = Usual) \<and>
-   (\<exists> child.
+   ((\<exists> child.
     finalized_with_root_with_n_switchings (0 :: nat) r rE rM s h child v m) \<or>
   (\<exists> child. finalized_with_root_with_n_switchings (1 :: nat) r rE rM s h child v m) \<and> rE < v \<and> (rE + 1 = v \<longrightarrow> vset_fwd h = vset_chosen r \<and> rM = FinalizingChild) \<or>
-  (\<exists> child. finalized_with_root_with_n_switchings (2 :: nat) r rE rM s h child v m) \<and> rE + 1 < v \<and> vset_bwd h = vset_chosen r \<and> rM = FinalizingChild"
+  (\<exists> child. finalized_with_root_with_n_switchings (2 :: nat) r rE rM s h child v m) \<and> rE + 1 < v \<and> vset_bwd h = vset_chosen r \<and> rM = FinalizingChild)"
 
 definition close_justification where
   "close_justification s r rE rM h v hist \<equiv>
@@ -1144,13 +1144,7 @@ qed
 lemma close_fj :
   "close_finalization s r rE rM h v m \<Longrightarrow>
    close_justification s r rE rM h v m"
-  apply(simp add: close_finalization_def close_justification_def)
-  apply(erule_tac disjE)
-  using fjn apply blast
-  apply(erule_tac disjE)
-  using fjn apply blast
-  using fjn apply blast
-  done
+  by(auto simp add: close_finalization_def close_justification_def fjn)
 
 lemma close_finalizations_cause_slashing_u_inner :
   " close_finalization s r rE Usual h0 v m0 \<Longrightarrow>
