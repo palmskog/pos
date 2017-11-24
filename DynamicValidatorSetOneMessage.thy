@@ -476,17 +476,99 @@ lemma when_close_justification_is_finalized :
    apply (simp add: when_close_justification_is_finalized_u)
   by (simp add: when_close_justification_is_finalized_f)
 
+lemma jff:
+   "finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+    justified s r rE rM \<Longrightarrow>
+    justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow>
+    finalized_with_root h0' v0' m0' s h0 child0 v0 m0"
+proof(induct rule: finalized_with_root.induct)
+  case (under_usual_link r rE mode s orig origE q0 q1 new)
+  then show ?case
+    by (simp add: finalized_with_root.under_usual_link)
+next
+  case (under_changing_link r rE mode s c e q0 q1 h)
+  then show ?case
+    by (meson casper.finalized_with_root.intros(2) casper_axioms)
+qed
+
+lemma small_fork_with_middle_means_without_link:
+ "justified s r rE rM \<Longrightarrow>
+  finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+  finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
+  \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+  rE \<noteq> v0' \<Longrightarrow> v0' \<noteq> v0 \<Longrightarrow>
+  justified_with_root r rE rM s h0' v0' m0' \<Longrightarrow>
+  justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow> finalized_with_root r rE rM s h0' c0' v0' m0' \<Longrightarrow>
+  \<not> justified_with_root h0' v0' m0' s h1 v1 m1 \<Longrightarrow>
+  justification_fork_with_root s r rE rM h0' v0' m0' h1 v1 m1"
+  using justification_fork_with_root_def justified_with_root_trans by blast
+
+lemma small_fork_with_middle_means_with_link:
+ "justified s r rE rM \<Longrightarrow>
+  finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+  finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
+  \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+  rE \<noteq> v0' \<Longrightarrow> v0' \<noteq> v0 \<Longrightarrow>
+  justified_with_root r rE rM s h0' v0' m0' \<Longrightarrow>
+  justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow> finalized_with_root r rE rM s h0' c0' v0' m0' \<Longrightarrow>
+  justified_with_root h0' v0' m0' s h1 v1 m1 \<Longrightarrow>
+  justification_fork_with_root s h0' v0' m0' h0 v0 m0 h1 v1 m1"
+  by (meson jff justification_fork_with_root_def justified_with_root_trans)
+
+lemma small_fork_with_middle_means:
+ "justified s r rE rM \<Longrightarrow>
+  finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+  finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
+  \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+  rE \<noteq> v0' \<Longrightarrow> v0' \<noteq> v0 \<Longrightarrow>
+  justified_with_root r rE rM s h0' v0' m0' \<Longrightarrow>
+  justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow> finalized_with_root r rE rM s h0' c0' v0' m0' \<Longrightarrow>
+  justification_fork_with_root s r rE rM h0' v0' m0' h1 v1 m1 \<or>
+  justification_fork_with_root s h0' v0' m0' h0 v0 m0 h1 v1 m1"
+  by (meson small_fork_with_middle_means_with_link small_fork_with_middle_means_without_link)
+
 lemma small_fork_has_no_middle_fin:
  "justified s r rE rM \<Longrightarrow>
-    finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
-    finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
-    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
-   \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+  finalized_with_root r rE rM s h0 child0 v0 m0 \<Longrightarrow>
+  finalized_with_root r rE rM s h1 child1 v1 m1 \<Longrightarrow>
+  \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow> \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+  \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
       v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1' \<Longrightarrow>
-   rE \<noteq> v0' \<Longrightarrow> v0' \<noteq> v0 \<Longrightarrow>
-   justified_with_root r rE rM s h0' v0' m0' \<Longrightarrow>
-   justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow> \<not> finalized_with_root r rE rM s h0' c0' v0' m0'"
-  sorry
+  rE \<noteq> v0' \<Longrightarrow> v0' \<noteq> v0 \<Longrightarrow>
+  justified_with_root r rE rM s h0' v0' m0' \<Longrightarrow>
+  justified_with_root h0' v0' m0' s h0 v0 m0 \<Longrightarrow> finalized_with_root r rE rM s h0' c0' v0' m0' \<Longrightarrow> False"
+proof -
+  assume j: "justified s r rE rM"
+  assume f0: "finalized_with_root r rE rM s h0 child0 v0 m0"
+  assume f1: "finalized_with_root r rE rM s h1 child1 v1 m1"
+  assume j10: "\<not> justified_with_root h1 v1 m1 s h0 v0 m0"
+  assume j01: "\<not> justified_with_root h0 v0 m0 s h1 v1 m1"
+  assume rv: "rE \<noteq> v0'"
+  assume vv: "v0' \<noteq> v0"
+  assume lower: "justified_with_root r rE rM s h0' v0' m0'"
+  assume higher: "justified_with_root h0' v0' m0' s h0 v0 m0"
+  assume mid_f: "finalized_with_root r rE rM s h0' c0' v0' m0'"
+  assume no_mid: "  \<forall>r' rE' rM' h0' v0' m0' h1' v1' m1'.
+     v0' + v1' - rE' < v0 + v1 - rE \<longrightarrow> \<not> justification_fork_with_root s r' rE' rM' h0' v0' m0' h1' v1' m1'"
+  consider
+    (a) "justification_fork_with_root s r rE rM h0' v0' m0' h1 v1 m1" |
+    (b) "justification_fork_with_root s h0' v0' m0' h0 v0 m0 h1 v1 m1"
+    by (meson casper.small_fork_with_middle_means casper_axioms f0 f1 higher j j01 j10 lower mid_f rv vv)
+  then show ?thesis
+  proof(cases)
+    case a
+    then have "v0' + v1 - rE < v0 + v1 - rE"
+      by (meson add_strict_right_mono diff_less_mono higher justifies_higher le_neq_implies_less less_le_trans linorder_not_le lower not_add_less1 vv)
+    then show ?thesis
+      using a no_mid by blast
+  next
+    case b
+    then have "v0 + v1 - v0' < v0 + v1 - rE"
+      by (metis casper.justifies_higher casper_axioms diff_less_mono2 higher le_less_trans le_neq_implies_less lower rv trans_less_add1)
+    then show ?thesis
+      using b no_mid by blast
+  qed
+qed
 
 lemma not_finalizing:
   "origM \<noteq> FinalizingChild \<Longrightarrow> origM = Usual"
@@ -883,7 +965,7 @@ proof -
     apply(rule_tac impI)
     apply(rule_tac impI)
     apply(rule_tac impI)
-    by(rule small_fork_has_no_middle_fin; auto)
+    using small_fork_has_no_middle_fin by auto
   then show ?thesis
     using close_finalization_alt f0 by blast
 qed
