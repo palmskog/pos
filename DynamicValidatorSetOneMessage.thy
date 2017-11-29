@@ -2088,7 +2088,8 @@ next
 
 next
   case (justified_on_finalization_n n r rE mode s c e origM q0 q1 h ee newM)
-  then show ?case sorry
+  then show ?case
+    by(auto simp add: close_finalization_def)
 qed
 
 lemma close_j_f_u_one:
