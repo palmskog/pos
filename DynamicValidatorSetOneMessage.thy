@@ -1845,9 +1845,9 @@ next
     by (meson casper.usual_link_def casper.voted_by_fwd_def casper_axioms ul voted_by_both_def)
   moreover have "vset_fwd r = vset_fwd new"
     by (metis casper.zero_switching_means casper_axioms oj ul usual_link_def)
-  moreover have "origE + 1 < v1"
-    by (metis Mode.simps(1) Suc_diff_Suc Suc_eq_plus1 Usual add_diff_inverse_nat diff_add_0 newMarith ul usual_link_higher)
-  ultimately have e: "\<exists> q. voted_by s q (vset_fwd r) orig origE new v1 \<and> origE + 1 < v1"
+  moreover have "origE + 1 = v1"
+    using FinalizingChild Mode.simps(1) newMarith by presburger
+  ultimately have e: "\<exists> q. voted_by s q (vset_fwd r) orig origE new v1 \<and> origE + 1 = v1"
     by simp
   have ss: "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r) \<longrightarrow> slashed s n"
     by (metis casper.double_vote casper_axioms e f nat_neq_iff)
@@ -1865,7 +1865,25 @@ lemma diff_conc2:
     justified s r rE Usual \<Longrightarrow>
     finalized_with_root_with_n_switchings (Suc 0) r rE Usual s h1 child v1 m1 \<Longrightarrow>
     new \<noteq> h1 \<Longrightarrow> \<exists>q r'. (\<exists>rE' a. justified s r' rE' a) \<and> one_third_of_fwd_or_bwd_slashed s r' q"
-sorry
+proof-
+  assume j: "justified_with_root_with_n_switchings 0 r rE Usual s orig origE origM"
+  assume ul: "usual_link s q0 q1 orig origE new v1"
+  have v_left:"\<exists> q. voted_by s q (vset_fwd new) orig origE new v1"
+    by (meson casper.voted_by_both_def casper_axioms ul usual_link_def voted_by_fwd_def)
+  have v_left2: "\<exists> q. voted_by s q (vset_fwd r) orig origE new v1"
+    by (metis casper.usual_link_def casper.zero_switching_means casper_axioms j ul v_left)
+  assume f: "finalized_with_root_with_n_switchings (Suc 0) r rE Usual s h1 child v1 m1"
+  have v_right: "\<exists> q p pE. voted_by s q (vset_fwd r) p pE h1 v1"
+    by (metis casper.forget_n_switchings casper_axioms f fjn j justifies_higher leD one_switching_involves_root_vote v_left2 voted_by_higher)
+  assume diff: "new \<noteq> h1 "
+  have ss: "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r) \<longrightarrow> slashed s n"
+    by (meson casper.double_vote casper_axioms diff v_left2 v_right)
+  have sl: "\<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
+    by (metis casper.zero_switching_means casper_axioms diff double_vote j one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def ul usual_link_def v_left v_right)
+  assume jj: "justified s r rE Usual"
+  show ?thesis
+    using jj sl by auto
+qed
 
 lemma diff_concl1:
     "justified_with_root_with_n_switchings 0 r rE Usual s orig origE origM \<Longrightarrow>
