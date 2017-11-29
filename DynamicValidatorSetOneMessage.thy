@@ -1555,12 +1555,27 @@ lemma close_finalization_has_child:
 by (smt Mode.simps(1) One_nat_def Suc_eq_plus1 Suc_lessI casper.close_finalization_def casper_axioms finalized_one_has_child finalized_zero_has_child)
 
 lemma surround_concrete:
-  "\<exists> q0. voted_by s q0 vset orig origE new newE \<Longrightarrow>
-   \<exists> q1 ch1. voted_by s q1 vset h1 v1 ch1 chE \<Longrightarrow>
+  "voted_by s q0 vset orig origE new newE \<Longrightarrow>
+   voted_by s q1 vset h1 v1 ch1 chE \<Longrightarrow>
    origE < v1 \<Longrightarrow>
    chE < newE \<Longrightarrow>
    \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset) \<longrightarrow> slashed s n"
-  sorry
+proof -
+  assume v0: "voted_by s q0 vset orig origE new newE"
+  assume v1: "voted_by s q1 vset h1 v1 ch1 chE"
+  have both: "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset) \<longrightarrow> (n \<in>\<^sub>1 q0 of vset) \<and> (n \<in>\<^sub>1 q1 of vset)"
+    by (metis byz_quorums_axioms byz_quorums_def)
+  then obtain q where qP: "\<forall> n. (n \<in>\<^sub>2 q of vset) \<longrightarrow> (n \<in>\<^sub>1 q0 of vset) \<and> (n \<in>\<^sub>1 q1 of vset)"
+    by blast
+  have vote0: "\<forall> n.  (n \<in>\<^sub>2 q of vset) \<longrightarrow> vote_msg s n new newE origE"
+    by (meson casper.voted_by_def casper_axioms qP v0)
+  have vote1: "\<forall> n.  (n \<in>\<^sub>2 q of vset) \<longrightarrow> vote_msg s n ch1 chE v1"
+    by (meson casper.voted_by_def casper_axioms qP v1)
+  assume orig_v1: " origE < v1"
+  assume ch_new: "chE < newE"
+  show ?thesis
+    by (meson ch_new orig_v1 slashed_def slashed_surround_def v1 vote0 vote1 voted_by_higher)
+qed
 
 lemma close_j_f_u_zero:
    "justified_with_root_with_n_switchings n r rE rM s h0 v0 m0 \<Longrightarrow>
