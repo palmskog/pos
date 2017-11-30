@@ -1583,14 +1583,13 @@ lemma close_j_f_u_zero:
     n = 0 \<Longrightarrow>
     rM = Usual \<Longrightarrow>
     v1 < v0 \<Longrightarrow>
-    \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
     \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
     justified s r rE Usual \<Longrightarrow>
     \<exists>q r'. (\<exists>rE'. Ex (justified s r' rE')) \<and> one_third_of_fwd_or_bwd_slashed s r' q"
 proof(induct rule: justified_with_root_with_n_switchings.induct)
   case (justified_genesis_n r r' rE rE' mode mode' n s)
   then show ?case
-    using close_fj close_justification_is_justification by blast
+    using close_fj close_justification_era leD by blast
 next
   case (usual_justification_n n r rE mode s orig origE origM q0 q1 new newE newM)
   then have f1: "close_finalization s r rE mode h1 v1 m1" by blast
@@ -1600,19 +1599,21 @@ next
   proof cases
     case a
     then show ?thesis
-      by (smt justifies_higher leD usual_justification usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(6) usual_justification_n.prems(7))
+      using usual_justification usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(5) usual_justification_n.prems(6) by blast
   next
     case b
+    have orignt: "rE < origE"
+      by (metis b casper.justifies_higher casper.trivial_is_refl casper.usual_justification_n casper_axioms close_fj forget_n_switchings le_neq_implies_less usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(5))
     have v0: "\<exists> q0 p0 pv0. voted_by s q0 (vset_fwd r) p0 pv0 orig origE"
-      by (smt b casper.close_justification_def casper.trivial_is_refl casper.usual_justification_n casper_axioms close_fj close_justification_is_justification le_add_diff_inverse less_imp_le_nat nat_neq_iff usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(4) usual_justification_n.prems(6) zero_switching_involves_root_vote)
+      by (metis orignt nat_neq_iff usual_justification_n.hyps(1) usual_justification_n.prems(2) usual_justification_n.prems(3) zero_switching_involves_root_vote)
     have v1: "\<exists> q1 p1 pv1. voted_by s q1 (vset_fwd r) p1 pv1 h1 v1"
-      by (smt casper.forget_n_switchings casper.trivial_is_refl casper.usual_justification_n casper_axioms close_fj close_involves_vote usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(3) usual_justification_n.prems(6))
+      by (smt b casper.trivial_is_refl casper_axioms close_fj close_involves_vote trivial_is_refl0 usual_justification_n.hyps(1) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) v0)
     have diff: "orig \<noteq> h1"
-      by (metis Mode.simps(1) Suc_eq_plus1 Suc_leI b casper.justified_with_root.intros(1) casper.justified_with_root.intros(2) casper.justifies_higher casper_axioms close_finalization_def close_fj forget_n_switchings le_neq_implies_less really_close_justification_zero trivial_is_refl usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(6))
+      by (metis Mode.simps(1) Suc_eq_plus1 Suc_lessI b casper.justified_genesis casper.usual_justification casper_axioms close_finalization_def orignt really_close_justification_zero usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(5))
     have sl: "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd r)) \<longrightarrow> slashed s n"
       using b casper.double_vote casper_axioms diff v0 v1 by fastforce
     show ?thesis
-      by (metis Mode.simps(1) Suc_eq_plus1 Suc_lessI b casper.close_justification_def casper_axioms close_finalizations_cause_slashing_u_j close_fj diff forget_n_switchings justified_back_unique justifies_higher le_neq_implies_less really_close_justification_zero trivial_is_refl usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(7))
+      by (metis Mode.simps(1) Suc_eq_plus1 Suc_lessI b casper.close_justification_def casper_axioms close_finalizations_cause_slashing_u_j close_fj diff justified_back_unique orignt really_close_justification_zero usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(6))
   next
     case c
     then show ?thesis
@@ -1629,7 +1630,7 @@ next
       then have "one_third_of_fwd_or_bwd_slashed s r q"
         by (simp add: one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def)
       then show ?thesis
-        using usual_justification_n.prems(7) by blast
+        using usual_justification_n.prems(6) by blast
     next
       case False (* double rule *)
       have v0: "\<exists> q0. voted_by s q0 (vset_fwd r) orig origE new newE"
@@ -1659,7 +1660,7 @@ next
         have sl: "\<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
           using fwr_sl one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def by blast
         then show ?thesis
-          using usual_justification_n.prems(7) by blast
+          using usual_justification_n.prems(6) by blast
       next
         case FinalizingChild
         have "close_finalization s r rE mode h1 v1 m1" using f1 by blast
@@ -1684,7 +1685,7 @@ next
         have sl: "\<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
           using fwr_sl one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def by blast
         then show ?thesis
-          using usual_justification_n.prems(7) by blast
+          using usual_justification_n.prems(6) by blast
       qed
     qed
   qed
@@ -1985,7 +1986,7 @@ proof(cases newM)
   have fff: "finalized_with_root_with_n_switchings 0 r rE Usual s h1 child v1 FinalizingChild"
     by (metis Mode.exhaust Usual ff m1e)
   then have f: "\<exists> q v1_src h1_src. voted_by s q (vset_fwd r) h1_src v1_src h1 v1 \<and> v1_src + 1 = v1"
-    using finalizing_justification_is_like0 by blast
+    by (metis Mode.simps(1) casper.fjn casper.forget_n_switchings casper_axioms finalizing_justification_is_like0 justifies_higher order.strict_iff_order refl_inv)
   assume ul: "usual_link s q0 q1 orig origE new v1"
   assume newMarith: "newM = (if v1 - origE = Suc 0 then FinalizingChild else Usual)"
   assume oj: "justified_with_root_with_n_switchings 0 r rE Usual s orig origE origM"
@@ -2092,13 +2093,17 @@ next
     by(auto simp add: close_finalization_def)
 qed
 
+lemma fwd_slashed_means:
+  "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd r)) \<longrightarrow> slashed s n \<Longrightarrow>
+   \<exists>q. one_third_of_fwd_or_bwd_slashed s r q"
+  by(auto simp add: one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def)
+
 lemma close_j_f_u_one:
    "justified_with_root_with_n_switchings n r rE rM s h0 v0 m0 \<Longrightarrow>
     n = Suc 0 \<Longrightarrow>
     close_finalization s r rE rM h1 v1 m1 \<Longrightarrow>
     rM = Usual \<Longrightarrow>
     v1 < v0 \<Longrightarrow>
-    \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
     \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
     justified s r rE Usual \<Longrightarrow>
     \<exists>q r'. (\<exists>rE'. Ex (justified s r' rE')) \<and> one_third_of_fwd_or_bwd_slashed s r' q"
@@ -2108,16 +2113,18 @@ proof(induct rule: justified_with_root_with_n_switchings.induct)
     using close_fj close_justification_is_justification by blast
 next
   case (usual_justification_n n r rE mode s orig origE origM q0 q1 new newE newM)
+  have inv: "    \<not> justified_with_root new newE newM s h1 v1 m1"
+    using justifies_higher leD usual_justification_n.prems(4) by blast
   consider (reduce) "v1 < origE" | (dblA) "v1 = origE" | (dblB) "origE < v1 \<and> newE = v1 + 1" | (surround) "origE < v1 \<and> v1 + 1 < newE"
     using usual_justification_n.prems(4) by linarith
   then show ?case proof cases
     case reduce
     then show ?thesis
-      by (smt justifies_higher leD usual_justification usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(6) usual_justification_n.prems(7))
+      using usual_justification usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(5) usual_justification_n.prems(6) by blast
   next
     case dblA
     then show ?thesis
-      by (metis Mode.simps(1) One_nat_def Suc_eq_plus1 Suc_lessI casper.close_justification_def casper_axioms close_finalizations_cause_slashing_u_j close_fj justified_back_unique justified_switch_really_higher really_close_justification_zero usual_justification usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(6) usual_justification_n.prems(7) zero_less_one)
+      by (smt Mode.simps(1) One_nat_def Suc_eq_plus1 Suc_lessI casper.close_finalizations_cause_slashing_u_j casper.close_justification_def casper_axioms close_fj justified_back_unique justified_switch_really_higher really_close_justification_zero usual_justification usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(5) usual_justification_n.prems(6) zero_less_one)
   next
     case dblB
     have vv0: "\<exists> q. voted_by s q (vset_bwd new) orig origE new newE"
@@ -2128,10 +2135,14 @@ next
       using close_finalization_has_child usual_justification_n.prems(2) usual_justification_n.prems(3) by blast
     have diff: "origE \<noteq> v1"
       using dblB by blast
-    have fwr_sl: "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd r)) \<longrightarrow> slashed s n"
+    have "\<exists> q. \<forall> n. (n \<in>\<^sub>2 q of (vset_fwd r)) \<longrightarrow> slashed s n"
       using casper.double_vote casper_axioms dblB vote0 vv1 by fastforce
+    then have goal_sl: "\<exists>q. one_third_of_fwd_or_bwd_slashed s r q"
+      using fwd_slashed_means by blast
+    have j: "\<exists>rE' a. justified s r rE' a"
+      using usual_justification_n.prems(6) by auto
     then show ?thesis
-      using one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def usual_justification_n.prems(7) by blast
+      using goal_sl by blast
   next
     case surround
     have vv1: "\<exists> q ch1. voted_by s q (vset_fwd r) h1 v1 ch1 (v1 + 1)"
@@ -2141,7 +2152,7 @@ next
     have sl: "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r) \<longrightarrow> slashed s n"
       using surround surround_concrete vote0 vv1 by blast
     then show ?thesis
-      using one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def usual_justification_n.prems(7) by blast
+      using one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def usual_justification_n.prems(6) by blast
   qed
 next
   case (justified_on_finalization_n n r rE mode s c e origM q0 q1 h ee newM)
@@ -2153,13 +2164,13 @@ next
     then have j0: "\<not> justified_with_root c e origM s h1 v1 m1"
       using justifies_higher leD by blast
     then have j1: "\<not> justified_with_root h1 v1 m1 s c e origM"
-      using casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(6) by fastforce
+      using casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(5) by fastforce
     then show ?thesis
-      using close_j_f_u_zero j0 justified_on_finalization_n.hyps(1) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(2) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(7) reduce_zero by fastforce
+      using close_j_f_u_zero j0 justified_on_finalization_n.hyps(1) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(2) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(6) reduce_zero by fastforce
   next
     case dbl_a
     have diff: "c \<noteq> h1 \<or> origM \<noteq> m1"
-      using casper.justified_genesis casper.justified_on_finalization casper_axioms dbl_a justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(6) by fastforce
+      using casper.justified_genesis casper.justified_on_finalization casper_axioms dbl_a justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(5) by fastforce
     have close0: "justified_with_root_with_n_switchings 0 r rE Usual s c e origM"
       using justified_on_finalization_n.hyps(1) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(3) by blast
     have close1: "close_finalization s r rE Usual h1 v1 m1"
@@ -2167,7 +2178,7 @@ next
     have lt: "rE < e"
       by (metis Mode.simps(1) casper.forget_n_switchings casper.justifies_higher casper.refl_inv casper_axioms close0 justified_on_finalization_n.hyps(3) le_neq_implies_less)
     then show ?thesis
-      using casper.different_conclusion_at_same_epoch casper_axioms close0 close1 dbl_a diff justified_on_finalization_n.prems(7) by fastforce
+      using casper.different_conclusion_at_same_epoch casper_axioms close0 close1 dbl_a diff justified_on_finalization_n.prems(6) by fastforce
   next
     case dbl_b
     have vv0: "\<exists> q. voted_by s q (vset_bwd h) c e h ee"
@@ -2184,7 +2195,7 @@ next
     have sl': "\<exists> q'. one_third_of_fwd_or_bwd_slashed s r q'"
       using one_third_of_fwd_or_bwd_slashed_def one_third_of_fwd_slashed_def sl by blast
     then show ?thesis
-      using justified_on_finalization_n.prems(7) by blast
+      using justified_on_finalization_n.prems(6) by blast
   next
     case surround
     have vv0: "\<exists> q. voted_by s q (vset_bwd h) c e h ee"
@@ -2199,7 +2210,7 @@ next
     have sl' : "\<exists> q. one_third_of_fwd_or_bwd_slashed s r q"
       by (metis casper.one_third_of_fwd_slashed_def casper_axioms one_third_of_fwd_or_bwd_slashed_def sl)
     have ju: "\<exists> a. justified s r rE a"
-      using justified_on_finalization_n.prems(7) by auto
+      using justified_on_finalization_n.prems(6) by auto
     then show ?thesis
       using sl' by auto
   qed
@@ -2210,7 +2221,6 @@ lemma close_justification_and_finalization_cause_slashing_u :
    close_finalization s r rE rM h1 v1 m1 \<Longrightarrow>
    rM = Usual \<Longrightarrow>
    v0 > v1 \<Longrightarrow>
-   \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
    justified s r rE rM \<Longrightarrow>
    \<exists> q r' rE' rM'. justified s r' rE' rM' \<and> one_third_of_fwd_or_bwd_slashed s r' q"
@@ -2268,10 +2278,9 @@ lemma close_j_f_f_one:
    close_finalization s r rE rM h1 v1 m1 \<Longrightarrow>
    rM = FinalizingChild \<Longrightarrow>
    v1 < v0 \<Longrightarrow>
-   \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+(*   \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow> *)
    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
    justified s r rE rM \<Longrightarrow>
-   Suc rE \<noteq> v0 \<Longrightarrow> (* necessary? doesn't hurt *)
    \<exists>q r'. (\<exists>rE'. Ex (justified s r' rE')) \<and> one_third_of_fwd_or_bwd_slashed s r' q"
 proof(induct rule: justified_with_root_with_n_switchings.induct)
   case (justified_genesis_n r r' rE rE' mode mode' n s)
@@ -2283,28 +2292,15 @@ next
   then show ?case proof cases
     case reduce
     then show ?thesis
-    proof -
-      have "\<forall>p pa pb f fa fb e n m s ea na b ba eb nb ma. (\<not> casper p (pa::'a \<Rightarrow> 'd \<Rightarrow> 'c \<Rightarrow> bool) pb \<or> \<not> casper.justified_with_root p pb f fa fb e n m (s::(_, 'e, 'f) state_scheme) ea na Usual \<or> \<not> casper.usual_link p pb f fa s (b::'b) ba ea na eb nb \<or> ma \<noteq> (if nb - na = 1 then FinalizingChild else Usual)) \<or> casper.justified_with_root p pb f fa fb e n m s eb nb ma"
-        by (metis (no_types) casper.justified_with_root.intros(2))
-      then have f1: "\<not> justified_with_root h1 v1 m1 s orig origE Usual \<or> \<not> (if newE - origE = 1 then (if newE - origE = 1 then FinalizingChild else Usual) = FinalizingChild else (if newE - origE = 1 then FinalizingChild else Usual) = Usual)"
-        using casper_axioms usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(6) by blast
-      have "justified_with_root_with_n_switchings (Suc 0) r rE FinalizingChild s orig origE Usual"
-        using usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.prems(1) usual_justification_n.prems(3) by blast
-      then have f2: "origE \<noteq> Suc rE"
-        by (meson Mode.simps(1) casper.really_close_justification_zero casper_axioms)
-      have f3: "\<not> justified_with_root orig origE Usual s h1 v1 m1"
-        by (meson casper.justifies_higher casper_axioms leD reduce)
-      have "\<not> justified_with_root h1 v1 m1 s orig origE Usual"
-        using f1 by meson
-      then show ?thesis
-       using f3 f2 reduce usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(7) by fastforce
-   qed  
+      using usual_justification usual_justification_n.hyps(2) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(5) usual_justification_n.prems(6) by blast
   next
     case dbl_a
+    have aux: "\<not> justified_with_root new newE newM s h1 v1 m1"
+      using justifies_higher leD usual_justification_n.prems(4) by blast
     have sl: "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_chosen r) \<longrightarrow> slashed s n"
-      by (metis Mode.simps(1) One_nat_def Suc_eq_plus1 casper.close_finalization_def casper.close_finalizations_cause_slashing_f_chosen casper.close_fj casper.justified_with_root.intros(2) casper.one_switching_involves_root_vote_f casper.really_close_justification_zero casper_axioms close_involves_vote_f dbl_a discrete double_vote justified_switch_really_higher order.strict_iff_order usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(6) zero_less_one)
+      by (metis Mode.simps(1) One_nat_def Suc_eq_plus1 Suc_leI casper.close_finalization_def casper.close_finalizations_cause_slashing_f_chosen casper.close_fj casper.close_involves_vote_f casper.justified_with_root.intros(2) casper.one_switching_involves_root_vote_f casper.really_close_justification_zero casper_axioms dbl_a double_vote justified_switch_really_higher order.strict_iff_order usual_justification_n.hyps(1) usual_justification_n.hyps(3) usual_justification_n.hyps(4) usual_justification_n.hyps(5) usual_justification_n.prems(1) usual_justification_n.prems(2) usual_justification_n.prems(3) usual_justification_n.prems(5) zero_less_one)
     have used: "\<exists> r' rE' a. justified s r' rE' a \<and> vset_fwd r' = vset_chosen r"
-      using find_first_change_one justified_switch_really_higher usual_justification_n.hyps(1) usual_justification_n.prems(1) usual_justification_n.prems(3) usual_justification_n.prems(7) by fastforce
+      using find_first_change_one justified_switch_really_higher usual_justification_n.hyps(1) usual_justification_n.prems(1) usual_justification_n.prems(3) usual_justification_n.prems(6) by fastforce
     then obtain r' rE' a where jjj: "justified s r' rE' a \<and> vset_fwd r' = vset_chosen r" by blast
     have sl'': "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r') \<longrightarrow> slashed s n"
       by (simp add: jjj sl)
@@ -2328,7 +2324,7 @@ next
     have sl: "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_chosen r) \<longrightarrow> slashed s n"
       using diff double_vote v0 v1' by blast
     have used: "\<exists> r' rE' a. justified s r' rE' a \<and> vset_fwd r' = vset_chosen r"
-      using find_first_change_one justified_switch_really_higher usual_justification_n.hyps(1) usual_justification_n.prems(1) usual_justification_n.prems(3) usual_justification_n.prems(7) by fastforce
+      using find_first_change_one justified_switch_really_higher usual_justification_n.hyps(1) usual_justification_n.prems(1) usual_justification_n.prems(3) usual_justification_n.prems(6) by fastforce
     then obtain r' rE' a where jjj: "justified s r' rE' a \<and> vset_fwd r' = vset_chosen r" by blast
     have sl'': "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r') \<longrightarrow> slashed s n"
       by (simp add: jjj sl)
@@ -2374,7 +2370,7 @@ next
   next
     case dbl_a
     then show ?thesis
-      by (metis Suc_inject casper.justified_on_finalization_n casper_axioms close_fj forget_n_switchings justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(2) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(6) trivial_is_refl zero_justification_f)
+      by (metis Suc_inject casper.justified_on_finalization_n casper_axioms close_fj forget_n_switchings justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(2) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(5) trivial_is_refl zero_justification_f)
   next
     case dbl_b
     have v0: "   \<exists> q. voted_by s q (vset_chosen r) c e h ee"
@@ -2390,7 +2386,7 @@ next
     have sl: "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_chosen r) \<longrightarrow> slashed s n"
       using diff double_vote v0 v1' by blast
     have used: "\<exists> r' rE' a. justified s r' rE' a \<and> vset_fwd r' = vset_chosen r"
-      by (metis Suc_inject casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(4) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(7) trivial_is_refl0 validator_changing_link_def zero_justification_f)
+      by (metis Suc_inject casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(4) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(6) trivial_is_refl0 validator_changing_link_def zero_justification_f)
     then obtain r' rE' a where jjj: "justified s r' rE' a \<and> vset_fwd r' = vset_chosen r" by blast
     have sl'': "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r') \<longrightarrow> slashed s n"
       by (simp add: jjj sl)
@@ -2413,7 +2409,7 @@ next
     have sl: "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_chosen r) \<longrightarrow> slashed s n"
       using surround surround_concrete v0 v1 by blast
     have used: "\<exists> r' rE' a. justified s r' rE' a \<and> vset_fwd r' = vset_chosen r"
-      by (metis Suc_inject casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(4) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(7) trivial_is_refl0 validator_changing_link_def zero_justification_f)
+      by (metis Suc_inject casper.justified_with_root.intros(3) casper_axioms justified_on_finalization_n.hyps(1) justified_on_finalization_n.hyps(4) justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(6) trivial_is_refl0 validator_changing_link_def zero_justification_f)
     then obtain r' rE' a where jjj: "justified s r' rE' a \<and> vset_fwd r' = vset_chosen r" by blast
     have sl'': "   \<exists> q. \<forall> n. (n \<in>\<^sub>2 q of vset_fwd r') \<longrightarrow> slashed s n"
       by (simp add: jjj sl)
@@ -2432,13 +2428,39 @@ lemma close_j_f_f_two:
     close_finalization s r rE FinalizingChild h1 v1 m1 \<Longrightarrow>
     rM = FinalizingChild \<Longrightarrow>
     v1 < v0 \<Longrightarrow>
-    \<not> justified_with_root h0 v0 Usual s h1 v1 m1 \<Longrightarrow>
-    \<not> justified_with_root h1 v1 m1 s h0 v0 Usual \<Longrightarrow>
+    \<not> justified_with_root h0 v0 m0 s h1 v1 m1 \<Longrightarrow>
+    \<not> justified_with_root h1 v1 m1 s h0 v0 m0 \<Longrightarrow>
     justified s r rE FinalizingChild \<Longrightarrow>
     Suc rE < v0 \<Longrightarrow>
     vset_bwd h0 = vset_chosen r \<Longrightarrow>
     m0 = Usual \<Longrightarrow> (* this cannot be kept during the induction...?  Yes, it can be kept! *)
     \<exists>q r'. (\<exists>rE'. Ex (justified s r' rE')) \<and> one_third_of_fwd_or_bwd_slashed s r' q"
+proof(induct rule: justified_with_root_with_n_switchings.induct)
+case (justified_genesis_n r r' rE rE' mode mode' n s)
+  then show ?case by blast
+next
+  case (usual_justification_n n r rE mode s orig origE origM q0 q1 new newE newM)
+  then show ?case sorry
+next
+  case (justified_on_finalization_n n r rE mode s c e origM q0 q1 h ee newM)
+  consider (reduce) "e > v1" | (others) "e \<le> v1"
+    using leI by blast
+  then show ?case proof cases
+    case reduce
+    have n1: "n = 1"
+      by (simp add: Suc_inject justified_on_finalization_n.prems(1))
+    have jv0: "justified_with_root_with_n_switchings n r rE mode s c e origM"
+      by (simp add: justified_on_finalization_n.hyps(1))
+    have non_j: "\<not> justified_with_root h1 v1 m1 s c e origM"
+      using justified_on_finalization justified_on_finalization_n.hyps(3) justified_on_finalization_n.hyps(4) justified_on_finalization_n.hyps(5) justified_on_finalization_n.prems(6) by blast
+    then show ?thesis
+      using casper.close_j_f_f_one casper_axioms justified_on_finalization_n.prems(1) justified_on_finalization_n.prems(2) justified_on_finalization_n.prems(3) justified_on_finalization_n.prems(7) jv0 reduce by fastforce
+  next
+    case others
+    then show ?thesis sorry
+  qed
+qed
+
   sorry
 
 lemma close_justification_and_finalization_cause_slashing_f :
