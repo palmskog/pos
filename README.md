@@ -8,21 +8,23 @@ This repository contains some distributed consensus related stuff.
 
 In Alloy, *enable Options->Forbid Overflow*
 
-## Some Isabelle/HOL Proofs
+## Some Casper Isabelle/HOL Proofs
 
 Isabelle2017 should work.
 
 ### On the Newest Casper Design
 
-`DynamicValidatorSetOneMessage.thy` is about one-message casper (newer) with dynamic validator sets (more realistic), and proves the accountable safety (not the plausible liveness).
+* [`DynamicValidatorSetOneMessage.thy`](DynamicValidatorSetOneMessage.thy) is about one-message Casper (newer) with a dynamic validator set (more realistic), and proves accountable safety (not plausible liveness).
+
+* [`CasperOneMessage.thy`](CasperOneMessage.thy) is about one-message Casper (newer) with a static validator set (unrealistic), and proves accountable safety (not plausible liveness).
 
 ### On Older Casper Designs
 
-`DynamicValidatorSet.thy` is about one-message casper (newer) with a constant validator set (unrealistic), and proves the accountable safety (not the plausible liveness).
+* [`DynamicValidatorSet.thy`](DynamicValidatorSet.thy) is about two-message Casper (older) with a dynamic validator set (more realistic), and proves accountable safety (not plausible liveness).
 
-`Casper.thy` is about two-message casper (older) with dynamic validator sets, and proves the accountable safety (not the plausible liveness).
+* [`Casper.thy`](Casper.thy) is about two-message Casper (older) with a static validator set (unrealistic), and proves accountable safety (not plausible liveness).
 
-`MinimumAlgo.thy` is about two-message casper (older) with dynamic validator sets, and proves the accountable safety and the plausible liveness.
+* [`MinimumAlgo.thy`](MinimumAlgo.thy) is about two-message Casper (older) with a dynamic validator set, and proves accountable safety and plausible liveness.
 
 ### How to See the Script
 
